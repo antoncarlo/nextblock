@@ -1,0 +1,194 @@
+/**
+ * Additional Theme Styles
+ * These supplement the main style.css
+ *
+ * @package NextBlock
+ */
+
+/* ============================================
+   SECTION VISIBILITY STATES
+   ============================================ */
+.nb-section {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+}
+
+.nb-section.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ============================================
+   MOBILE MENU STYLES
+   ============================================ */
+@media (max-width: 768px) {
+    .nb-header__nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(250, 250, 248, 0.98);
+        backdrop-filter: blur(20px);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 24px;
+        transform: translateX(100%);
+        transition: transform 0.3s ease-out;
+        z-index: 99;
+    }
+
+    .nb-header__nav.is-open {
+        transform: translateX(0);
+    }
+
+    .nb-header__nav-link {
+        font-size: 24px;
+    }
+
+    .nb-header__mobile-toggle {
+        z-index: 100;
+    }
+
+    .nb-header__mobile-toggle.is-active svg line:first-child {
+        transform: rotate(45deg) translate(5px, 5px);
+    }
+
+    .nb-header__mobile-toggle.is-active svg line:nth-child(2) {
+        opacity: 0;
+    }
+
+    .nb-header__mobile-toggle.is-active svg line:last-child {
+        transform: rotate(-45deg) translate(5px, -5px);
+    }
+}
+
+/* ============================================
+   HERO VIDEO CONTROLS
+   ============================================ */
+.nb-hero__video video {
+    filter: grayscale(0.2);
+}
+
+/* ============================================
+   CARD HOVER STATES
+   ============================================ */
+.nb-card {
+    cursor: pointer;
+}
+
+.nb-card--glass:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.nb-card--active .nb-card__content {
+    display: block;
+}
+
+.nb-card--glass .nb-card__content {
+    display: none;
+}
+
+/* ============================================
+   FORM ENHANCEMENTS
+   ============================================ */
+.nb-form__input:focus,
+.nb-form__select:focus,
+.nb-form__textarea:focus {
+    outline: none;
+    border-color: var(--nb-primary);
+    box-shadow: 0 0 0 3px rgba(27, 58, 107, 0.1);
+}
+
+.nb-form__submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ============================================
+   LOADING STATES
+   ============================================ */
+.nb-loading {
+    position: relative;
+    pointer-events: none;
+}
+
+.nb-loading::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ============================================
+   SCROLL INDICATOR ANIMATION
+   ============================================ */
+.nb-hero__scroll-dot {
+    animation: scrollBounce 2s ease-in-out infinite;
+}
+
+@keyframes scrollBounce {
+    0%, 100% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    50% {
+        transform: translateY(8px);
+        opacity: 0.5;
+    }
+}
+
+/* ============================================
+   STATS NODES ANIMATION
+   ============================================ */
+.nb-stats__node {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: translateX(-50%) scale(1);
+    }
+    50% {
+        transform: translateX(-50%) scale(1.1);
+    }
+}
+
+/* ============================================
+   SVG LINE ANIMATIONS
+   ============================================ */
+.nb-decorative-grid svg path,
+.nb-decorative-lines svg path {
+    stroke-dasharray: 2000;
+    stroke-dashoffset: 2000;
+    transition: stroke-dashoffset 2s ease-out;
+}
+
+.nb-decorative-grid.is-visible svg path,
+.nb-decorative-lines.is-visible svg path {
+    stroke-dashoffset: 0;
+}
+
+/* ============================================
+   PRINT STYLES
+   ============================================ */
+@media print {
+    .nb-header,
+    .nb-decorative-lines,
+    .nb-decorative-grid,
+    .nb-hero__scroll {
+        display: none !important;
+    }
+
+    .nb-section {
+        opacity: 1 !important;
+        transform: none !important;
+        page-break-inside: avoid;
+    }
+}

@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="NextBlock - The Universal Marketplace for Insurance-Linked Assets. Permissionless, transparent, and composable on-chain insurance risk vaults.">
+    <meta name="keywords" content="insurance, blockchain, DeFi, reinsurance, tokenized assets, Base, Ethereum">
+    <title>NextBlock | Insurance-Linked Assets Marketplace</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/style.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+</head>
+<body>
+    <!-- Header -->
+    <header class="nb-header" id="header">
+        <div class="nb-header__inner">
+            <a href="#" class="nb-header__logo">NEXTBLOCK</a>
+            
+            <nav class="nb-header__nav" id="nav">
+                <a href="#about" class="nb-header__nav-link">About</a>
+                <a href="#how-it-works" class="nb-header__nav-link">How It Works</a>
+                <a href="#waitlist" class="nb-header__cta">Request Access</a>
+            </nav>
+            
+            <button class="nb-header__mobile-toggle" id="mobile-toggle" aria-label="Toggle menu">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <main id="primary" class="nb-main">
+        
+        <!-- Hero Section -->
+        <section class="nb-hero nb-section">
+            <div class="nb-hero__video">
+                <video autoplay muted playsinline loop>
+                    <source src="videos/hero-background.mp4" type="video/mp4">
+                </video>
+            </div>
+
+            <div class="nb-hero__content">
+                <h1 class="nb-hero__title animate-fade-in-up">
+                    The Universal Marketplace for Insurance-Linked Assets.
+                </h1>
+
+                <div class="nb-hero__actions animate-fade-in-up delay-200">
+                    <a href="#waitlist" class="nb-btn nb-btn--primary">Request Early Access</a>
+                    <a href="#how-it-works" class="nb-btn nb-btn--outline">Learn More</a>
+                </div>
+            </div>
+
+            <div class="nb-hero__scroll">
+                <div class="nb-hero__scroll-indicator">
+                    <div class="nb-hero__scroll-dot"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Key Benefits Marquee -->
+        <section class="nb-marquee">
+            <div class="nb-marquee__track">
+                <span class="nb-marquee__item">Permissionless</span>
+                <span class="nb-marquee__item nb-marquee__partner">
+                    <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5"/></svg>
+                    Base
+                </span>
+                <span class="nb-marquee__item">Open-Source</span>
+                <span class="nb-marquee__item nb-marquee__partner">
+                    <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M10 2L3 10L10 13L17 10L10 2Z" stroke="currentColor" stroke-width="1.5"/><path d="M10 13L3 10L10 18L17 10L10 13Z" stroke="currentColor" stroke-width="1.5"/></svg>
+                    Ethereum
+                </span>
+                <span class="nb-marquee__item">On-Chain</span>
+                <span class="nb-marquee__item nb-marquee__partner">
+                    <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M10 2L17 6V14L10 18L3 14V6L10 2Z" stroke="currentColor" stroke-width="1.5"/></svg>
+                    Chainlink
+                </span>
+                <span class="nb-marquee__item">Transparent</span>
+                <span class="nb-marquee__item">Immutable</span>
+                <span class="nb-marquee__item">Composable</span>
+                <!-- Duplicate for seamless scroll -->
+                <span class="nb-marquee__item">Permissionless</span>
+                <span class="nb-marquee__item nb-marquee__partner">
+                    <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5"/></svg>
+                    Base
+                </span>
+                <span class="nb-marquee__item">Open-Source</span>
+                <span class="nb-marquee__item nb-marquee__partner">
+                    <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M10 2L3 10L10 13L17 10L10 2Z" stroke="currentColor" stroke-width="1.5"/><path d="M10 13L3 10L10 18L17 10L10 13Z" stroke="currentColor" stroke-width="1.5"/></svg>
+                    Ethereum
+                </span>
+                <span class="nb-marquee__item">On-Chain</span>
+                <span class="nb-marquee__item nb-marquee__partner">
+                    <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M10 2L17 6V14L10 18L3 14V6L10 2Z" stroke="currentColor" stroke-width="1.5"/></svg>
+                    Chainlink
+                </span>
+                <span class="nb-marquee__item">Transparent</span>
+                <span class="nb-marquee__item">Immutable</span>
+                <span class="nb-marquee__item">Composable</span>
+            </div>
+        </section>
+
+        <!-- Features Section (Problem/Solution) -->
+        <section class="nb-features nb-section nb-section--dark">
+            <div class="nb-decorative-grid"></div>
+            
+            <div class="nb-container">
+                <div class="nb-features__header">
+                    <span class="section-label section-label--light">The Opportunity</span>
+                    <h2>From Silos to a<br>Liquid Marketplace</h2>
+                </div>
+
+                <div class="nb-features__cards">
+                    <div class="nb-card nb-card--active">
+                        <div class="nb-card__icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        </div>
+                        <span class="nb-card__label">The Problem</span>
+                        <h3 class="nb-card__title">Trapped Capital, Opaque Risk</h3>
+                        <p class="nb-card__content">
+                            The traditional reinsurance market is capital-intensive, illiquid, and inaccessible. For reinsurers, billions in capital are trapped in inefficient structures. For investors, access to this stable, uncorrelated asset class is restricted to a select few.
+                        </p>
+                    </div>
+
+                    <div class="nb-card nb-card--glass">
+                        <div class="nb-card__icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+                        </div>
+                        <span class="nb-card__label">The Solution</span>
+                        <h3 class="nb-card__title">Permissionless Vaults, Composable Risk</h3>
+                        <p class="nb-card__content">
+                            NextBlock provides the open-source infrastructure to change this. We enable any entity—from established reinsurers to specialized asset managers—to curate and launch their own tokenized risk vaults.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Stats Section -->
+        <section id="about" class="nb-stats nb-section nb-section--alt">
+            <div class="nb-decorative-grid nb-decorative-grid--light"></div>
+            
+            <div class="nb-container">
+                <div class="nb-stats__header">
+                    <span class="section-label">The Market</span>
+                    <h2 class="nb-stats__title">
+                        An Untapped<br>
+                        <span>Financial Primitive</span>
+                    </h2>
+                </div>
+
+                <div class="nb-stats__grid">
+                    <div class="nb-stats__line hide-mobile"></div>
+
+                    <div class="nb-stats__item">
+                        <div class="nb-stats__content">
+                            <div class="nb-stats__value">$30T</div>
+                            <div class="nb-stats__label">Global Insurance AUM</div>
+                            <p class="nb-stats__description">Global insurance assets under management, one of the largest capital pools in the world.</p>
+                        </div>
+                        <div class="nb-stats__node hide-mobile">
+                            <div class="nb-stats__node-inner"></div>
+                        </div>
+                        <div class="nb-stats__spacer"></div>
+                    </div>
+
+                    <div class="nb-stats__item">
+                        <div class="nb-stats__content">
+                            <div class="nb-stats__value">$700B+</div>
+                            <div class="nb-stats__label">Reinsurance Capital</div>
+                            <p class="nb-stats__description">The total capital base of the global reinsurance industry, foundational to global financial stability.</p>
+                        </div>
+                        <div class="nb-stats__node hide-mobile">
+                            <div class="nb-stats__node-inner"></div>
+                        </div>
+                        <div class="nb-stats__spacer"></div>
+                    </div>
+
+                    <div class="nb-stats__item">
+                        <div class="nb-stats__content">
+                            <div class="nb-stats__value">&lt;1%</div>
+                            <div class="nb-stats__label">On-Chain</div>
+                            <p class="nb-stats__description">The fraction of insurance-linked assets currently accessible on-chain. A massive opportunity awaits.</p>
+                        </div>
+                        <div class="nb-stats__node hide-mobile">
+                            <div class="nb-stats__node-inner"></div>
+                        </div>
+                        <div class="nb-stats__spacer"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Protocol Stack Section -->
+        <section id="how-it-works" class="nb-protocol nb-section nb-section--dark" style="background-image: url('images/protocol-stack-lion.png'); background-size: contain; background-position: center; background-repeat: no-repeat; background-color: #FAFAF8;">
+            <div class="nb-protocol__overlay">
+                <div class="nb-decorative-grid"></div>
+                
+                <div class="nb-container">
+                    <div class="nb-protocol__header">
+                        <span class="section-label section-label--light">How It Works</span>
+                        <h2>The Insurance-Linked<br>Protocol Stack</h2>
+                    </div>
+
+                    <div class="nb-protocol__cards">
+                        <div class="nb-card nb-card--active" data-card="0">
+                            <span class="nb-card__label">The Protocol</span>
+                            <h3 class="nb-card__title">NextBlock Core</h3>
+                            <p class="nb-card__content">A simple, immutable, and open-source set of smart contracts on Base. The core protocol allows for the permissionless creation of tokenized insurance risk vaults.</p>
+                        </div>
+
+                        <div class="nb-card nb-card--glass" data-card="1">
+                            <span class="nb-card__label">The Curators</span>
+                            <h3 class="nb-card__title">Risk Architects</h3>
+                            <p class="nb-card__content">Reinsurers, asset managers, and specialized funds act as Curators. They source insurance risk and launch their own unique vaults on the NextBlock protocol.</p>
+                        </div>
+
+                        <div class="nb-card nb-card--glass" data-card="2">
+                            <span class="nb-card__label">The Investors</span>
+                            <h3 class="nb-card__title">Curated Yield</h3>
+                            <p class="nb-card__content">Institutional and accredited investors can access a diverse marketplace of insurance-linked vaults, gaining exposure to stable, real-world yield sources.</p>
+                        </div>
+
+                        <div class="nb-card nb-card--glass" data-card="3">
+                            <span class="nb-card__label">The Marketplace</span>
+                            <h3 class="nb-card__title">Liquid Trading</h3>
+                            <p class="nb-card__content">Vault tokens can be traded on secondary markets, creating liquidity for a traditionally illiquid asset class.</p>
+                        </div>
+
+                        <div class="nb-card nb-card--glass" data-card="4">
+                            <span class="nb-card__label">The Infrastructure</span>
+                            <h3 class="nb-card__title">On-Chain Settlement</h3>
+                            <p class="nb-card__content">All transactions settle on Base (Ethereum L2), providing institutional-grade security with low transaction costs.</p>
+                        </div>
+                    </div>
+
+                    <div class="nb-protocol__nav">
+                        <button class="nb-protocol__nav-btn" id="prev-card">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+                        </button>
+                        <button class="nb-protocol__nav-btn" id="next-card">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Vision Section -->
+        <section class="nb-vision nb-section nb-section--light">
+            <div class="nb-decorative-grid nb-decorative-grid--light"></div>
+            
+            <div class="nb-vision__grid">
+                <div class="nb-vision__content">
+                    <span class="section-label">Our Vision</span>
+                    <h2>From Venice to the Blockchain</h2>
+                    <p>
+                        The modern insurance market was born in the coffeehouses and trading houses of Venice, where merchants pooled capital to share maritime risk. Centuries later, NextBlock brings this foundational principle on-chain — permissionless, transparent, and composable.
+                    </p>
+                    <a href="#" class="nb-vision__link">Read our thesis →</a>
+                </div>
+                
+                <div class="nb-vision__image">
+                    <img src="images/our-vision-venice.png" alt="Venetian merchant at desk with Grand Canal view">
+                </div>
+            </div>
+        </section>
+
+        <!-- Waitlist Section -->
+        <section id="waitlist" class="nb-waitlist nb-section nb-section--dark">
+            <div class="nb-decorative-grid"></div>
+            
+            <div class="nb-container">
+                <div class="nb-waitlist__header">
+                    <span class="section-label section-label--light">Join the Waitlist</span>
+                    <h2>Be Part of the New<br>Capital Market</h2>
+                    <p class="nb-waitlist__subtitle">
+                        We are currently in private beta, working with leading reinsurers and asset managers. Request early access to join as a curator, investor, or partner.
+                    </p>
+                </div>
+
+                <div class="nb-waitlist__grid">
+                    <!-- Role Cards -->
+                    <div class="nb-waitlist__roles">
+                        <div class="nb-card nb-card--active" data-role="curator">
+                            <span class="nb-card__label">For Curators</span>
+                            <h3 class="nb-card__title">Build Your Strategy</h3>
+                        </div>
+
+                        <div class="nb-card nb-card--glass" data-role="investor">
+                            <span class="nb-card__label">For Investors</span>
+                            <h3 class="nb-card__title">Diversify Your Portfolio</h3>
+                        </div>
+
+                        <div class="nb-card nb-card--glass" data-role="partner">
+                            <span class="nb-card__label">For Partners</span>
+                            <h3 class="nb-card__title">Join the Ecosystem</h3>
+                        </div>
+                    </div>
+
+                    <!-- Form -->
+                    <div class="nb-waitlist__form-card">
+                        <form class="nb-form" id="waitlist-form" action="#" method="POST">
+                            <div class="nb-form__group">
+                                <label class="nb-form__label" for="full_name">Full Name *</label>
+                                <input type="text" id="full_name" name="full_name" class="nb-form__input" required>
+                            </div>
+
+                            <div class="nb-form__group">
+                                <label class="nb-form__label" for="email">Work Email *</label>
+                                <input type="email" id="email" name="email" class="nb-form__input" required>
+                            </div>
+
+                            <div class="nb-form__group">
+                                <label class="nb-form__label" for="company">Company / Organization *</label>
+                                <input type="text" id="company" name="company" class="nb-form__input" required>
+                            </div>
+
+                            <div class="nb-form__group">
+                                <label class="nb-form__label" for="interest">I am interested as a... *</label>
+                                <select id="interest" name="interest" class="nb-form__select" required>
+                                    <option value="">Select one</option>
+                                    <option value="curator">Curator (Launch Vaults)</option>
+                                    <option value="investor">Investor (Access Vaults)</option>
+                                    <option value="partner">Partner (Integrate/Collaborate)</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+
+                            <div class="nb-form__group">
+                                <label class="nb-form__label" for="message">Message (Optional)</label>
+                                <textarea id="message" name="message" class="nb-form__textarea" rows="3" placeholder="Tell us about your interest..."></textarea>
+                            </div>
+
+                            <button type="submit" class="nb-btn nb-btn--primary nb-btn--full nb-form__submit">
+                                Request Access
+                            </button>
+
+                            <p class="nb-form__disclaimer">
+                                By submitting, you agree to our privacy policy and terms of service.
+                            </p>
+                        </form>
+
+                        <div class="nb-form__success" id="form-success" style="display: none;">
+                            <div class="nb-form__success-icon">✓</div>
+                            <h3>Thank You!</h3>
+                            <p>Your submission has been received. We'll be in touch soon.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="nb-footer">
+        <!-- Decorative Video -->
+        <div class="nb-footer__video">
+            <video autoplay muted playsinline loop>
+                <source src="videos/footer-frieze.mp4" type="video/mp4">
+            </video>
+        </div>
+
+        <div class="nb-footer__content">
+            <div class="nb-container">
+                <div class="nb-footer__grid">
+                    <div class="nb-footer__brand">
+                        <a href="#" class="nb-footer__logo">NEXTBLOCK</a>
+                        <p class="nb-footer__tagline">The Universal Marketplace for Insurance-Linked Assets</p>
+                    </div>
+
+                    <div class="nb-footer__links">
+                        <h4 class="nb-footer__heading">Protocol</h4>
+                        <ul>
+                            <li><a href="#how-it-works">How It Works</a></li>
+                            <li><a href="#">Documentation</a></li>
+                            <li><a href="#">GitHub</a></li>
+                        </ul>
+                    </div>
+
+                    <div class="nb-footer__links">
+                        <h4 class="nb-footer__heading">Company</h4>
+                        <ul>
+                            <li><a href="#about">About</a></li>
+                            <li><a href="#">Careers</a></li>
+                            <li><a href="#">Press</a></li>
+                        </ul>
+                    </div>
+
+                    <div class="nb-footer__links">
+                        <h4 class="nb-footer__heading">Legal</h4>
+                        <ul>
+                            <li><a href="#">Privacy Policy</a></li>
+                            <li><a href="#">Terms of Service</a></li>
+                            <li><a href="#">Cookie Policy</a></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="nb-footer__bottom">
+                    <p class="nb-footer__copyright">© 2024 NextBlock. All rights reserved.</p>
+                    
+                    <div class="nb-footer__social">
+                        <a href="#" aria-label="Twitter">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"/></svg>
+                        </a>
+                        <a href="#" aria-label="Discord">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12h.01M12 12h.01M16 12h.01"/></svg>
+                        </a>
+                        <a href="#" aria-label="Telegram">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" x2="11" y1="2" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                        </a>
+                        <a href="#" aria-label="LinkedIn">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/main.js"></script>
+</body>
+</html>
