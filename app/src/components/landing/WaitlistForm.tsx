@@ -60,7 +60,7 @@ const WaitlistForm = () => {
         },
       });
 
-      if (resendResponse.error && import.meta.env.DEV) {
+      if (resendResponse.error && process.env.NODE_ENV === 'development') {
         console.error('Resend welcome email error:', resendResponse.error);
       }
 
@@ -70,7 +70,7 @@ const WaitlistForm = () => {
         description: "We'll be in touch soon with exclusive updates.",
       });
     } catch (error) {
-      if (import.meta.env.DEV) {
+      if (process.env.NODE_ENV === 'development') {
         console.error('Error submitting waitlist:', error);
       }
       toast({
