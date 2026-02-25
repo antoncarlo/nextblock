@@ -2,7 +2,7 @@
 import { motion } from "framer-motion";
 import { Linkedin, Mail } from "lucide-react";
 import WaitlistSection from "./WaitlistSection";
-const footerFriezeVideo = "/assets/footer-frieze.mp4";
+const footerFriezeImage = "/assets/venice-footer-frieze.png";
 const logoBlack = "/assets/logo-black.svg";
 
 // Custom X (Twitter) icon since lucide doesn't have the new X logo
@@ -67,18 +67,17 @@ const Footer = () => {
         }}
       >
         {/* Decorative frieze at top */}
-        <div className="relative w-full overflow-hidden">
-          <video
-            src={footerFriezeVideo}
-            autoPlay
-            loop
-            muted
-            playsInline
+        <div className="relative w-full overflow-hidden" style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={footerFriezeImage}
+            alt=""
             aria-hidden="true"
             style={{
               width: '100%',
               height: 'auto',
               display: 'block',
+              objectFit: 'cover',
             }}
           />
         </div>
