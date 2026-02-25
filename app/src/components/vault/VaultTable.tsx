@@ -1,5 +1,4 @@
 'use client';
-
 import { VaultRow } from './VaultRow';
 
 interface VaultTableProps {
@@ -8,19 +7,45 @@ interface VaultTableProps {
 
 export function VaultTable({ vaultAddresses }: VaultTableProps) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-      <table className="w-full">
+    <div
+      className="card-institutional overflow-hidden"
+      style={{ borderRadius: '12px', overflow: 'hidden' }}
+    >
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
-          <tr className="border-b border-gray-100 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
-            <th className="px-6 py-3">Vault</th>
-            <th className="px-6 py-3">TVL</th>
-            <th className="px-6 py-3">Curator</th>
-            <th className="px-6 py-3">Exposure</th>
-            <th className="px-6 py-3 text-center">Policies</th>
-            <th className="px-6 py-3 text-right">Target APY</th>
+          <tr
+            style={{
+              borderBottom: '1px solid rgba(0,0,0,0.06)',
+              background: '#FAFAF8',
+            }}
+          >
+            {[
+              { label: 'Vault', align: 'left' },
+              { label: 'TVL', align: 'left' },
+              { label: 'Curator', align: 'left' },
+              { label: 'Exposure', align: 'left' },
+              { label: 'Policies', align: 'center' },
+              { label: 'Target APY', align: 'right' },
+            ].map((col) => (
+              <th
+                key={col.label}
+                style={{
+                  padding: '12px 24px',
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: '11px',
+                  fontWeight: 500,
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  color: '#9A9A9A',
+                  textAlign: col.align as 'left' | 'center' | 'right',
+                }}
+              >
+                {col.label}
+              </th>
+            ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-50">
+        <tbody>
           {vaultAddresses.map((address) => (
             <VaultRow key={address} vaultAddress={address} />
           ))}

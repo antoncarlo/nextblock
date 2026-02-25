@@ -1,5 +1,4 @@
 'use client';
-
 import Link from 'next/link';
 import { useAccount } from 'wagmi';
 import { WalletButton } from './WalletButton';
@@ -14,36 +13,77 @@ export function Header() {
     address?.toLowerCase() === adminAddress.toLowerCase();
 
   return (
-    <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/80 backdrop-blur-sm">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Logo + nav */}
-        <div className="flex items-center gap-8">
-          <Link href="/app" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900">
-              <span className="text-sm font-bold text-white">NB</span>
-            </div>
-            <span className="text-lg font-semibold text-gray-900">
-              NextBlock
-            </span>
-          </Link>
+    <header
+      className="sticky top-0 z-50"
+      style={{
+        background: 'rgba(250, 250, 248, 0.92)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderBottom: '1px solid rgba(0,0,0,0.06)',
+      }}
+    >
+      <div
+        className="mx-auto flex items-center justify-between"
+        style={{ maxWidth: '1280px', padding: '0 32px', height: '64px' }}
+      >
+        {/* Logo */}
+        <Link href="/app" className="flex items-center" style={{ textDecoration: 'none' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/assets/logo-black.svg"
+            alt="NextBlock"
+            style={{ height: '26px', width: 'auto' }}
+          />
+        </Link>
 
-          <nav className="hidden items-center gap-1 sm:flex">
+        {/* Nav pill — center */}
+        <nav
+          className="hidden sm:flex items-center gap-1"
+          style={{
+            background: 'rgba(255,255,255,0.85)',
+            border: '1px solid rgba(0,0,0,0.06)',
+            borderRadius: '50px',
+            padding: '4px 6px',
+            backdropFilter: 'blur(20px)',
+          }}
+        >
+          <Link
+            href="/app"
+            style={{
+              padding: '6px 18px',
+              borderRadius: '50px',
+              fontSize: '13px',
+              fontWeight: 500,
+              fontFamily: "'Inter', sans-serif",
+              color: '#1B3A6B',
+              textDecoration: 'none',
+              letterSpacing: '0.01em',
+              transition: 'background 0.2s',
+            }}
+            className="hover:bg-black/5"
+          >
+            Vaults
+          </Link>
+          {isAdmin && (
             <Link
-              href="/app"
-              className="rounded-md px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
+              href="/app/admin"
+              style={{
+                padding: '6px 18px',
+                borderRadius: '50px',
+                fontSize: '13px',
+                fontWeight: 500,
+                fontFamily: "'Inter', sans-serif",
+                color: '#6B7280',
+                textDecoration: 'none',
+                letterSpacing: '0.01em',
+                transition: 'background 0.2s',
+              }}
+              className="hover:bg-black/5"
             >
-              Vaults
+              Admin
             </Link>
-            {isAdmin && (
-              <Link
-                href="/app/admin"
-                className="rounded-md px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900"
-              >
-                Admin
-              </Link>
-            )}
-          </nav>
-        </div>
+          )}
+        </nav>
 
         {/* Wallet */}
         <div className="flex items-center gap-3">
