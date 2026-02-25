@@ -24,7 +24,7 @@ export function Header() {
     >
       <div
         className="mx-auto flex items-center justify-between"
-        style={{ maxWidth: '1280px', padding: '0 32px', height: '64px' }}
+        style={{ maxWidth: '1280px', padding: '0 32px', height: '80px' }}
       >
         {/* Logo */}
         <Link href="/app" className="flex items-center" style={{ textDecoration: 'none' }}>
@@ -32,7 +32,7 @@ export function Header() {
           <img
             src="/assets/logo-black.svg"
             alt="NextBlock"
-            style={{ height: '26px', width: 'auto' }}
+            style={{ height: '160px', width: 'auto' }}
           />
         </Link>
 
