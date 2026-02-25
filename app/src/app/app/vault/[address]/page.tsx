@@ -154,7 +154,7 @@ export default function VaultDetailPage({
             Could not load vault at address {shortenAddress(vaultAddress)}
           </p>
           <Link
-            href="/"
+            href="/app"
             className="mt-4 inline-block text-sm font-medium text-blue-600 hover:text-blue-800"
           >
             Back to vaults
@@ -216,7 +216,7 @@ export default function VaultDetailPage({
       {/* Breadcrumb */}
       <div className="mb-6">
         <Link
-          href="/"
+          href="/app"
           className="text-sm text-gray-500 transition-colors hover:text-gray-700"
         >
           Vaults

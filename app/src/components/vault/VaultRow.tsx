@@ -159,7 +159,7 @@ export function VaultRow({ vaultAddress }: VaultRowProps) {
   return (
     <tr className="group cursor-pointer border-b border-gray-50 transition-colors hover:bg-gray-50">
       <td className="px-6 py-4">
-        <Link href={`/vault/${vaultAddress}`} className="block">
+        <Link href={`/app/vault/${vaultAddress}`} className="block">
           <div className="text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
             {name}
           </div>
@@ -167,19 +167,19 @@ export function VaultRow({ vaultAddress }: VaultRowProps) {
         </Link>
       </td>
       <td className="px-6 py-4">
-        <Link href={`/vault/${vaultAddress}`} className="block">
+        <Link href={`/app/vault/${vaultAddress}`} className="block">
           <span className="font-mono text-sm font-medium text-gray-900">
             {formatUSDCCompact(assets)}
           </span>
         </Link>
       </td>
       <td className="px-6 py-4">
-        <Link href={`/vault/${vaultAddress}`} className="block">
+        <Link href={`/app/vault/${vaultAddress}`} className="block">
           <span className="text-sm text-gray-600">{ensName || shortenAddress(managerAddr!)}</span>
         </Link>
       </td>
       <td className="px-6 py-4">
-        <Link href={`/vault/${vaultAddress}`} className="block">
+        <Link href={`/app/vault/${vaultAddress}`} className="block">
           <div className="flex items-center gap-1.5">
             {Array.from(verificationTypes)
               .sort()
@@ -193,14 +193,14 @@ export function VaultRow({ vaultAddress }: VaultRowProps) {
         </Link>
       </td>
       <td className="px-6 py-4 text-center">
-        <Link href={`/vault/${vaultAddress}`} className="block">
+        <Link href={`/app/vault/${vaultAddress}`} className="block">
           <span className="text-sm font-medium text-gray-700">
             {Number(policyCount)}
           </span>
         </Link>
       </td>
       <td className="px-6 py-4 text-right">
-        <Link href={`/vault/${vaultAddress}`} className="block">
+        <Link href={`/app/vault/${vaultAddress}`} className="block">
           <span className="text-sm font-semibold text-gray-900">
             {display.targetApy}
           </span>
