@@ -1,16 +1,44 @@
 'use client';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import { WalletButton } from './WalletButton';
 import { WalletRoleIndicator } from './WalletRoleIndicator';
 import { useAdminAddress } from '@/hooks/useAdminAddress';
 
+// Off-chain KYC whitelist — same list used in create-vault page
+const KYC_WHITELIST: string[] = [
+  '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
+  '0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266',
+  '0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc',
+];
+
+const navLinkStyle = (active: boolean): React.CSSProperties => ({
+  padding: '6px 18px',
+  borderRadius: '50px',
+  fontSize: '13px',
+  fontWeight: active ? 600 : 500,
+  fontFamily: "'Inter', sans-serif",
+  color: active ? '#1B3A6B' : '#6B7280',
+  textDecoration: 'none',
+  letterSpacing: '0.01em',
+  transition: 'background 0.2s',
+  backgroundColor: active ? 'rgba(27,58,107,0.08)' : 'transparent',
+});
+
 export function Header() {
   const { address, isConnected } = useAccount();
   const adminAddress = useAdminAddress();
+  const pathname = usePathname();
+
   const isAdmin =
     isConnected &&
     address?.toLowerCase() === adminAddress.toLowerCase();
+
+  const isKycApproved =
+    isConnected && address
+      ? KYC_WHITELIST.map(a => a.toLowerCase()).includes(address.toLowerCase())
+      : false;
 
   return (
     <header
@@ -49,35 +77,42 @@ export function Header() {
         >
           <Link
             href="/app"
-            style={{
-              padding: '6px 18px',
-              borderRadius: '50px',
-              fontSize: '13px',
-              fontWeight: 500,
-              fontFamily: "'Inter', sans-serif",
-              color: '#1B3A6B',
-              textDecoration: 'none',
-              letterSpacing: '0.01em',
-              transition: 'background 0.2s',
-            }}
+            style={navLinkStyle(pathname === '/app')}
             className="hover:bg-black/5"
           >
             Vaults
           </Link>
+
+          <Link
+            href="/app/curators"
+            style={navLinkStyle(pathname?.startsWith('/app/curators') ?? false)}
+            className="hover:bg-black/5"
+          >
+            Curators
+          </Link>
+
+          {/* Create Vault — visible only to KYC-approved curators */}
+          {isKycApproved && (
+            <Link
+              href="/app/create-vault"
+              style={{
+                ...navLinkStyle(pathname?.startsWith('/app/create-vault') ?? false),
+                backgroundColor:
+                  pathname?.startsWith('/app/create-vault')
+                    ? 'rgba(27,58,107,0.08)'
+                    : 'rgba(27,58,107,0.06)',
+                color: '#1B3A6B',
+              }}
+              className="hover:bg-black/5"
+            >
+              + Create Vault
+            </Link>
+          )}
+
           {isAdmin && (
             <Link
               href="/app/admin"
-              style={{
-                padding: '6px 18px',
-                borderRadius: '50px',
-                fontSize: '13px',
-                fontWeight: 500,
-                fontFamily: "'Inter', sans-serif",
-                color: '#6B7280',
-                textDecoration: 'none',
-                letterSpacing: '0.01em',
-                transition: 'background 0.2s',
-              }}
+              style={navLinkStyle(pathname?.startsWith('/app/admin') ?? false)}
               className="hover:bg-black/5"
             >
               Admin
