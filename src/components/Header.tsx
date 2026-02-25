@@ -108,7 +108,7 @@ const Header = () => {
             Protocol
           </a>
           <a 
-            href="https://nextblock-zeta.vercel.app"
+            href="https://nextblock2.vercel.app/app"
             target="_blank"
             rel="noopener noreferrer"
             className="transition-all duration-200"
