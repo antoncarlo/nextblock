@@ -9,13 +9,11 @@ interface NavLinkCompatProps {
   to: string;
   className?: string;
   activeClassName?: string;
-  pendingClassName?: string;
   children?: React.ReactNode;
-  [key: string]: unknown;
 }
 
 const NavLink = forwardRef<HTMLAnchorElement, NavLinkCompatProps>(
-  ({ className, activeClassName, to, children, ...props }, ref) => {
+  ({ className, activeClassName, to, children }, ref) => {
     const pathname = usePathname();
     const isActive = pathname === to;
 
@@ -24,7 +22,6 @@ const NavLink = forwardRef<HTMLAnchorElement, NavLinkCompatProps>(
         ref={ref}
         href={to}
         className={cn(className, isActive && activeClassName)}
-        {...props}
       >
         {children}
       </Link>
