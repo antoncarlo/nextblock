@@ -1,6 +1,6 @@
 "use client";
-
 import { motion } from "framer-motion";
+const lionImage = "/assets/protocol-stack-lion.png";
 import { SectionConnector } from "./FlowchartLines";
 import DecorativeGrid from "./DecorativeGrid";
 
@@ -37,7 +37,7 @@ const ProtocolStackCards = () => {
       <div 
         className="absolute inset-0"
         style={{
-          backgroundImage: `url(${"/assets/protocol-stack-lion.png"})`,
+          backgroundImage: `url(${lionImage})`,
           backgroundSize: 'contain',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',

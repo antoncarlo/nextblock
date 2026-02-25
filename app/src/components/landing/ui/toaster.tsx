@@ -1,6 +1,4 @@
-"use client";
-
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks-landing/use-toast";
 import { Toast, ToastClose, ToastDescription, ToastProvider, ToastTitle, ToastViewport } from "@/components/landing/ui/toast";
 
 export function Toaster() {

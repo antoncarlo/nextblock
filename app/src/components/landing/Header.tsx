@@ -1,8 +1,7 @@
 "use client";
-
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
-import Link from "next/link";
+const logoBlack = "/assets/logo-black.svg";
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -27,30 +26,30 @@ const Header = () => {
         padding: '20px 40px',
       }}
     >
-      <div
+      <div 
         className="mx-auto flex items-center justify-center relative"
         style={{
           maxWidth: '1280px',
         }}
       >
         {/* Left: Logo - Outside container, hidden on scroll */}
-        <motion.a
-          href="#"
+        <motion.a 
+          href="#" 
           className="flex items-center absolute left-0"
           initial={{ opacity: 1 }}
-          animate={{
+          animate={{ 
             opacity: isScrolled ? 0 : 1,
             pointerEvents: isScrolled ? 'none' : 'auto',
           }}
           transition={{ duration: 0.3 }}
         >
-          <img
-            src="/assets/logo-black.svg"
-            alt="NextBlock"
+          <img 
+            src={logoBlack} 
+            alt="NextBlock" 
             style={{ height: '140px', width: 'auto' }}
           />
         </motion.a>
-
+        
         {/* Center: Navigation container */}
         <div
           className="flex items-center gap-6 md:gap-10"
@@ -64,8 +63,8 @@ const Header = () => {
             boxShadow: isScrolled ? '0 4px 24px rgba(0, 0, 0, 0.08)' : '0 2px 12px rgba(0, 0, 0, 0.04)',
           }}
         >
-          <a
-            href="#about"
+          <a 
+            href="#about" 
             className="transition-colors duration-200"
             style={{
               fontFamily: "'Playfair Display', Georgia, serif",
@@ -79,8 +78,8 @@ const Header = () => {
           >
             Market
           </a>
-          <a
-            href="#how-it-works"
+          <a 
+            href="#how-it-works" 
             className="transition-colors duration-200"
             style={{
               fontFamily: "'Playfair Display', Georgia, serif",
@@ -94,8 +93,8 @@ const Header = () => {
           >
             How It Works
           </a>
-          <a
-            href="#protocol-stack"
+          <a 
+            href="#protocol-stack" 
             className="transition-colors duration-200"
             style={{
               fontFamily: "'Playfair Display', Georgia, serif",
@@ -109,8 +108,10 @@ const Header = () => {
           >
             Protocol
           </a>
-          <Link
+          <a 
             href="/app"
+            target="_blank"
+            rel="noopener noreferrer"
             className="transition-all duration-200"
             style={{
               fontFamily: "'Playfair Display', Georgia, serif",
@@ -122,21 +123,20 @@ const Header = () => {
               padding: '8px 20px',
               borderRadius: '50px',
               border: '1.5px solid #1B3A6B',
-              textDecoration: 'none',
             }}
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLAnchorElement).style.backgroundColor = '#1B3A6B';
-              (e.currentTarget as HTMLAnchorElement).style.color = '#fff';
+              e.currentTarget.style.backgroundColor = '#1B3A6B';
+              e.currentTarget.style.color = '#fff';
             }}
             onMouseLeave={(e) => {
-              (e.currentTarget as HTMLAnchorElement).style.backgroundColor = 'transparent';
-              (e.currentTarget as HTMLAnchorElement).style.color = '#1B3A6B';
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = '#1B3A6B';
             }}
           >
             Launch App
-          </Link>
-          <a
-            href="#waitlist"
+          </a>
+          <a 
+            href="#waitlist" 
             className="transition-all duration-200"
             style={{
               fontFamily: "'Playfair Display', Georgia, serif",

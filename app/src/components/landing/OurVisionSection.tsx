@@ -1,6 +1,6 @@
 "use client";
-
 import { motion } from "framer-motion";
+const veniceImage = "/assets/our-vision-venice.png";
 import { SectionConnector } from "./FlowchartLines";
 import DecorativeGrid from "./DecorativeGrid";
 
@@ -169,7 +169,7 @@ const OurVisionSection = () => {
             }}
           >
             <img
-              src={"/assets/our-vision-venice.png"}
+              src={veniceImage}
               alt="Venetian merchant at desk with Grand Canal view"
               style={{
                 width: '100%',

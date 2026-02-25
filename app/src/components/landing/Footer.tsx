@@ -1,8 +1,10 @@
 "use client";
-
 import { motion } from "framer-motion";
 import { Linkedin, Mail } from "lucide-react";
 import WaitlistSection from "./WaitlistSection";
+const footerFriezeVideo = "/assets/footer-frieze.mp4";
+const logoBlack = "/assets/logo-black.svg";
+
 // Custom X (Twitter) icon since lucide doesn't have the new X logo
 const XIcon = ({ size = 20 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
@@ -67,7 +69,7 @@ const Footer = () => {
         {/* Decorative frieze at top */}
         <div className="relative w-full overflow-hidden">
           <video
-            src={"/assets/footer-frieze.mp4"}
+            src={footerFriezeVideo}
             autoPlay
             loop
             muted
@@ -93,7 +95,7 @@ const Footer = () => {
             <div className="lg:col-span-1">
               <a href="#" className="inline-block mb-4">
                 <img 
-                  src={"/assets/logo-black.svg"} 
+                  src={logoBlack} 
                   alt="NextBlock" 
                   style={{ height: '100px', width: 'auto' }}
                 />

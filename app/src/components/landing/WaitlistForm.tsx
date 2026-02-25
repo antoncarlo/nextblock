@@ -1,10 +1,9 @@
 "use client";
-
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Send, CheckCircle } from "lucide-react";
 import { z } from "zod";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks-landing/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 const waitlistSchema = z.object({

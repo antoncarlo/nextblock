@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import IntroExperience from "@/components/landing/intro/IntroExperience";
@@ -18,28 +17,26 @@ export default function HomePage() {
 
   return (
     <>
-      <AnimatePresence mode="wait">
+      <AnimatePresence>
         {showIntro && (
-          <IntroExperience
-            key="intro"
-            onComplete={() => setShowIntro(false)}
-          />
+          <IntroExperience onComplete={() => setShowIntro(false)} />
         )}
       </AnimatePresence>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: showIntro ? 0 : 1 }}
-        transition={{ duration: 0.8 }}
-        className="min-h-screen bg-background relative"
+        transition={{ duration: 0.5 }}
       >
-        <FlowchartLines />
-        <FloatingParallaxElements />
         <Header />
-        <HeroSection />
-        <KeyBenefitsSection />
-        <FeaturesSection />
-        <AboutSection />
-        <OurVisionSection />
+        <main>
+          <HeroSection />
+          <FlowchartLines />
+          <FloatingParallaxElements />
+          <KeyBenefitsSection />
+          <FeaturesSection />
+          <AboutSection />
+          <OurVisionSection />
+        </main>
         <Footer />
       </motion.div>
     </>

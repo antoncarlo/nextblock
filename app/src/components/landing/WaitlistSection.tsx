@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Compass, Key, Handshake, ChevronRight } from "lucide-react";

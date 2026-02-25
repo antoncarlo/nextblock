@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Lock, Unlock, ChevronLeft, ChevronRight } from "lucide-react";

@@ -1,5 +1,4 @@
 "use client";
-
 import { motion } from "framer-motion";
 import { SectionConnector } from "./FlowchartLines";
 import DecorativeGrid from "./DecorativeGrid";

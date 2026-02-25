@@ -1,7 +1,9 @@
 "use client";
-
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+const logoLeftWhite = "/assets/logo-left.svg";
+const logoRightWhite = "/assets/logo-right.svg";
+
 interface IntroExperienceProps {
   onComplete: () => void;
 }
@@ -95,7 +97,7 @@ const IntroExperience = ({ onComplete }: IntroExperienceProps) => {
                 }}
               >
                 <img
-                  src={"/assets/logo-left.svg"}
+                  src={logoLeftWhite}
                   alt="Next"
                   className="h-48 md:h-64 lg:h-96 w-auto"
                   style={{
@@ -119,7 +121,7 @@ const IntroExperience = ({ onComplete }: IntroExperienceProps) => {
                 }}
               >
                 <img
-                  src={"/assets/logo-right.svg"}
+                  src={logoRightWhite}
                   alt="Block"
                   className="h-48 md:h-64 lg:h-96 w-auto"
                   style={{

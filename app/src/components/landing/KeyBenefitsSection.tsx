@@ -1,13 +1,14 @@
-"use client";
+const baseLogo = "/assets/base-logo.webp";
+const ethereumLogo = "/assets/ethereum-logo.png";
 
 const techBadges = [
   {
     name: "Base",
-    icon: <img src={"/assets/base-logo.webp"} alt="Base" className="w-5 h-5 object-contain" />,
+    icon: <img src={baseLogo} alt="Base" className="w-5 h-5 object-contain" />,
   },
   {
     name: "Ethereum",
-    icon: <img src={"/assets/ethereum-logo.png"} alt="Ethereum" className="w-5 h-5 object-contain" />,
+    icon: <img src={ethereumLogo} alt="Ethereum" className="w-5 h-5 object-contain" />,
   },
   {
     name: "Compliant Infrastructure",
