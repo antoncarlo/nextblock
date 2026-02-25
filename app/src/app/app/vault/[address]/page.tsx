@@ -82,6 +82,9 @@ export default function VaultDetailPage({ params }: { params: Promise<{ address:
 
   const managerAddr = vaultInfo ? ((vaultInfo as unknown as [string, `0x${string}`])[1]) : undefined;
   const { ensName: managerEns } = useEnsName(managerAddr);
+  const isManager = isConnected && userAddress && managerAddr
+    ? userAddress.toLowerCase() === managerAddr.toLowerCase()
+    : false;
 
   if (vaultLoading) return <VaultDetailSkeleton />;
 
@@ -129,6 +132,12 @@ export default function VaultDetailPage({ params }: { params: Promise<{ address:
             </Link>
             <span style={{ color: "rgba(255,255,255,0.25)", fontSize: "13px" }}>/</span>
             <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(255,255,255,0.85)" }}>{name}</span>
+            {isManager && (
+              <>
+                <span style={{ color: "rgba(255,255,255,0.25)", fontSize: "13px" }}>/</span>
+                <Link href={`/app/vault/${vaultAddress}/manage`} style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "#C9A84C", textDecoration: "none", fontWeight: 600 }}>Manage</Link>
+              </>
+            )}
           </div>
 
           {/* Vault name + strategy */}
@@ -150,9 +159,35 @@ export default function VaultDetailPage({ params }: { params: Promise<{ address:
                 &ldquo;{display.strategy}&rdquo;
               </p>
             </div>
-            <div style={{ textAlign: "right" }}>
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.4)", marginBottom: "4px" }}>Target APY</p>
-              <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "32px", fontWeight: 400, color: "#FFFFFF", lineHeight: 1 }}>{display.targetApy}</p>
+            <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "12px" }}>
+              <div>
+                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.4)", marginBottom: "4px" }}>Target APY</p>
+                <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "32px", fontWeight: 400, color: "#FFFFFF", lineHeight: 1 }}>{display.targetApy}</p>
+              </div>
+              {isManager && (
+                <Link
+                  href={`/app/vault/${vaultAddress}/manage`}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    background: "rgba(201,168,76,0.15)",
+                    border: "1px solid rgba(201,168,76,0.4)",
+                    color: "#C9A84C",
+                    padding: "8px 16px",
+                    borderRadius: "8px",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    fontFamily: "'Inter', sans-serif",
+                    textDecoration: "none",
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+                  </svg>
+                  Manage Vault
+                </Link>
+              )}
             </div>
           </div>
 
