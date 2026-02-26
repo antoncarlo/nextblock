@@ -42,9 +42,12 @@ export const BASIS_POINTS = 10_000;
  * Admin wallet address per chain.
  */
 export const CHAIN_ADMIN_ADDRESS: Record<number, `0x${string}`> = {
-  84532: '0x35cE744bc6b5CE979fA3251b8008b64C35aa8505', // Base Sepolia admin
-  11155111: '0x35cE744bc6b5CE979fA3251b8008b64C35aa8505', // Ethereum Sepolia admin
-  5042002: '0x35cE744bc6b5CE979fA3251b8008b64C35aa8505', // Arc Testnet admin
+  84532: '0x810fa6726eeB6014c2F77Bb4802A5734C28b0F3e', // Base Sepolia admin (Anton Carlo)
+  11155111: '0x810fa6726eeB6014c2F77Bb4802A5734C28b0F3e', // Ethereum Sepolia admin (Anton Carlo)
+  5042002: '0x810fa6726eeB6014c2F77Bb4802A5734C28b0F3e', // Arc Testnet admin (Anton Carlo)
+  1: '0x810fa6726eeB6014c2F77Bb4802A5734C28b0F3e', // Ethereum Mainnet admin (Anton Carlo)
+  8453: '0x810fa6726eeB6014c2F77Bb4802A5734C28b0F3e', // Base Mainnet admin (Anton Carlo)
+  31337: '0x810fa6726eeB6014c2F77Bb4802A5734C28b0F3e', // Anvil local admin (Anton Carlo)
 };
 
 /**
