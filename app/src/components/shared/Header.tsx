@@ -1,13 +1,14 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState } from 'react';
 import { useAccount } from 'wagmi';
 import { WalletButton } from './WalletButton';
 import { WalletRoleIndicator } from './WalletRoleIndicator';
 import { useAdminAddress } from '@/hooks/useAdminAddress';
 import { INSURANCE_COMPANY_WHITELIST, CURATOR_WHITELIST } from '@/app/app/apply/page';
 
-// Combined KYC whitelist — insurance companies + curators
+// Combined KYC whitelist — insurance companies + syndicates
 const KYC_WHITELIST: string[] = [
   ...INSURANCE_COMPANY_WHITELIST,
   ...CURATOR_WHITELIST,
@@ -30,6 +31,7 @@ export function Header() {
   const { address, isConnected } = useAccount();
   const adminAddress = useAdminAddress();
   const pathname = usePathname();
+  const [showSyndicateInfo, setShowSyndicateInfo] = useState(false);
 
   const isAdmin =
     isConnected &&
@@ -83,13 +85,153 @@ export function Header() {
             Vaults
           </Link>
 
-          <Link
-            href="/app/curators"
-            style={navLinkStyle(pathname?.startsWith('/app/curators') ?? false)}
-            className="hover:bg-black/5"
-          >
-            Curators
-          </Link>
+          {/* Syndicates link with info icon */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', position: 'relative' }}>
+            <Link
+              href="/app/syndicates"
+              style={navLinkStyle(pathname?.startsWith('/app/syndicates') ?? false)}
+              className="hover:bg-black/5"
+            >
+              Syndicates
+            </Link>
+            <button
+              onClick={() => setShowSyndicateInfo(!showSyndicateInfo)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '16px',
+                height: '16px',
+                borderRadius: '50%',
+                border: '1.5px solid #9CA3AF',
+                backgroundColor: 'transparent',
+                color: '#9CA3AF',
+                fontSize: '10px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                padding: 0,
+                lineHeight: 1,
+                flexShrink: 0,
+                transition: 'border-color 0.2s, color 0.2s',
+              }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLButtonElement).style.borderColor = '#1B3A6B';
+                (e.currentTarget as HTMLButtonElement).style.color = '#1B3A6B';
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLButtonElement).style.borderColor = '#9CA3AF';
+                (e.currentTarget as HTMLButtonElement).style.color = '#9CA3AF';
+              }}
+              aria-label="What is a Syndicate?"
+            >
+              i
+            </button>
+
+            {/* Info popup */}
+            {showSyndicateInfo && (
+              <>
+                {/* Backdrop */}
+                <div
+                  style={{ position: 'fixed', inset: 0, zIndex: 998 }}
+                  onClick={() => setShowSyndicateInfo(false)}
+                />
+                {/* Popup card */}
+                <div style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 16px)',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  zIndex: 999,
+                  backgroundColor: '#FFFFFF',
+                  border: '1px solid #E8E4DC',
+                  borderRadius: '14px',
+                  padding: '22px 26px',
+                  width: '360px',
+                  boxShadow: '0 12px 40px rgba(27,58,107,0.16)',
+                }}>
+                  {/* Arrow */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '-7px',
+                    left: '50%',
+                    transform: 'translateX(-50%) rotate(45deg)',
+                    width: '12px',
+                    height: '12px',
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #E8E4DC',
+                    borderBottom: 'none',
+                    borderRight: 'none',
+                  }} />
+
+                  {/* Header */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '14px' }}>
+                    <h4 style={{
+                      fontFamily: '"Playfair Display", Georgia, serif',
+                      fontSize: '17px',
+                      fontWeight: 700,
+                      color: '#1B3A6B',
+                      margin: 0,
+                      lineHeight: 1.3,
+                    }}>
+                      What is a Syndicate?
+                    </h4>
+                    <button
+                      onClick={() => setShowSyndicateInfo(false)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: '#9CA3AF',
+                        fontSize: '18px',
+                        padding: '0 0 0 10px',
+                        lineHeight: 1,
+                        flexShrink: 0,
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  <p style={{ fontSize: '13px', color: '#374151', lineHeight: '1.65', margin: '0 0 12px' }}>
+                    On NextBlock, <strong>Syndicates</strong> are what we call <strong>Vault Curators</strong> — the licensed reinsurers, insurers, and asset managers who deploy and manage insurance vaults on the protocol.
+                  </p>
+
+                  <p style={{ fontSize: '13px', color: '#374151', lineHeight: '1.65', margin: '0 0 12px' }}>
+                    The name is inspired by the <strong>Lloyd&apos;s of London</strong> model, where independent Syndicates underwrite risk pools and attract capital from investors. Each NextBlock Syndicate:
+                  </p>
+
+                  <ul style={{ fontSize: '13px', color: '#374151', lineHeight: '1.75', margin: '0 0 16px', paddingLeft: '18px' }}>
+                    <li>Deploys an <strong>ERC-4626 vault</strong> with a defined insurance strategy</li>
+                    <li>Registers and manages <strong>tokenized insurance policies</strong></li>
+                    <li>Sets <strong>risk parameters</strong>: buffer ratio, fees, verification paths</li>
+                    <li>Attracts <strong>USDC liquidity</strong> from investors seeking insurance yield</li>
+                  </ul>
+
+                  <div style={{
+                    backgroundColor: '#F0F4FF',
+                    borderRadius: '8px',
+                    padding: '10px 14px',
+                    marginBottom: '16px',
+                    fontSize: '12px',
+                    color: '#1D4ED8',
+                    lineHeight: '1.6',
+                  }}>
+                    <strong>KYC required.</strong> Only entities approved by NextBlock after identity and regulatory verification may operate as Syndicate Managers.
+                  </div>
+
+                  <div style={{ borderTop: '1px solid #F0EDE8', paddingTop: '12px', display: 'flex', justifyContent: 'flex-end' }}>
+                    <Link
+                      href="/app/syndicates"
+                      onClick={() => setShowSyndicateInfo(false)}
+                      style={{ fontSize: '12px', fontWeight: 600, color: '#1B3A6B', textDecoration: 'none' }}
+                    >
+                      View all Syndicates →
+                    </Link>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
 
           <Link
             href="/app/apply"

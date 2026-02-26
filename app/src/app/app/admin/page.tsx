@@ -71,7 +71,7 @@ export default function AdminPage() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">
-          Admin / Curator Panel
+          Admin / Syndicate Manager Panel
         </h1>
         <p className="mt-1 text-sm text-gray-500">
           Control time, oracles, and claim triggers for the demo. All changes
@@ -126,13 +126,13 @@ export default function AdminPage() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                 <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#C9A84C' }} />
-                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '12px', fontWeight: 600, color: '#92400E', margin: 0 }}>Vault Curators ({CURATOR_WHITELIST.length})</p>
+                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '12px', fontWeight: 600, color: '#92400E', margin: 0 }}>Vault Syndicates ({CURATOR_WHITELIST.length})</p>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {CURATOR_WHITELIST.map((addr) => (
                   <div key={addr} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(201,168,76,0.06)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: '8px', padding: '10px 14px' }}>
                     <span style={{ fontFamily: 'monospace', fontSize: '12px', color: '#92400E' }}>{addr.slice(0, 10)}...{addr.slice(-6)}</span>
-                    <span style={{ fontFamily: "'Inter', sans-serif", fontSize: '10px', fontWeight: 600, background: 'rgba(201,168,76,0.12)', color: '#92400E', padding: '2px 8px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Curator</span>
+                    <span style={{ fontFamily: "'Inter', sans-serif", fontSize: '10px', fontWeight: 600, background: 'rgba(201,168,76,0.12)', color: '#92400E', padding: '2px 8px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Syndicate Manager</span>
                   </div>
                 ))}
               </div>

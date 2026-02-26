@@ -16,8 +16,8 @@ interface RoleCardData {
 
 const roleCards: RoleCardData[] = [
   {
-    id: "curator",
-    label: "For Vault Curators",
+    id: "syndicate manager",
+    label: "For Vault Syndicates",
     title: "Reinsurers · Insurers · Asset Managers",
     content: "Deploy compliant vaults. Access global capital. You control underwriting — the protocol handles infrastructure.",
     icon: <Compass />,

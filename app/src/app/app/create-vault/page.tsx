@@ -7,7 +7,7 @@ import { VAULT_FACTORY_ABI, CHAIN_ADDRESSES } from '@/config/contracts';
 import { useAddresses } from '@/hooks/useAddresses';
 import { INSURANCE_COMPANY_WHITELIST, CURATOR_WHITELIST } from '@/app/app/apply/page';
 
-// Combined KYC whitelist — insurance companies + curators
+// Combined KYC whitelist — insurance companies + syndicates
 const KYC_WHITELIST: string[] = [
   ...INSURANCE_COMPANY_WHITELIST,
   ...CURATOR_WHITELIST,
@@ -179,11 +179,11 @@ export default function CreateVaultPage() {
               Connected wallet: <code style={{ backgroundColor: '#F5F5F5', padding: '2px 6px', borderRadius: '4px', fontSize: '12px' }}>{address?.slice(0, 6)}...{address?.slice(-4)}</code>
             </p>
             <div style={{ backgroundColor: '#FAFAF8', border: '1px solid #E8E4DC', borderRadius: '12px', padding: '24px', marginBottom: '32px', textAlign: 'left' }}>
-              <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#1B3A6B', marginBottom: '16px' }}>How to become a curator:</h3>
+              <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#1B3A6B', marginBottom: '16px' }}>How to become a syndicate manager:</h3>
               {[
-                { step: '01', title: 'Submit Application', desc: 'Fill out the curator application form with your entity details, regulatory status, and proposed vault strategy.' },
+                { step: '01', title: 'Submit Application', desc: 'Fill out the syndicate manager application form with your entity details, regulatory status, and proposed vault strategy.' },
                 { step: '02', title: 'KYC / KYB Verification', desc: 'Complete identity and business verification. NextBlock reviews your regulatory license and jurisdiction.' },
-                { step: '03', title: 'Whitelist Approval', desc: 'Once approved, your wallet address is added to the curator whitelist and you gain access to vault creation.' },
+                { step: '03', title: 'Whitelist Approval', desc: 'Once approved, your wallet address is added to the syndicate manager whitelist and you gain access to vault creation.' },
                 { step: '04', title: 'Deploy Your Vault', desc: 'Use this interface to deploy your ERC-4626 vault via VaultFactory with your chosen parameters.' },
               ].map(item => (
                 <div key={item.step} style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
@@ -196,14 +196,14 @@ export default function CreateVaultPage() {
               ))}
             </div>
             <a
-              href="mailto:nextblock@financier.com?subject=Curator Application"
+              href="mailto:nextblock@financier.com?subject=Syndicate Manager Application"
               style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', backgroundColor: '#1B3A6B', color: '#FFFFFF', padding: '14px 32px', borderRadius: '8px', fontSize: '14px', fontWeight: 600, textDecoration: 'none', letterSpacing: '0.02em' }}
             >
-              <ExternalLink size={15} />Apply for Curator Access
+              <ExternalLink size={15} />Apply for Syndicate Access
             </a>
             <p style={{ fontSize: '12px', color: '#8A8A8A', marginTop: '16px' }}>
               Already applied?{' '}
-              <Link href="/app/curators" style={{ color: '#1B3A6B', textDecoration: 'underline' }}>View active curators</Link>
+              <Link href="/app/syndicates" style={{ color: '#1B3A6B', textDecoration: 'underline' }}>View active syndicates</Link>
             </p>
           </div>
         </div>

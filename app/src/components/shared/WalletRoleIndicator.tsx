@@ -13,7 +13,7 @@ export function WalletRoleIndicator() {
   const addr = address.toLowerCase();
   const isAdmin = addr === adminAddress.toLowerCase();
   const isInsurance = INSURANCE_COMPANY_WHITELIST.includes(addr);
-  const isCurator = CURATOR_WHITELIST.includes(addr);
+  const isSyndicateManager = CURATOR_WHITELIST.includes(addr);
 
   if (isAdmin) {
     return (
@@ -33,11 +33,11 @@ export function WalletRoleIndicator() {
     );
   }
 
-  if (isCurator) {
+  if (isSyndicateManager) {
     return (
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', borderRadius: '50px', padding: '3px 10px', fontSize: '11px', fontWeight: 600, fontFamily: "'Inter', sans-serif", background: 'rgba(146,64,14,0.08)', color: '#92400E', border: '1px solid rgba(201,168,76,0.3)' }}>
         <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C9A84C' }} />
-        Curator
+        Syndicate Manager
       </span>
     );
   }

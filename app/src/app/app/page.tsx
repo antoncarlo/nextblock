@@ -63,7 +63,7 @@ export default function VaultDiscoveryPage() {
               marginBottom: "36px",
             }}
           >
-            Deposit capital into curator-managed vaults backed by tokenized
+            Deposit capital into syndicate manager-managed vaults backed by tokenized
             insurance policies. Earn premiums as yield — uncorrelated to
             equities, bonds, and crypto.
           </p>
@@ -71,7 +71,7 @@ export default function VaultDiscoveryPage() {
             {[
               { label: "Target APY Range", value: "5–18%" },
               { label: "Verification Types", value: "3" },
-              { label: "Active Curators", value: "8" },
+              { label: "Active Syndicates", value: "8" },
             ].map((stat) => (
               <div key={stat.label}>
                 <div
@@ -255,7 +255,7 @@ function VaultTableSkeleton() {
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr style={{ borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
-            {["Vault", "TVL", "Curator", "Exposure", "Policies", "Target APY"].map((h) => (
+            {["Vault", "TVL", "Syndicate Manager", "Exposure", "Policies", "Target APY"].map((h) => (
               <th key={h} style={{ padding: "12px 24px", fontFamily: "'Inter', sans-serif", fontSize: "11px", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "#9A9A9A", textAlign: "left" }}>
                 {h}
               </th>

@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { CURATOR_WHITELIST, INSURANCE_COMPANY_WHITELIST } from '@/app/app/apply/page';
 
-// Strategy templates available to curators
+// Strategy templates available to syndicates
 const STRATEGY_TEMPLATES = [
   {
     id: 'conservative-reinsurance',
@@ -96,14 +96,14 @@ const STRATEGY_TEMPLATES = [
     feeRange: 'Custom',
     apyRange: 'Custom',
     verificationTypes: ['Permissionless', 'Oracle', 'Admin'],
-    suitableFor: ['All Curators'],
+    suitableFor: ['All Syndicates'],
     icon: Settings,
     color: '#1B3A6B',
     bg: 'rgba(27,58,107,0.06)',
   },
 ];
 
-// Mock active strategies for the curator
+// Mock active strategies for the syndicate manager
 const ACTIVE_STRATEGIES = [
   {
     id: 'strat-001',
@@ -137,7 +137,7 @@ export default function CuratorDashboardPage() {
     verificationTypes: ['permissionless'],
   });
 
-  const isCurator = isConnected && address
+  const isSyndicateManager = isConnected && address
     ? CURATOR_WHITELIST.includes(address.toLowerCase()) || INSURANCE_COMPANY_WHITELIST.includes(address.toLowerCase())
     : false;
 
@@ -148,30 +148,30 @@ export default function CuratorDashboardPage() {
         <div style={{ textAlign: 'center', maxWidth: '400px', padding: '48px' }}>
           <Lock size={48} color="#1B3A6B" style={{ marginBottom: '20px' }} />
           <h2 style={{ fontFamily: '"Playfair Display", Georgia, serif', fontSize: '24px', color: '#1B3A6B', marginBottom: '12px' }}>Connect Your Wallet</h2>
-          <p style={{ fontSize: '14px', color: '#8A8A8A', lineHeight: '1.6' }}>Connect your wallet to access the curator dashboard.</p>
+          <p style={{ fontSize: '14px', color: '#8A8A8A', lineHeight: '1.6' }}>Connect your wallet to access the syndicate dashboard.</p>
         </div>
       </div>
     );
   }
 
-  // Not a curator
-  if (!isCurator) {
+  // Not a syndicate manager
+  if (!isSyndicateManager) {
     return (
       <div style={{ backgroundColor: '#FAFAF8', minHeight: '100vh' }}>
         <div style={{ background: 'linear-gradient(135deg, #1B3A6B 0%, #0F2447 100%)', padding: '64px 40px 56px' }}>
           <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-            <h1 style={{ fontFamily: '"Playfair Display", Georgia, serif', fontSize: '42px', fontWeight: 700, color: '#FFFFFF', margin: '0 0 12px' }}>Curator Dashboard</h1>
+            <h1 style={{ fontFamily: '"Playfair Display", Georgia, serif', fontSize: '42px', fontWeight: 700, color: '#FFFFFF', margin: '0 0 12px' }}>Syndicate Dashboard</h1>
           </div>
         </div>
         <div style={{ maxWidth: '640px', margin: '64px auto', padding: '0 40px' }}>
           <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E8E4DC', borderRadius: '16px', padding: '48px', textAlign: 'center' }}>
             <Lock size={32} color="#C2410C" style={{ marginBottom: '16px' }} />
-            <h2 style={{ fontFamily: '"Playfair Display", Georgia, serif', fontSize: '22px', color: '#1B3A6B', marginBottom: '12px' }}>Curator Access Required</h2>
+            <h2 style={{ fontFamily: '"Playfair Display", Georgia, serif', fontSize: '22px', color: '#1B3A6B', marginBottom: '12px' }}>Syndicate Access Required</h2>
             <p style={{ fontSize: '14px', color: '#5A5A5A', lineHeight: '1.7', marginBottom: '24px' }}>
-              This dashboard is reserved for KYC-verified curators. Apply to become a curator to access strategy creation and vault management tools.
+              This dashboard is reserved for KYC-verified syndicates. Apply to become a Syndicate Manager to access strategy creation and vault management tools.
             </p>
             <Link href="/app/apply" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', backgroundColor: '#1B3A6B', color: '#FFFFFF', padding: '12px 28px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, textDecoration: 'none' }}>
-              Apply as Curator
+              Apply as Syndicate Manager
             </Link>
           </div>
         </div>
@@ -195,15 +195,15 @@ export default function CuratorDashboardPage() {
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'url(/assets/ships-illustration.jpg)', backgroundSize: 'cover', backgroundPosition: 'center 30%', opacity: 0.07 }} />
         <div style={{ position: 'relative', maxWidth: '1200px', margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
-            <Link href="/app/curators" style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', textDecoration: 'none' }}>Curators</Link>
+            <Link href="/app/syndicates" style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', textDecoration: 'none' }}>Syndicates</Link>
             <ChevronRight size={12} color="rgba(255,255,255,0.3)" />
             <span style={{ color: 'rgba(255,255,255,0.9)', fontSize: '13px' }}>Dashboard</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
             <div>
-              <h1 style={{ fontFamily: '"Playfair Display", Georgia, serif', fontSize: '38px', fontWeight: 700, color: '#FFFFFF', margin: '0 0 8px' }}>Curator Dashboard</h1>
+              <h1 style={{ fontFamily: '"Playfair Display", Georgia, serif', fontSize: '38px', fontWeight: 700, color: '#FFFFFF', margin: '0 0 8px' }}>Syndicate Dashboard</h1>
               <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px', margin: 0 }}>
-                {address?.slice(0, 6)}...{address?.slice(-4)} · Verified Curator
+                {address?.slice(0, 6)}...{address?.slice(-4)} · Verified Syndicate Manager
               </p>
             </div>
             <div style={{ display: 'flex', gap: '24px' }}>
@@ -303,7 +303,7 @@ export default function CuratorDashboardPage() {
               {[
                 { icon: Plus, title: 'Create New Strategy', desc: 'Deploy a new insurance vault with a custom or template-based strategy.', action: () => setActiveTab('new-strategy'), cta: 'Start' },
                 { icon: FileText, title: 'Register Policy', desc: 'Add a new insurance policy to the PolicyRegistry and allocate it to a vault.', action: () => setActiveTab('policies'), cta: 'Register' },
-                { icon: Users, title: 'View All Curators', desc: 'Browse the full list of verified curators and their vault strategies.', action: null, href: '/app/curators', cta: 'Browse' },
+                { icon: Users, title: 'View All Syndicates', desc: 'Browse the full list of verified syndicates and their vault strategies.', action: null, href: '/app/syndicates', cta: 'Browse' },
               ].map(item => (
                 <div key={item.title} style={{ backgroundColor: '#FFFFFF', border: '1px solid #E8E4DC', borderRadius: '12px', padding: '24px' }}>
                   <item.icon size={20} color="#1B3A6B" style={{ marginBottom: '12px' }} />

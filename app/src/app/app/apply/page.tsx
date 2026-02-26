@@ -9,14 +9,14 @@ export const INSURANCE_COMPANY_WHITELIST: string[] = [
   '0x810fa6726eeb6014c2f77bb4802a5734c28b0f3e', // NextBlock Admin (Anton Carlo)
 ];
 
-// Curator whitelist — possono creare vault
+// Syndicate Manager whitelist — possono creare vault
 export const CURATOR_WHITELIST: string[] = [
   '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
   '0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266',
   '0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc',
 ];
 
-type Role = 'insurance' | 'curator' | null;
+type Role = 'insurance' | 'syndicate manager' | null;
 type Step = 'choose' | 'form' | 'submitted';
 
 const INSURANCE_TYPES = [
@@ -63,7 +63,7 @@ export default function ApplyPage() {
     agreedTerms: false,
   });
 
-  // Curator form state
+  // Syndicate Manager form state
   const [curForm, setCurForm] = useState({
     entityName: '',
     entityType: '',
@@ -148,7 +148,7 @@ export default function ApplyPage() {
             Join NextBlock
           </h1>
           <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '15px', color: 'rgba(255,255,255,0.6)', maxWidth: '560px', lineHeight: 1.6 }}>
-            NextBlock is an institutional-grade protocol for tokenized insurance risk. Apply for access as an insurance company or as a vault curator.
+            NextBlock is an institutional-grade protocol for tokenized insurance risk. Apply for access as an insurance company or as a vault syndicate manager.
           </p>
         </div>
       </div>
@@ -171,7 +171,7 @@ export default function ApplyPage() {
           <div style={{ background: 'rgba(27,58,107,0.06)', border: '1px solid rgba(27,58,107,0.2)', borderRadius: '12px', padding: '16px 20px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1B3A6B" strokeWidth="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             <div>
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '14px', fontWeight: 600, color: '#1B3A6B', margin: 0 }}>Your wallet is approved as Curator</p>
+              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '14px', fontWeight: 600, color: '#1B3A6B', margin: 0 }}>Your wallet is approved as Syndicate Manager</p>
               <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '12px', color: '#1B3A6B', opacity: 0.8, margin: '2px 0 0' }}>
                 You can deploy insurance vaults. <Link href="/app/create-vault" style={{ color: '#1B3A6B', fontWeight: 600 }}>Create a vault →</Link>
               </p>
@@ -235,12 +235,12 @@ export default function ApplyPage() {
                 </div>
               </button>
 
-              {/* Curator Card */}
+              {/* Syndicate Manager Card */}
               <button
-                onClick={() => { setRole('curator'); setStep('form'); }}
+                onClick={() => { setRole('syndicate manager'); setStep('form'); }}
                 style={{
-                  background: role === 'curator' ? 'rgba(201,168,76,0.06)' : '#FFFFFF',
-                  border: `2px solid ${role === 'curator' ? '#C9A84C' : 'rgba(201,168,76,0.3)'}`,
+                  background: role === 'syndicate manager' ? 'rgba(201,168,76,0.06)' : '#FFFFFF',
+                  border: `2px solid ${role === 'syndicate manager' ? '#C9A84C' : 'rgba(201,168,76,0.3)'}`,
                   borderRadius: '16px',
                   padding: '28px',
                   textAlign: 'left',
@@ -255,12 +255,12 @@ export default function ApplyPage() {
                     </svg>
                   </div>
                   <div>
-                    <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '17px', fontWeight: 400, color: '#0F1218', margin: 0 }}>Vault Curator</p>
+                    <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '17px', fontWeight: 400, color: '#0F1218', margin: 0 }}>Vault Syndicate Manager</p>
                     <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '12px', color: '#6B7280', margin: '2px 0 0' }}>Asset manager or risk strategist</p>
                   </div>
                 </div>
                 <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '13px', color: '#374151', lineHeight: 1.6, marginBottom: '16px' }}>
-                  Design and deploy insurance risk strategies. Curators set vault parameters, select policies, and manage capital allocation for institutional investors.
+                  Design and deploy insurance risk strategies. Syndicates set vault parameters, select policies, and manage capital allocation for institutional investors.
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {[
@@ -430,15 +430,15 @@ export default function ApplyPage() {
           </form>
         )}
 
-        {/* ── STEP: Curator Form ── */}
-        {step === 'form' && role === 'curator' && (
+        {/* ── STEP: Syndicate Manager Form ── */}
+        {step === 'form' && role === 'syndicate manager' && (
           <form onSubmit={handleCurSubmit}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px' }}>
               <button type="button" onClick={() => setStep('choose')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', fontFamily: "'Inter', sans-serif", fontSize: '13px' }}>
                 ← Back
               </button>
               <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 400, color: '#0F1218', margin: 0 }}>
-                Vault Curator Application
+                Vault Syndicate Manager Application
               </h2>
             </div>
 
@@ -559,7 +559,7 @@ export default function ApplyPage() {
                 letterSpacing: '0.02em',
               }}
             >
-              Submit Curator Application
+              Submit Syndicate Manager Application
             </button>
           </form>
         )}
@@ -575,7 +575,7 @@ export default function ApplyPage() {
             </h2>
             <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '14px', color: '#6B7280', maxWidth: '480px', margin: '0 auto 8px', lineHeight: 1.6 }}>
               Thank you for applying to NextBlock. Our team will review your{' '}
-              {role === 'insurance' ? 'insurance company' : 'curator'} application and contact you at the provided email address.
+              {role === 'insurance' ? 'insurance company' : 'syndicate manager'} application and contact you at the provided email address.
             </p>
             <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '13px', color: '#9A9A9A', marginBottom: '32px' }}>
               Review typically takes <strong>3–7 business days</strong>.
@@ -597,7 +597,7 @@ export default function ApplyPage() {
                 Browse Vaults
               </Link>
               <Link
-                href="/app/curators"
+                href="/app/syndicates"
                 style={{
                   background: 'transparent',
                   color: '#1B3A6B',
@@ -610,7 +610,7 @@ export default function ApplyPage() {
                   textDecoration: 'none',
                 }}
               >
-                View Curators
+                View Syndicates
               </Link>
             </div>
           </div>

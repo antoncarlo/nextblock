@@ -194,7 +194,7 @@ export function VaultRow({ vaultAddress }: VaultRowProps) {
         </Link>
       </td>
 
-      {/* Curator */}
+      {/* Syndicate Manager */}
       <td style={{ padding: "18px 24px" }}>
         <Link href={`/app/vault/${vaultAddress}`} style={{ textDecoration: "none", display: "block" }}>
           <span

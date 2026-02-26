@@ -20,7 +20,7 @@ const CURATORS = [
     kyc: true,
     featured: true,
     since: '2024',
-    badge: 'Founding Curator',
+    badge: 'Founding Syndicate',
   },
   {
     id: 'klapton-re',
@@ -61,7 +61,7 @@ const CURATORS = [
     kyc: true,
     featured: true,
     since: '2024',
-    badge: 'Verified Reinsurer',
+    badge: 'Verified Syndicate',
   },
   {
     id: 'alpine-re',
@@ -80,7 +80,7 @@ const CURATORS = [
     kyc: true,
     featured: false,
     since: '2024',
-    badge: 'Verified Reinsurer',
+    badge: 'Verified Syndicate',
   },
   {
     id: 'stormguard-capital',
@@ -99,7 +99,7 @@ const CURATORS = [
     kyc: true,
     featured: false,
     since: '2024',
-    badge: 'Verified Insurer',
+    badge: 'Verified Syndicate',
   },
   {
     id: 'bondsecure-capital',
@@ -118,7 +118,7 @@ const CURATORS = [
     kyc: true,
     featured: false,
     since: '2024',
-    badge: 'Verified Asset Manager',
+    badge: 'Verified Syndicate',
   },
   {
     id: 'cyberguard-partners',
@@ -137,7 +137,7 @@ const CURATORS = [
     kyc: true,
     featured: false,
     since: '2024',
-    badge: 'Verified Insurer',
+    badge: 'Verified Syndicate',
   },
   {
     id: 'meridian-risk',
@@ -156,7 +156,7 @@ const CURATORS = [
     kyc: true,
     featured: false,
     since: '2024',
-    badge: 'Verified Asset Manager',
+    badge: 'Verified Syndicate',
   },
 ];
 
@@ -190,16 +190,16 @@ export default function CuratorsPage() {
           <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'24px' }}>
             <Link href="/app" style={{ color:'rgba(255,255,255,0.5)', fontSize:'13px', textDecoration:'none' }}>Vaults</Link>
             <ChevronRight size={12} color="rgba(255,255,255,0.3)" />
-            <span style={{ color:'rgba(255,255,255,0.9)', fontSize:'13px' }}>Curators</span>
+            <span style={{ color:'rgba(255,255,255,0.9)', fontSize:'13px' }}>Syndicates</span>
           </div>
           <h1 style={{ fontFamily:'"Playfair Display", Georgia, serif', fontSize:'42px', fontWeight:700, color:'#FFFFFF', margin:'0 0 12px', letterSpacing:'-0.5px' }}>
-            Vault Curators
+            Vault Syndicates
           </h1>
           <p style={{ color:'rgba(255,255,255,0.65)', fontSize:'16px', margin:'0 0 40px', maxWidth:'560px' }}>
             KYC-verified reinsurers, insurers, and asset managers who deploy and manage insurance vaults on the NextBlock protocol.
           </p>
           <div style={{ display:'flex', gap:'48px' }}>
-            {[{ label:'Active Curators', value: CURATORS.length }, { label:'Total Vaults', value: CURATORS.reduce((s,c)=>s+c.vaultCount,0) }, { label:'Total AUM', value: totalAum }].map(s => (
+            {[{ label:'Active Syndicates', value: CURATORS.length }, { label:'Total Vaults', value: CURATORS.reduce((s,c)=>s+c.vaultCount,0) }, { label:'Total AUM', value: totalAum }].map(s => (
               <div key={s.label}>
                 <div style={{ fontFamily:'"Playfair Display", Georgia, serif', fontSize:'28px', fontWeight:700, color:'#FFFFFF' }}>{s.value}</div>
                 <div style={{ fontSize:'12px', color:'rgba(255,255,255,0.5)', marginTop:'2px', letterSpacing:'0.08em', textTransform:'uppercase' }}>{s.label}</div>
@@ -214,8 +214,8 @@ export default function CuratorsPage() {
         <div style={{ maxWidth:'1200px', margin:'0 auto', display:'flex', alignItems:'center', gap:'10px' }}>
           <Lock size={14} color="#1D4ED8" />
           <span style={{ fontSize:'13px', color:'#1D4ED8' }}>
-            <strong>Curator access is restricted.</strong> Only KYC-verified entities approved by NextBlock may deploy vaults.{' '}
-            <Link href="/app/apply" style={{ color:'#1D4ED8', textDecoration:'underline' }}>Apply to become a curator →</Link>{' · '}<Link href="/app/curators/dashboard" style={{ color:'#1D4ED8', textDecoration:'underline', fontWeight:600 }}>Curator Dashboard →</Link>
+            <strong>Syndicate access is restricted.</strong> Only KYC-verified entities approved by NextBlock may deploy Syndicates.{' '}
+            <Link href="/app/apply" style={{ color:'#1D4ED8', textDecoration:'underline' }}>Apply to become a Syndicate Manager →</Link>{' · '}<Link href="/app/syndicates/dashboard" style={{ color:'#1D4ED8', textDecoration:'underline', fontWeight:600 }}>Syndicate Dashboard →</Link>
           </span>
         </div>
       </div>
@@ -224,15 +224,15 @@ export default function CuratorsPage() {
       <div style={{ maxWidth:'1200px', margin:'0 auto', padding:'48px 40px' }}>
 
         {/* Featured */}
-        <h2 style={{ fontFamily:'"Playfair Display", Georgia, serif', fontSize:'22px', fontWeight:600, color:'#1B3A6B', marginBottom:'24px' }}>Featured Curators</h2>
+        <h2 style={{ fontFamily:'"Playfair Display", Georgia, serif', fontSize:'22px', fontWeight:600, color:'#1B3A6B', marginBottom:'24px' }}>Featured Syndicates</h2>
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(520px, 1fr))', gap:'20px', marginBottom:'48px' }}>
-          {featured.map(c => <CuratorCard key={c.id} curator={c} featured />)}
+          {featured.map(c => <CuratorCard key={c.id} syndicateManager={c} featured />)}
         </div>
 
         {/* All */}
-        <h2 style={{ fontFamily:'"Playfair Display", Georgia, serif', fontSize:'22px', fontWeight:600, color:'#1B3A6B', marginBottom:'24px' }}>All Curators</h2>
+        <h2 style={{ fontFamily:'"Playfair Display", Georgia, serif', fontSize:'22px', fontWeight:600, color:'#1B3A6B', marginBottom:'24px' }}>All Syndicates</h2>
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(360px, 1fr))', gap:'16px', marginBottom:'64px' }}>
-          {rest.map(c => <CuratorCard key={c.id} curator={c} featured={false} />)}
+          {rest.map(c => <CuratorCard key={c.id} syndicateManager={c} featured={false} />)}
         </div>
 
         {/* CTA */}
@@ -245,10 +245,10 @@ export default function CuratorsPage() {
           </div>
           <div style={{ display:'flex', flexDirection:'column', gap:'12px', alignItems:'flex-end' }}>
             <Link href="/app/apply" style={{ display:'inline-flex', alignItems:'center', gap:'8px', backgroundColor:'#FFFFFF', color:'#1B3A6B', padding:'14px 28px', borderRadius:'8px', fontSize:'14px', fontWeight:600, textDecoration:'none', whiteSpace:'nowrap', letterSpacing:'0.02em' }}>
-              <Award size={16} />Apply as Curator
+              <Award size={16} />Apply as Syndicate Manager
             </Link>
-            <Link href="/app/curators/dashboard" style={{ display:'inline-flex', alignItems:'center', gap:'8px', backgroundColor:'rgba(255,255,255,0.12)', color:'rgba(255,255,255,0.9)', padding:'12px 24px', borderRadius:'8px', fontSize:'13px', fontWeight:500, textDecoration:'none', whiteSpace:'nowrap', border:'1px solid rgba(255,255,255,0.25)' }}>
-              Curator Dashboard →
+            <Link href="/app/syndicates/dashboard" style={{ display:'inline-flex', alignItems:'center', gap:'8px', backgroundColor:'rgba(255,255,255,0.12)', color:'rgba(255,255,255,0.9)', padding:'12px 24px', borderRadius:'8px', fontSize:'13px', fontWeight:500, textDecoration:'none', whiteSpace:'nowrap', border:'1px solid rgba(255,255,255,0.25)' }}>
+              Syndicate Dashboard →
             </Link>
           </div>
         </div>
@@ -257,7 +257,7 @@ export default function CuratorsPage() {
   );
 }
 
-function CuratorCard({ curator, featured }: { curator: typeof CURATORS[0]; featured: boolean }) {
+function CuratorCard({ syndicateManager, featured }: { syndicateManager: typeof CURATORS[0]; featured: boolean }) {
   return (
     <div
       style={{ backgroundColor:'#FFFFFF', border:'1px solid #E8E4DC', borderRadius:'12px', padding: featured ? '28px' : '22px', transition:'box-shadow 0.2s, border-color 0.2s', cursor:'default' }}
@@ -268,27 +268,27 @@ function CuratorCard({ curator, featured }: { curator: typeof CURATORS[0]; featu
       <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:'16px' }}>
         <div>
           <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'6px' }}>
-            <TypeBadge type={curator.type} />
+            <TypeBadge type={syndicateManager.type} />
             <span style={{ display:'inline-flex', alignItems:'center', gap:'4px', backgroundColor:'#F0FDF4', color:'#166534', fontSize:'11px', fontWeight:600, padding:'3px 8px', borderRadius:'4px' }}>
               ✓ KYC Verified
             </span>
           </div>
-          <h3 style={{ fontFamily:'"Playfair Display", Georgia, serif', fontSize: featured ? '22px' : '18px', fontWeight:700, color:'#1B3A6B', margin:'4px 0 2px' }}>{curator.name}</h3>
+          <h3 style={{ fontFamily:'"Playfair Display", Georgia, serif', fontSize: featured ? '22px' : '18px', fontWeight:700, color:'#1B3A6B', margin:'4px 0 2px' }}>{syndicateManager.name}</h3>
           <div style={{ display:'flex', alignItems:'center', gap:'4px', color:'#8A8A8A', fontSize:'12px' }}>
-            <Globe size={11} />{curator.jurisdiction} · Since {curator.since}
+            <Globe size={11} />{syndicateManager.jurisdiction} · Since {syndicateManager.since}
           </div>
         </div>
         <span style={{ backgroundColor:'#F5F0E8', color:'#6B5B3E', fontSize:'11px', fontWeight:600, padding:'4px 10px', borderRadius:'20px', letterSpacing:'0.04em', whiteSpace:'nowrap' }}>
-          {curator.badge}
+          {syndicateManager.badge}
         </span>
       </div>
 
       {/* Description */}
-      <p style={{ fontSize:'13px', color:'#5A5A5A', lineHeight:'1.6', marginBottom:'20px' }}>{curator.description}</p>
+      <p style={{ fontSize:'13px', color:'#5A5A5A', lineHeight:'1.6', marginBottom:'20px' }}>{syndicateManager.description}</p>
 
       {/* Metrics */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'12px', backgroundColor:'#FAFAF8', borderRadius:'8px', padding:'14px', marginBottom:'20px' }}>
-        {[{ label:'AUM', value:curator.aum }, { label:'Avg APY', value:curator.avgApy }, { label:'Vaults', value:curator.vaultCount }].map(m => (
+        {[{ label:'AUM', value:syndicateManager.aum }, { label:'Avg APY', value:syndicateManager.avgApy }, { label:'Vaults', value:syndicateManager.vaultCount }].map(m => (
           <div key={m.label} style={{ textAlign:'center' }}>
             <div style={{ fontFamily:'"Playfair Display", Georgia, serif', fontSize:'18px', fontWeight:700, color:'#1B3A6B' }}>{m.value}</div>
             <div style={{ fontSize:'11px', color:'#8A8A8A', letterSpacing:'0.06em', textTransform:'uppercase' }}>{m.label}</div>
@@ -300,10 +300,10 @@ function CuratorCard({ curator, featured }: { curator: typeof CURATORS[0]; featu
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' }}>
         <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
           <span style={{ fontSize:'11px', color:'#8A8A8A', textTransform:'uppercase', letterSpacing:'0.06em' }}>Risk:</span>
-          <span style={{ fontSize:'12px', fontWeight:600, color: curator.riskColor }}>{curator.riskProfile}</span>
+          <span style={{ fontSize:'12px', fontWeight:600, color: syndicateManager.riskColor }}>{syndicateManager.riskProfile}</span>
         </div>
         <div style={{ display:'flex', gap:'4px' }}>
-          {curator.verificationTypes.map(v => (
+          {syndicateManager.verificationTypes.map(v => (
             <span key={v} style={{ fontSize:'10px', fontWeight:600, padding:'2px 7px', borderRadius:'4px', backgroundColor:'#F0F4FF', color:'#3B5BDB', letterSpacing:'0.04em' }}>{v}</span>
           ))}
         </div>
@@ -313,7 +313,7 @@ function CuratorCard({ curator, featured }: { curator: typeof CURATORS[0]; featu
       <div style={{ borderTop:'1px solid #F0EDE8', paddingTop:'16px' }}>
         <div style={{ fontSize:'11px', color:'#8A8A8A', letterSpacing:'0.08em', textTransform:'uppercase', marginBottom:'10px' }}>Managed Vaults</div>
         <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
-          {curator.vaults.map(v => (
+          {syndicateManager.vaults.map(v => (
             <div key={v.name} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 12px', backgroundColor:'#FAFAF8', borderRadius:'6px', border:'1px solid #F0EDE8' }}>
               <div>
                 <div style={{ fontSize:'13px', fontWeight:600, color:'#1B3A6B', fontFamily:'"Playfair Display", Georgia, serif' }}>{v.name}</div>

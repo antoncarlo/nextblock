@@ -243,11 +243,11 @@ export default function VaultDetailPage({ params }: { params: Promise<{ address:
           <div className="grid gap-6 lg:grid-cols-3">
             {/* Left column (2/3) */}
             <div className="space-y-6 lg:col-span-2">
-              {/* Curator info */}
+              {/* Syndicate Manager info */}
               <div className="card-institutional" style={{ padding: "24px 28px" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
                   <div>
-                    <p className="section-label" style={{ marginBottom: "4px" }}>Vault Curator</p>
+                    <p className="section-label" style={{ marginBottom: "4px" }}>Vault Syndicate Manager</p>
                     <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "18px", fontWeight: 400, color: "#0F1218" }}>
                       {managerEns || display.manager}
                     </p>
@@ -349,7 +349,7 @@ export default function VaultDetailPage({ params }: { params: Promise<{ address:
             <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "22px", fontWeight: 400, color: "#0F1218", marginBottom: "24px" }}>Risk Disclosures</h2>
             <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
               {[
-                { title: "Vault Curator", body: `${managerEns || display.manager} (${shortenAddress(manager)})` },
+                { title: "Vault Syndicate Manager", body: `${managerEns || display.manager} (${shortenAddress(manager)})` },
                 { title: "Verification Taxonomy", body: "This vault uses three types of claim verification: On-chain (trustless, permissionless via oracle price feeds), Oracle-dependent (automated via third-party data feeds), and Off-chain (insurer-assessed, manual verification). Each type carries different trust assumptions and settlement guarantees." },
                 { title: "Buffer Ratio", body: `${formatBufferRatio(bufferBps)} of vault assets are held as liquid buffer for immediate withdrawals. The remaining capital is deployed as underwriting capacity. During high-claim events, withdrawal capacity may be temporarily reduced.` },
                 { title: "Smart Contract Risk", body: "This vault is deployed on a testnet for demonstration purposes. Smart contracts have not been audited. In production, all contracts will undergo multiple security audits and bug bounty programs. Never deposit funds you cannot afford to lose." },
