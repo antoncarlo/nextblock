@@ -9,6 +9,7 @@ import { ClaimTriggers } from '@/components/admin/ClaimTriggers';
 import { ClaimReceipts } from '@/components/admin/ClaimReceipts';
 import { PolicyPool } from '@/components/admin/PolicyPool';
 import { DemoControls } from '@/components/admin/DemoControls';
+import { INSURANCE_COMPANY_WHITELIST, CURATOR_WHITELIST } from '@/app/app/apply/page';
 
 export default function AdminPage() {
   const { address, isConnected } = useAccount();
@@ -99,6 +100,48 @@ export default function AdminPage() {
       {/* Full-width section: Policy Pool */}
       <div className="mt-6">
         <PolicyPool />
+      </div>
+
+      {/* Whitelist Management */}
+      <div className="mt-6">
+        <div style={{ background: '#FFFFFF', border: '1px solid rgba(27,58,107,0.12)', borderRadius: '16px', padding: '28px' }}>
+          <h3 style={{ fontFamily: "'Inter', sans-serif", fontSize: '13px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#1B3A6B', marginBottom: '20px', paddingBottom: '12px', borderBottom: '1px solid rgba(27,58,107,0.08)' }}>
+            Whitelist Management
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '24px' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#166534' }} />
+                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '12px', fontWeight: 600, color: '#166534', margin: 0 }}>Insurance Company Admins ({INSURANCE_COMPANY_WHITELIST.length})</p>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {INSURANCE_COMPANY_WHITELIST.map((addr) => (
+                  <div key={addr} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(22,101,52,0.05)', border: '1px solid rgba(22,101,52,0.15)', borderRadius: '8px', padding: '10px 14px' }}>
+                    <span style={{ fontFamily: 'monospace', fontSize: '12px', color: '#166534' }}>{addr.slice(0, 10)}...{addr.slice(-6)}</span>
+                    <span style={{ fontFamily: "'Inter', sans-serif", fontSize: '10px', fontWeight: 600, background: 'rgba(22,101,52,0.1)', color: '#166534', padding: '2px 8px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Approved</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#C9A84C' }} />
+                <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '12px', fontWeight: 600, color: '#92400E', margin: 0 }}>Vault Curators ({CURATOR_WHITELIST.length})</p>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {CURATOR_WHITELIST.map((addr) => (
+                  <div key={addr} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(201,168,76,0.06)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: '8px', padding: '10px 14px' }}>
+                    <span style={{ fontFamily: 'monospace', fontSize: '12px', color: '#92400E' }}>{addr.slice(0, 10)}...{addr.slice(-6)}</span>
+                    <span style={{ fontFamily: "'Inter', sans-serif", fontSize: '10px', fontWeight: 600, background: 'rgba(201,168,76,0.12)', color: '#92400E', padding: '2px 8px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Curator</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '11px', color: '#9A9A9A', marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+            To add addresses, update the whitelist arrays in <code style={{ background: '#F3F4F6', padding: '1px 4px', borderRadius: '3px' }}>src/app/app/apply/page.tsx</code>.
+          </p>
+        </div>
       </div>
 
       {/* Vault overview (compact) */}

@@ -5,13 +5,12 @@ import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagm
 import { ChevronRight, Shield, Info, CheckCircle2, AlertCircle, Loader2, Lock, ExternalLink } from 'lucide-react';
 import { VAULT_FACTORY_ABI, CHAIN_ADDRESSES } from '@/config/contracts';
 import { useAddresses } from '@/hooks/useAddresses';
+import { INSURANCE_COMPANY_WHITELIST, CURATOR_WHITELIST } from '@/app/app/apply/page';
 
-// Off-chain KYC whitelist — addresses approved by NextBlock after KYC
-// In production this would be fetched from a backend/Supabase table
+// Combined KYC whitelist — insurance companies + curators
 const KYC_WHITELIST: string[] = [
-  '0x70997970c51812dc3a010c7d01b50e0d17dc79c8', // demo: hardhat account 1
-  '0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266', // demo: hardhat account 0 (admin)
-  '0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc', // demo: hardhat account 2
+  ...INSURANCE_COMPANY_WHITELIST,
+  ...CURATOR_WHITELIST,
 ];
 
 // Verification type options

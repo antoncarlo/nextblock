@@ -5,12 +5,12 @@ import { useAccount } from 'wagmi';
 import { WalletButton } from './WalletButton';
 import { WalletRoleIndicator } from './WalletRoleIndicator';
 import { useAdminAddress } from '@/hooks/useAdminAddress';
+import { INSURANCE_COMPANY_WHITELIST, CURATOR_WHITELIST } from '@/app/app/apply/page';
 
-// Off-chain KYC whitelist — same list used in create-vault page
+// Combined KYC whitelist — insurance companies + curators
 const KYC_WHITELIST: string[] = [
-  '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
-  '0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266',
-  '0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc',
+  ...INSURANCE_COMPANY_WHITELIST,
+  ...CURATOR_WHITELIST,
 ];
 
 const navLinkStyle = (active: boolean): React.CSSProperties => ({
@@ -91,7 +91,15 @@ export function Header() {
             Curators
           </Link>
 
-          {/* Create Vault — visible only to KYC-approved curators */}
+          <Link
+            href="/app/apply"
+            style={navLinkStyle(pathname?.startsWith('/app/apply') ?? false)}
+            className="hover:bg-black/5"
+          >
+            Apply
+          </Link>
+
+          {/* Create Vault — visible only to KYC-approved wallets */}
           {isKycApproved && (
             <Link
               href="/app/create-vault"
