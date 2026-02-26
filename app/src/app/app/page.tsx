@@ -98,15 +98,81 @@ function Hero({ label, title, subtitle, stats, ctas }: {
 }
 
 // ─── Quick Actions ────────────────────────────────────────────────────────────
+const ACTION_ICONS: Record<string, React.ReactNode> = {
+  "Create Vault": (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B3A6B" strokeWidth="1.5">
+      <rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 8v8M8 12h8"/>
+    </svg>
+  ),
+  "Deploy Vault": (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B3A6B" strokeWidth="1.5">
+      <rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 8v8M8 12h8"/>
+    </svg>
+  ),
+  "Register Policy": (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B3A6B" strokeWidth="1.5">
+      <path d="M9 12h6M9 16h6M7 4H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2h-2M9 4a2 2 0 012-2h2a2 2 0 012 2v0a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+    </svg>
+  ),
+  "Deposit Premium": (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B3A6B" strokeWidth="1.5">
+      <circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 3"/>
+    </svg>
+  ),
+  "View Analytics": (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B3A6B" strokeWidth="1.5">
+      <path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 4-6"/>
+    </svg>
+  ),
+  "My Dashboard": (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B3A6B" strokeWidth="1.5">
+      <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+      <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+    </svg>
+  ),
+  "All Syndicates": (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B3A6B" strokeWidth="1.5">
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/>
+      <path d="M16 3.13a4 4 0 010 7.75M21 21v-2a4 4 0 00-3-3.87"/>
+    </svg>
+  ),
+  "Strategy Builder": (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B3A6B" strokeWidth="1.5">
+      <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+    </svg>
+  ),
+};
+
 function QuickActions({ actions }: { actions: { icon: string; title: string; desc: string; href: string }[] }) {
   return (
     <div style={{ backgroundColor: "#F2F1EE", borderBottom: "1px solid rgba(0,0,0,0.06)", padding: "32px" }}>
       <div className="mx-auto grid grid-cols-1 md:grid-cols-4 gap-4" style={{ maxWidth: "1200px" }}>
         {actions.map(a => (
-          <Link key={a.title} href={a.href} style={{ display: "block", background: "#FFFFFF", border: "1px solid #E8E4DC", borderRadius: "12px", padding: "20px", textDecoration: "none" }}>
-            <div style={{ fontSize: "24px", marginBottom: "10px" }}>{a.icon}</div>
-            <div style={{ fontFamily: "'Inter', sans-serif", fontSize: "14px", fontWeight: 600, color: "#1B3A6B", marginBottom: "4px" }}>{a.title}</div>
-            <div style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "#6B7280" }}>{a.desc}</div>
+          <Link
+            key={a.title}
+            href={a.href}
+            className="card-institutional"
+            style={{ display: "block", padding: "24px", textDecoration: "none" }}
+          >
+            <div style={{
+              width: "36px", height: "36px", borderRadius: "8px",
+              background: "rgba(27,58,107,0.07)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              marginBottom: "14px",
+            }}>
+              {ACTION_ICONS[a.title] ?? (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B3A6B" strokeWidth="1.5">
+                  <circle cx="12" cy="12" r="9"/>
+                </svg>
+              )}
+            </div>
+            <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "15px", fontWeight: 400, color: "#0F1218", marginBottom: "6px" }}>
+              {a.title}
+            </div>
+            <div style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "#6B7280", lineHeight: 1.5 }}>
+              {a.desc}
+            </div>
           </Link>
         ))}
       </div>
