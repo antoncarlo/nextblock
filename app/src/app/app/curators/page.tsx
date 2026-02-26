@@ -215,7 +215,7 @@ export default function CuratorsPage() {
           <Lock size={14} color="#1D4ED8" />
           <span style={{ fontSize:'13px', color:'#1D4ED8' }}>
             <strong>Curator access is restricted.</strong> Only KYC-verified entities approved by NextBlock may deploy vaults.{' '}
-            <Link href="/app/create-vault" style={{ color:'#1D4ED8', textDecoration:'underline' }}>Apply to become a curator →</Link>
+            <Link href="/app/apply" style={{ color:'#1D4ED8', textDecoration:'underline' }}>Apply to become a curator →</Link>{' · '}<Link href="/app/curators/dashboard" style={{ color:'#1D4ED8', textDecoration:'underline', fontWeight:600 }}>Curator Dashboard →</Link>
           </span>
         </div>
       </div>
@@ -243,9 +243,14 @@ export default function CuratorsPage() {
               Are you a licensed reinsurer, insurer, or asset manager? Complete KYC onboarding and deploy your own ERC-4626 vault on NextBlock.
             </p>
           </div>
-          <Link href="/app/create-vault" style={{ display:'inline-flex', alignItems:'center', gap:'8px', backgroundColor:'#FFFFFF', color:'#1B3A6B', padding:'14px 28px', borderRadius:'8px', fontSize:'14px', fontWeight:600, textDecoration:'none', whiteSpace:'nowrap', letterSpacing:'0.02em' }}>
-            <Award size={16} />Apply as Curator
-          </Link>
+          <div style={{ display:'flex', flexDirection:'column', gap:'12px', alignItems:'flex-end' }}>
+            <Link href="/app/apply" style={{ display:'inline-flex', alignItems:'center', gap:'8px', backgroundColor:'#FFFFFF', color:'#1B3A6B', padding:'14px 28px', borderRadius:'8px', fontSize:'14px', fontWeight:600, textDecoration:'none', whiteSpace:'nowrap', letterSpacing:'0.02em' }}>
+              <Award size={16} />Apply as Curator
+            </Link>
+            <Link href="/app/curators/dashboard" style={{ display:'inline-flex', alignItems:'center', gap:'8px', backgroundColor:'rgba(255,255,255,0.12)', color:'rgba(255,255,255,0.9)', padding:'12px 24px', borderRadius:'8px', fontSize:'13px', fontWeight:500, textDecoration:'none', whiteSpace:'nowrap', border:'1px solid rgba(255,255,255,0.25)' }}>
+              Curator Dashboard →
+            </Link>
+          </div>
         </div>
       </div>
     </div>
