@@ -1,5 +1,6 @@
 import { Header } from '@/components/shared/Header';
 import { AutoDisconnect } from '@/components/shared/AutoDisconnect';
+import { ActiveRoleProvider } from '@/components/shared/WalletRoleIndicator';
 
 export default function AppLayout({
   children,
@@ -7,7 +8,7 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   return (
-    <>
+    <ActiveRoleProvider>
       <AutoDisconnect />
       <Header />
       <main>{children}</main>
@@ -69,6 +70,6 @@ export default function AppLayout({
           </div>
         </div>
       </footer>
-    </>
+    </ActiveRoleProvider>
   );
 }

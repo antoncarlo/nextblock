@@ -5,7 +5,7 @@ import { useVaultAddresses } from "@/hooks/useVaultData";
 import { VaultTable } from "@/components/vault/VaultTable";
 import { VerificationBadge } from "@/components/shared/VerificationBadge";
 import { VerificationType } from "@/config/constants";
-import { getWalletRole } from "@/components/shared/WalletRoleIndicator";
+import { getWalletRole, useActiveRole } from "@/components/shared/WalletRoleIndicator";
 import { getWalletName } from "@/config/knownWallets";
 import Link from "next/link";
 
@@ -297,12 +297,14 @@ function SyndicateManagerView() {
   );
 }
 
-// ─── Router principale ────────────────────────────────────────────────────────
+/// ─── Router principale ────────────────────────────────────────────────────────
 export default function AppPage() {
   const { address, isConnected } = useAccount();
   const adminAddress = useAdminAddress();
-  const role = getWalletRole(address, adminAddress);
-
+  const { activeRole } = useActiveRole();
+  const baseRole = getWalletRole(address, adminAddress);
+  // Il ruolo effettivo è l'override manuale (se impostato) oppure il ruolo base
+  const role = activeRole ?? baseRole;
   if (!isConnected || role === "investor") return <InvestorView />;
   if (role === "insurance") return <InsuranceCompanyView />;
   if (role === "syndicate" || role === "admin") return <SyndicateManagerView />;

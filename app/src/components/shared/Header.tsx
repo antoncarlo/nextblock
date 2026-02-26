@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { useAccount } from 'wagmi';
 import { WalletButton } from './WalletButton';
-import { WalletRoleIndicator, getWalletRole } from './WalletRoleIndicator';
+import { WalletRoleIndicator, getWalletRole, useActiveRole } from './WalletRoleIndicator';
 import { useAdminAddress } from '@/hooks/useAdminAddress';
 
 const navLinkStyle = (active: boolean): React.CSSProperties => ({
@@ -18,20 +18,7 @@ const navLinkStyle = (active: boolean): React.CSSProperties => ({
   letterSpacing: '0.01em',
   transition: 'background 0.2s',
   backgroundColor: active ? 'rgba(27,58,107,0.08)' : 'transparent',
-});
-
-const ctaLinkStyle = (active: boolean): React.CSSProperties => ({
-  padding: '6px 18px',
-  borderRadius: '50px',
-  fontSize: '13px',
-  fontWeight: 600,
-  fontFamily: "'Inter', sans-serif",
-  color: '#1B3A6B',
-  textDecoration: 'none',
-  letterSpacing: '0.01em',
-  transition: 'background 0.2s',
-  backgroundColor: active ? 'rgba(27,58,107,0.12)' : 'rgba(27,58,107,0.06)',
-  border: '1px solid rgba(27,58,107,0.12)',
+  whiteSpace: 'nowrap' as const,
 });
 
 export function Header() {
@@ -39,22 +26,26 @@ export function Header() {
   const adminAddress = useAdminAddress();
   const pathname = usePathname();
   const [showSyndicateInfo, setShowSyndicateInfo] = useState(false);
+  const { activeRole } = useActiveRole();
 
-  const role = getWalletRole(address, adminAddress);
+  const baseRole = getWalletRole(address, adminAddress);
+  // Il ruolo effettivo è l'override manuale (se impostato) oppure il ruolo base
+  const role = activeRole ?? baseRole;
 
-  // ─── Navigazione per ruolo ──────────────────────────────────────────────
-  // Wallet non connesso o Investor: solo Vaults
-  // Insurance Company: Vaults + My Company + Create Vault
-  // Syndicate Manager: Vaults + Syndicates + Syndicate Dashboard + Create Vault
-  // Admin: tutto
-
-  const showVaults = true; // sempre visibile
-  const showSyndicates = role === 'syndicate' || role === 'admin';
+  // ─── Visibilità voci di menu ────────────────────────────────────────────────
+  const showSyndicates        = role === 'syndicate' || role === 'admin';
   const showSyndicateDashboard = role === 'syndicate' || role === 'admin';
-  const showMyCompany = role === 'insurance' || role === 'admin';
-  const showCreateVault = role === 'insurance' || role === 'syndicate' || role === 'admin';
-  const showApply = !isConnected || role === 'investor'; // visibile solo se non connesso o investor
-  const showAdmin = role === 'admin';
+  const showMyCompany         = role === 'insurance' || role === 'admin';
+  const showApply             = !isConnected || role === 'investor';
+  const showAdmin             = role === 'admin';
+
+  // ─── Active link helpers ────────────────────────────────────────────────────
+  const isVaultsActive = pathname === '/app';
+  const isSyndicatesActive = pathname === '/app/syndicates';
+  const isDashboardActive = pathname?.startsWith('/app/syndicates/dashboard') ?? false;
+  const isMyCompanyActive = pathname?.startsWith('/app/my-company') ?? false;
+  const isApplyActive = pathname?.startsWith('/app/apply') ?? false;
+  const isAdminActive = pathname?.startsWith('/app/admin') ?? false;
 
   return (
     <header
@@ -92,15 +83,13 @@ export function Header() {
           }}
         >
           {/* Vaults — sempre visibile */}
-          {showVaults && (
-            <Link
-              href="/app"
-              style={navLinkStyle(pathname === '/app')}
-              className="hover:bg-black/5"
-            >
-              Vaults
-            </Link>
-          )}
+          <Link
+            href="/app"
+            style={navLinkStyle(isVaultsActive)}
+            className="hover:bg-black/5"
+          >
+            Vaults
+          </Link>
 
           {/* Syndicates — solo per Syndicate Manager e Admin */}
           {showSyndicates && (
@@ -108,9 +97,9 @@ export function Header() {
               <div
                 style={{
                   display: 'flex', alignItems: 'center', gap: '4px',
-                  padding: '6px 12px 6px 18px',
+                  padding: '6px 10px 6px 18px',
                   borderRadius: '50px',
-                  backgroundColor: pathname?.startsWith('/app/syndicates') ? 'rgba(27,58,107,0.08)' : 'transparent',
+                  backgroundColor: isSyndicatesActive ? 'rgba(27,58,107,0.08)' : 'transparent',
                   transition: 'background 0.2s',
                 }}
               >
@@ -118,9 +107,9 @@ export function Header() {
                   href="/app/syndicates"
                   style={{
                     fontSize: '13px',
-                    fontWeight: pathname?.startsWith('/app/syndicates') ? 600 : 500,
+                    fontWeight: isSyndicatesActive ? 600 : 500,
                     fontFamily: "'Inter', sans-serif",
-                    color: pathname?.startsWith('/app/syndicates') ? '#1B3A6B' : '#6B7280',
+                    color: isSyndicatesActive ? '#1B3A6B' : '#6B7280',
                     textDecoration: 'none',
                     letterSpacing: '0.01em',
                     whiteSpace: 'nowrap',
@@ -128,29 +117,30 @@ export function Header() {
                 >
                   Syndicates
                 </Link>
-              <button
-                onClick={() => setShowSyndicateInfo(!showSyndicateInfo)}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  width: '16px', height: '16px', borderRadius: '50%',
-                  border: '1.5px solid #9CA3AF', backgroundColor: 'transparent',
-                  color: '#9CA3AF', fontSize: '10px', fontWeight: 700,
-                  cursor: 'pointer', padding: 0, lineHeight: 1, flexShrink: 0,
-                  transition: 'border-color 0.2s, color 0.2s',
-                }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = '#1B3A6B';
-                  (e.currentTarget as HTMLButtonElement).style.color = '#1B3A6B';
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = '#9CA3AF';
-                  (e.currentTarget as HTMLButtonElement).style.color = '#9CA3AF';
-                }}
-                aria-label="What is a Syndicate?"
-              >
-                i
-              </button>
+                <button
+                  onClick={() => setShowSyndicateInfo(!showSyndicateInfo)}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    width: '16px', height: '16px', borderRadius: '50%',
+                    border: '1.5px solid #9CA3AF', backgroundColor: 'transparent',
+                    color: '#9CA3AF', fontSize: '10px', fontWeight: 700,
+                    cursor: 'pointer', padding: 0, lineHeight: 1, flexShrink: 0,
+                    transition: 'border-color 0.2s, color 0.2s',
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = '#1B3A6B';
+                    (e.currentTarget as HTMLButtonElement).style.color = '#1B3A6B';
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = '#9CA3AF';
+                    (e.currentTarget as HTMLButtonElement).style.color = '#9CA3AF';
+                  }}
+                  aria-label="What is a Syndicate?"
+                >
+                  i
+                </button>
               </div>
+
               {/* Info popup */}
               {showSyndicateInfo && (
                 <>
@@ -195,11 +185,11 @@ export function Header() {
             </div>
           )}
 
-          {/* Syndicate Dashboard — solo per Syndicate Manager e Admin */}
+          {/* My Dashboard — solo per Syndicate Manager e Admin */}
           {showSyndicateDashboard && (
             <Link
               href="/app/syndicates/dashboard"
-              style={navLinkStyle(pathname?.startsWith('/app/syndicates/dashboard') ?? false)}
+              style={navLinkStyle(isDashboardActive)}
               className="hover:bg-black/5"
             >
               My Dashboard
@@ -210,7 +200,7 @@ export function Header() {
           {showMyCompany && (
             <Link
               href="/app/my-company"
-              style={navLinkStyle(pathname?.startsWith('/app/my-company') ?? false)}
+              style={navLinkStyle(isMyCompanyActive)}
               className="hover:bg-black/5"
             >
               My Company
@@ -221,21 +211,10 @@ export function Header() {
           {showApply && (
             <Link
               href="/app/apply"
-              style={navLinkStyle(pathname?.startsWith('/app/apply') ?? false)}
+              style={navLinkStyle(isApplyActive)}
               className="hover:bg-black/5"
             >
               Apply
-            </Link>
-          )}
-
-          {/* Create Vault — solo per Insurance Co., Syndicate Manager e Admin */}
-          {showCreateVault && (
-            <Link
-              href="/app/create-vault"
-              style={ctaLinkStyle(pathname?.startsWith('/app/create-vault') ?? false)}
-              className="hover:bg-black/5"
-            >
-              Create Vault
             </Link>
           )}
 
@@ -243,7 +222,7 @@ export function Header() {
           {showAdmin && (
             <Link
               href="/app/admin"
-              style={navLinkStyle(pathname?.startsWith('/app/admin') ?? false)}
+              style={navLinkStyle(isAdminActive)}
               className="hover:bg-black/5"
             >
               Admin

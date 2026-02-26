@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useAccount } from 'wagmi';
-import { getWalletRole } from '@/components/shared/WalletRoleIndicator';
+import { getWalletRole, useActiveRole } from '@/components/shared/WalletRoleIndicator';
 import { useAdminAddress } from '@/hooks/useAdminAddress';
 import { getWalletName } from '@/config/knownWallets';
 import { useVaultAddresses, useVaultInfo } from '@/hooks/useVaultData';
@@ -92,7 +92,9 @@ function CompanyVaultCard({ address }: { address: string }) {
 export default function MyCompanyPage() {
   const { address, isConnected } = useAccount();
   const adminAddress = useAdminAddress();
-  const role = getWalletRole(address, adminAddress);
+  const { activeRole } = useActiveRole();
+  const baseRole = getWalletRole(address, adminAddress);
+  const role = activeRole ?? baseRole;
   const userName = getWalletName(address);
   const { data: vaultAddresses } = useVaultAddresses();
 
