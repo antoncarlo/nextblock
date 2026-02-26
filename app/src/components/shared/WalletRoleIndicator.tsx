@@ -2,6 +2,7 @@
 import { useState, createContext, useContext } from 'react';
 import { useAccount } from 'wagmi';
 import { useAdminAddress } from '@/hooks/useAdminAddress';
+import { ADMIN_ADDRESSES } from '@/config/constants';
 import { INSURANCE_COMPANY_WHITELIST, CURATOR_WHITELIST } from '@/app/app/apply/page';
 
 export type AppRole = 'admin' | 'insurance' | 'syndicate' | 'investor' | 'none';
@@ -31,7 +32,10 @@ export function getWalletRole(
 ): AppRole {
   if (!address) return 'none';
   const addr = address.toLowerCase();
-  if (addr === adminAddress.toLowerCase()) return 'admin';
+  // Controlla sia il singolo adminAddress (per compatibilità chain-based) sia l'array ADMIN_ADDRESSES
+  const isAdmin = addr === adminAddress.toLowerCase() ||
+    ADMIN_ADDRESSES.map(a => a.toLowerCase()).includes(addr);
+  if (isAdmin) return 'admin';
   if (INSURANCE_COMPANY_WHITELIST.map(a => a.toLowerCase()).includes(addr)) return 'insurance';
   if (CURATOR_WHITELIST.map(a => a.toLowerCase()).includes(addr)) return 'syndicate';
   return 'investor';

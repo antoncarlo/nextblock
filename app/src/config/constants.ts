@@ -39,7 +39,16 @@ export const SECONDS_PER_YEAR = 31_536_000;
 export const BASIS_POINTS = 10_000;
 
 /**
- * Admin wallet address per chain.
+ * Admin wallet addresses (multi-admin support).
+ * All addresses in this list have full admin privileges.
+ */
+export const ADMIN_ADDRESSES: string[] = [
+  '0x810fa6726eeB6014c2F77Bb4802A5734C28b0F3e', // Anton Carlo Santoro — NextBlock Founder
+  '0x3630082d96065B756E84B8b79e030a525B9583ed', // Co-Admin
+];
+
+/**
+ * Admin wallet address per chain (primary admin, kept for backward compatibility).
  */
 export const CHAIN_ADMIN_ADDRESS: Record<number, `0x${string}`> = {
   84532: '0x810fa6726eeB6014c2F77Bb4802A5734C28b0F3e', // Base Sepolia admin (Anton Carlo)
