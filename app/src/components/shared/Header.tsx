@@ -197,7 +197,7 @@ export function Header() {
                   </p>
 
                   <p style={{ fontSize: '13px', color: '#374151', lineHeight: '1.65', margin: '0 0 12px' }}>
-                    The name is inspired by the <strong>Lloyd&apos;s of London</strong> model, where independent Syndicates underwrite risk pools and attract capital from investors. Each NextBlock Syndicate:
+                    Each NextBlock Syndicate:
                   </p>
 
                   <ul style={{ fontSize: '13px', color: '#374151', lineHeight: '1.75', margin: '0 0 16px', paddingLeft: '18px' }}>
@@ -255,7 +255,7 @@ export function Header() {
               }}
               className="hover:bg-black/5"
             >
-              + Create Vault
+              Create Vault
             </Link>
           )}
 
