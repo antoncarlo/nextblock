@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { useAccount } from 'wagmi';
 import { WalletButton } from './WalletButton';
-import { WalletRoleIndicator } from './WalletRoleIndicator';
+import { WalletRoleIndicator, useActiveRole } from './WalletRoleIndicator';
 import { useAdminAddress } from '@/hooks/useAdminAddress';
 import { INSURANCE_COMPANY_WHITELIST, CURATOR_WHITELIST } from '@/app/app/apply/page';
 
@@ -41,6 +41,11 @@ export function Header() {
     isConnected && address
       ? KYC_WHITELIST.map(a => a.toLowerCase()).includes(address.toLowerCase())
       : false;
+  const [activeRole] = useActiveRole();
+  // Create Vault visibile se: ruolo attivo è insurance, syndicate, o admin
+  const showCreateVault = isConnected && (activeRole === 'insurance' || activeRole === 'syndicate' || isAdmin);
+  // Syndicate Dashboard visibile se: ruolo attivo è syndicate
+  const showSyndicateDashboard = isConnected && activeRole === 'syndicate';
 
   return (
     <header
@@ -241,8 +246,18 @@ export function Header() {
             Apply
           </Link>
 
-          {/* Create Vault — visible only to KYC-approved wallets */}
-          {isKycApproved && (
+          {/* Syndicate Dashboard — visible only when role is Syndicate Manager */}
+          {showSyndicateDashboard && (
+            <Link
+              href="/app/syndicates/dashboard"
+              style={navLinkStyle(pathname?.startsWith('/app/syndicates/dashboard') ?? false)}
+              className="hover:bg-black/5"
+            >
+              Syndicate Dashboard
+            </Link>
+          )}
+          {/* Create Vault — visible only to KYC-approved wallets or role override */}
+          {(isKycApproved || showCreateVault) && (
             <Link
               href="/app/create-vault"
               style={{
