@@ -1,4 +1,5 @@
 import { Header } from '@/components/shared/Header';
+import { AutoDisconnect } from '@/components/shared/AutoDisconnect';
 
 export default function AppLayout({
   children,
@@ -7,6 +8,7 @@ export default function AppLayout({
 }) {
   return (
     <>
+      <AutoDisconnect />
       <Header />
       <main>{children}</main>
 

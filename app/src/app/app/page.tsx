@@ -6,6 +6,7 @@ import { VaultTable } from "@/components/vault/VaultTable";
 import { VerificationBadge } from "@/components/shared/VerificationBadge";
 import { VerificationType } from "@/config/constants";
 import { getWalletRole } from "@/components/shared/WalletRoleIndicator";
+import { getWalletName } from "@/config/knownWallets";
 import Link from "next/link";
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
@@ -236,23 +237,25 @@ function InvestorView() {
 
 // ─── Vista Insurance Company ──────────────────────────────────────────────────
 function InsuranceCompanyView() {
+  const { address } = useAccount();
+  const userName = getWalletName(address) ?? 'Insurance Company';
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#FAFAF8" }}>
       <Hero
         label="Insurance Company Portal"
-        title="Welcome back, Insurance Co."
+        title={`Welcome back, ${userName}`}
         subtitle="Tokenize your insurance portfolio, create vaults, register policies and manage your capital on-chain."
         stats={[]}
         ctas={[
           { label: "Create New Vault", href: "/app/create-vault", primary: true },
-          { label: "Manage My Vault", href: "/app/vault/0xF725B7E9176F1F2D0B9b3D0e3E5e1b1C5e2D3A4B/manage" },
+          { label: "My Company", href: "/app/my-company" },
         ]}
       />
       <QuickActions actions={[
-        { icon: "🏛️", title: "Create Vault", desc: "Deploy a new ERC-4626 insurance vault", href: "/app/create-vault" },
-        { icon: "📋", title: "Register Policy", desc: "Tokenize a new insurance policy", href: "/app/vault/0xF725B7E9176F1F2D0B9b3D0e3E5e1b1C5e2D3A4B/manage" },
-        { icon: "💰", title: "Deposit Premium", desc: "Fund your policies with USDC premiums", href: "/app/vault/0xF725B7E9176F1F2D0B9b3D0e3E5e1b1C5e2D3A4B/manage" },
-        { icon: "📊", title: "View Analytics", desc: "Monitor your portfolio performance", href: "/app/vault/0xF725B7E9176F1F2D0B9b3D0e3E5e1b1C5e2D3A4B" },
+        { icon: "", title: "Create Vault", desc: "Deploy a new ERC-4626 insurance vault", href: "/app/create-vault" },
+        { icon: "", title: "Register Policy", desc: "Tokenize a new insurance policy", href: "/app/my-company" },
+        { icon: "", title: "Deposit Premium", desc: "Fund your policies with USDC premiums", href: "/app/my-company" },
+        { icon: "", title: "View Analytics", desc: "Monitor your portfolio performance", href: "/app/my-company" },
       ]} />
       <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "48px 32px" }}>
         <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "24px", fontWeight: 400, color: "#1B3A6B", marginBottom: "8px" }}>My Vaults</h2>
@@ -265,11 +268,13 @@ function InsuranceCompanyView() {
 
 // ─── Vista Syndicate Manager ──────────────────────────────────────────────────
 function SyndicateManagerView() {
+  const { address } = useAccount();
+  const userName = getWalletName(address) ?? 'Syndicate Manager';
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#FAFAF8" }}>
       <Hero
         label="Syndicate Manager Portal"
-        title="Welcome back, Syndicate Manager"
+        title={`Welcome back, ${userName}`}
         subtitle="Deploy and manage insurance vaults, define risk strategies, attract USDC liquidity and earn management fees."
         stats={[]}
         ctas={[
@@ -278,10 +283,10 @@ function SyndicateManagerView() {
         ]}
       />
       <QuickActions actions={[
-        { icon: "🏛️", title: "Deploy Vault", desc: "Create a new insurance vault strategy", href: "/app/create-vault" },
-        { icon: "📊", title: "My Dashboard", desc: "Monitor your syndicates and performance", href: "/app/syndicates/dashboard" },
-        { icon: "🔍", title: "All Syndicates", desc: "Browse all approved syndicate managers", href: "/app/syndicates" },
-        { icon: "📋", title: "Strategy Builder", desc: "Configure vault parameters and risk profile", href: "/app/syndicates/dashboard" },
+        { icon: "", title: "Deploy Vault", desc: "Create a new insurance vault strategy", href: "/app/create-vault" },
+        { icon: "", title: "My Dashboard", desc: "Monitor your syndicates and performance", href: "/app/syndicates/dashboard" },
+        { icon: "", title: "All Syndicates", desc: "Browse all approved syndicate managers", href: "/app/syndicates" },
+        { icon: "", title: "Strategy Builder", desc: "Configure vault parameters and risk profile", href: "/app/syndicates/dashboard" },
       ]} />
       <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "48px 32px" }}>
         <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "24px", fontWeight: 400, color: "#1B3A6B", marginBottom: "8px" }}>All Insurance Vaults</h2>

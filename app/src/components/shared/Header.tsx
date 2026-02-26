@@ -104,14 +104,30 @@ export function Header() {
 
           {/* Syndicates — solo per Syndicate Manager e Admin */}
           {showSyndicates && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', position: 'relative' }}>
-              <Link
-                href="/app/syndicates"
-                style={navLinkStyle(pathname?.startsWith('/app/syndicates') ?? false)}
-                className="hover:bg-black/5"
+            <div style={{ position: 'relative' }}>
+              <div
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '4px',
+                  padding: '6px 12px 6px 18px',
+                  borderRadius: '50px',
+                  backgroundColor: pathname?.startsWith('/app/syndicates') ? 'rgba(27,58,107,0.08)' : 'transparent',
+                  transition: 'background 0.2s',
+                }}
               >
-                Syndicates
-              </Link>
+                <Link
+                  href="/app/syndicates"
+                  style={{
+                    fontSize: '13px',
+                    fontWeight: pathname?.startsWith('/app/syndicates') ? 600 : 500,
+                    fontFamily: "'Inter', sans-serif",
+                    color: pathname?.startsWith('/app/syndicates') ? '#1B3A6B' : '#6B7280',
+                    textDecoration: 'none',
+                    letterSpacing: '0.01em',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  Syndicates
+                </Link>
               <button
                 onClick={() => setShowSyndicateInfo(!showSyndicateInfo)}
                 style={{
@@ -134,6 +150,7 @@ export function Header() {
               >
                 i
               </button>
+              </div>
               {/* Info popup */}
               {showSyndicateInfo && (
                 <>
@@ -192,8 +209,8 @@ export function Header() {
           {/* My Company — solo per Insurance Company e Admin */}
           {showMyCompany && (
             <Link
-              href="/app/vault/0xF725B7E9176F1F2D0B9b3D0e3E5e1b1C5e2D3A4B/manage"
-              style={navLinkStyle(pathname?.includes('/manage') ?? false)}
+              href="/app/my-company"
+              style={navLinkStyle(pathname?.startsWith('/app/my-company') ?? false)}
               className="hover:bg-black/5"
             >
               My Company
