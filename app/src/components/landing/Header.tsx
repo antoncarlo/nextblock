@@ -110,8 +110,6 @@ const Header = () => {
           </a>
           <a 
             href="/app"
-            target="_blank"
-            rel="noopener noreferrer"
             className="transition-all duration-200"
             style={{
               fontFamily: "'Playfair Display', Georgia, serif",
