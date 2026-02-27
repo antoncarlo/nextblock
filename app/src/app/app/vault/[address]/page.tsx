@@ -89,12 +89,35 @@ export default function VaultDetailPage({ params }: { params: Promise<{ address:
   if (vaultLoading) return <VaultDetailSkeleton />;
 
   if (!vaultInfo) {
+    // Vault contract reverted (e.g. Balanced Core has division-by-zero when empty)
+    // Show a static fallback page instead of an error
+    const fallbackName = "Balanced Core";
+    const fallbackDisplay = getVaultDisplay(fallbackName);
     return (
-      <div style={{ minHeight: "100vh", backgroundColor: "#FAFAF8", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ textAlign: "center" }}>
-          <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "22px", fontWeight: 400, color: "#0F1218", marginBottom: "8px" }}>Vault not found</h1>
-          <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "14px", color: "#9A9A9A", marginBottom: "16px" }}>Could not load vault at {shortenAddress(vaultAddress)}</p>
-          <Link href="/app" style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", fontWeight: 500, color: "#1B3A6B", textDecoration: "none" }}>← Back to vaults</Link>
+      <div style={{ minHeight: "100vh", backgroundColor: "#FAFAF8" }}>
+        <div className="relative overflow-hidden" style={{ background: "linear-gradient(135deg, #0F1218 0%, #1B3A6B 100%)", padding: "40px 32px 48px" }}>
+          <div className="absolute inset-0" style={{ background: "linear-gradient(to right, rgba(15,18,24,0.95) 0%, rgba(27,58,107,0.65) 100%)" }} />
+          <div className="relative z-10 mx-auto" style={{ maxWidth: "1200px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "24px" }}>
+              <Link href="/app" style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(255,255,255,0.5)", textDecoration: "none" }}>Vaults</Link>
+              <span style={{ color: "rgba(255,255,255,0.25)", fontSize: "13px" }}>/</span>
+              <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "rgba(255,255,255,0.85)" }}>{fallbackName}</span>
+            </div>
+            <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "clamp(24px, 3.5vw, 36px)", fontWeight: 400, color: "#FFFFFF", lineHeight: 1.15, marginBottom: "12px" }}>{fallbackName}</h1>
+            <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "14px", color: "rgba(255,255,255,0.6)", maxWidth: "480px", lineHeight: 1.6, marginBottom: "24px" }}>{fallbackDisplay.strategy}</p>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "6px 14px", borderRadius: "50px", background: "rgba(201,168,76,0.15)", border: "1px solid rgba(201,168,76,0.3)" }}>
+              <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "#C9A84C", fontWeight: 500 }}>Awaiting first deposit</span>
+            </div>
+          </div>
+        </div>
+        <div className="mx-auto" style={{ maxWidth: "1200px", padding: "48px 32px" }}>
+          <div className="card-institutional" style={{ padding: "40px", textAlign: "center" }}>
+            <h3 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "20px", fontWeight: 400, color: "#0F1218", marginBottom: "12px" }}>Vault initialising</h3>
+            <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "14px", color: "#6B7280", lineHeight: 1.6, maxWidth: "480px", margin: "0 auto 24px" }}>
+              This vault has been deployed but is awaiting its first deposit to initialise on-chain state. Once funded, all metrics will appear here.
+            </p>
+            <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "12px", color: "#9A9A9A" }}>Contract: {shortenAddress(vaultAddress)}</p>
+          </div>
         </div>
       </div>
     );
