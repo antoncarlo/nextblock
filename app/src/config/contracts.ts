@@ -3710,13 +3710,13 @@ export const CHAIN_ADDRESSES: Record<number, ChainAddresses> = {
     mockOracle: '0xb7c01385B368954573bEc08C1267FE816869D2a1',
     claimReceipt: '0x74c27cA51758407Fd7fAC612630553f3900B7B22',
   },
-  // Base Sepolia (V5 deploy - 2026-02-07, naming/premium fixes, seed-before-premium)
+  // Base Sepolia (HackMoney 2026 deploy — verified on Basescan)
   84532: {
-    vaultFactory: '0x543a747e789a77e36ef814E47590B65ac48A9B03',
-    policyRegistry: '0xeDec1D94558c3AdDF454d0A76B3554C60E5c2408',
-    mockUSDC: '0x48cE7Ee4Fb90980b388FE56029290Dd2d71aD9b4',
-    mockOracle: '0x289283f042E244567465cE26Da005b7663E86BFe',
-    claimReceipt: '0xefe6ddeC75d814A77775b46B62711ec94a8c2ce1',
+    vaultFactory: '0xFfC5B0c4977ac151EA7bd4d4E77c8C93cF51B118',
+    policyRegistry: '0x07B088adE0612E2CDE85f60ED8Cbeb552A4dcAED',
+    mockUSDC: '0xD011bF408A804679C6733926A20cA6Dae2d4837b',
+    mockOracle: '0x0e5f1dC0AAb5Dc3993200723cee24bD4D23a1308',
+    claimReceipt: '0xf9F87d030E7038382aC0fE4a9d9150744B15fD55',
   },
   // Ethereum Sepolia (deploy - 2026-02-08)
   11155111: {
