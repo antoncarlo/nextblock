@@ -6,14 +6,14 @@ import { useAccount } from 'wagmi';
 // ─── Whitelist pre-approvati ───────────────────────────────────────────────
 // Insurance Company admins — hanno accesso diretto alla gestione vault
 export const INSURANCE_COMPANY_WHITELIST: string[] = [
-  '0x810fa6726eeb6014c2f77bb4802a5734c28b0f3e', // NextBlock Admin (Anton Carlo)
-  '0x3630082d96065b756e84b8b79e030a525b9583ed', // Co-Admin
+  '0x3630082d96065b756e84b8b79e030a525b9583ed', // NextBlock Primary Admin
+  '0x810fa6726eeb6014c2f77bb4802a5734c28b0f3e', // NextBlock Co-Admin (Anton Carlo)
 ];
 
 // Syndicate Manager whitelist — possono creare vault e gestire strategie
 export const CURATOR_WHITELIST: string[] = [
-  '0x810fa6726eeb6014c2f77bb4802a5734c28b0f3e', // NextBlock Admin (Anton Carlo) — accesso completo
-  '0x3630082d96065b756e84b8b79e030a525b9583ed', // Co-Admin — accesso completo
+  '0x3630082d96065b756e84b8b79e030a525b9583ed', // NextBlock Primary Admin — accesso completo
+  '0x810fa6726eeb6014c2f77bb4802a5734c28b0f3e', // NextBlock Co-Admin (Anton Carlo) — accesso completo
   '0x70997970c51812dc3a010c7d01b50e0d17dc79c8',
   '0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266',
   '0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc',

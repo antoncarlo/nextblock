@@ -43,20 +43,20 @@ export const BASIS_POINTS = 10_000;
  * All addresses in this list have full admin privileges.
  */
 export const ADMIN_ADDRESSES: string[] = [
-  '0x810fa6726eeB6014c2F77Bb4802A5734C28b0F3e', // Anton Carlo Santoro — NextBlock Founder
-  '0x3630082d96065B756E84B8b79e030a525B9583ed', // Co-Admin
+  '0x3630082d96065B756E84B8b79e030a525B9583ed', // NextBlock Primary Admin
+  '0x810fa6726eeB6014c2F77Bb4802A5734C28b0F3e', // NextBlock Co-Admin
 ];
 
 /**
  * Admin wallet address per chain (primary admin, kept for backward compatibility).
  */
 export const CHAIN_ADMIN_ADDRESS: Record<number, `0x${string}`> = {
-  84532: '0x810fa6726eeB6014c2F77Bb4802A5734C28b0F3e', // Base Sepolia admin (Anton Carlo)
-  11155111: '0x810fa6726eeB6014c2F77Bb4802A5734C28b0F3e', // Ethereum Sepolia admin (Anton Carlo)
-  5042002: '0x810fa6726eeB6014c2F77Bb4802A5734C28b0F3e', // Arc Testnet admin (Anton Carlo)
-  1: '0x810fa6726eeB6014c2F77Bb4802A5734C28b0F3e', // Ethereum Mainnet admin (Anton Carlo)
-  8453: '0x810fa6726eeB6014c2F77Bb4802A5734C28b0F3e', // Base Mainnet admin (Anton Carlo)
-  31337: '0x810fa6726eeB6014c2F77Bb4802A5734C28b0F3e', // Anvil local admin (Anton Carlo)
+  84532: '0x3630082d96065B756E84B8b79e030a525B9583ed', // Base Sepolia — Primary Admin
+  11155111: '0x3630082d96065B756E84B8b79e030a525B9583ed', // Ethereum Sepolia — Primary Admin
+  5042002: '0x3630082d96065B756E84B8b79e030a525B9583ed', // Arc Testnet — Primary Admin
+  1: '0x3630082d96065B756E84B8b79e030a525B9583ed', // Ethereum Mainnet — Primary Admin
+  8453: '0x3630082d96065B756E84B8b79e030a525B9583ed', // Base Mainnet — Primary Admin
+  31337: '0x3630082d96065B756E84B8b79e030a525B9583ed', // Anvil local — Primary Admin
 };
 
 /**
