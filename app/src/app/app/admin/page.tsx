@@ -2,7 +2,7 @@
 
 import { useAccount } from 'wagmi';
 import { useVaultAddresses, useMultiVaultInfo } from '@/hooks/useVaultData';
-import { useAdminAddress } from '@/hooks/useAdminAddress';
+import { ADMIN_ADDRESSES } from '@/config/constants';
 import { TimeControls } from '@/components/admin/TimeControls';
 import { OracleControls } from '@/components/admin/OracleControls';
 import { ClaimTriggers } from '@/components/admin/ClaimTriggers';
@@ -13,10 +13,10 @@ import { INSURANCE_COMPANY_WHITELIST, CURATOR_WHITELIST } from '@/app/app/apply/
 
 export default function AdminPage() {
   const { address, isConnected } = useAccount();
-  const adminAddress = useAdminAddress();
   const isAdmin =
     isConnected &&
-    address?.toLowerCase() === adminAddress.toLowerCase();
+    !!address &&
+    ADMIN_ADDRESSES.map((a) => a.toLowerCase()).includes(address.toLowerCase());
 
   const { data: vaultAddresses } = useVaultAddresses();
   const { data: vaultInfos } = useMultiVaultInfo(vaultAddresses);
@@ -59,7 +59,7 @@ export default function AdminPage() {
             Connected: {address}
           </p>
           <p className="mt-1 text-xs text-gray-400">
-            Required: {adminAddress}
+            Required: one of the authorised admin wallets
           </p>
         </div>
       </div>
