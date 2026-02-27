@@ -3,7 +3,7 @@ import { use, useState } from "react";
 import Link from "next/link";
 import { useAccount, useChainId } from "wagmi";
 import {
-  useVaultInfo,
+  useVaultInfoSafe,
   useUserShares,
   useMaxWithdraw,
   usePendingClaims,
@@ -73,7 +73,7 @@ export default function VaultDetailPage({ params }: { params: Promise<{ address:
   const chainId = useChainId();
   const [tab, setTab] = useState<Tab>("overview");
 
-  const { data: vaultInfo, isLoading: vaultLoading } = useVaultInfo(vaultAddress);
+  const { data: vaultInfo, isLoading: vaultLoading } = useVaultInfoSafe(vaultAddress);
   const { policies, isLoading: policiesLoading } = useVaultPolicies(vaultAddress);
   const { data: currentTime } = useCurrentTime();
   const { data: userShares } = useUserShares(vaultAddress, userAddress);

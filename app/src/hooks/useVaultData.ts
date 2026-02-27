@@ -241,3 +241,91 @@ export function useUserPositions(
     },
   });
 }
+
+/**
+ * Fetch vault data using individual contract functions instead of getVaultInfo().
+ * This is a fallback for vaults where getVaultInfo() reverts (e.g. Panic 0x12
+ * division-by-zero caused by a zero-duration policy in the registry).
+ * Returns data in the same shape as VaultInfo so callers can use it transparently.
+ */
+export function useVaultInfoFallback(vaultAddress: `0x${string}` | undefined) {
+  const result = useReadContracts({
+    contracts: vaultAddress
+      ? [
+          { address: vaultAddress, abi: INSURANCE_VAULT_ABI, functionName: "vaultName" as const },
+          { address: vaultAddress, abi: INSURANCE_VAULT_ABI, functionName: "vaultManager" as const },
+          { address: vaultAddress, abi: INSURANCE_VAULT_ABI, functionName: "totalAssets" as const },
+          { address: vaultAddress, abi: INSURANCE_VAULT_ABI, functionName: "totalSupply" as const },
+          { address: vaultAddress, abi: INSURANCE_VAULT_ABI, functionName: "bufferRatioBps" as const },
+          { address: vaultAddress, abi: INSURANCE_VAULT_ABI, functionName: "managementFeeBps" as const },
+          { address: vaultAddress, abi: INSURANCE_VAULT_ABI, functionName: "totalDeployedCapital" as const },
+          { address: vaultAddress, abi: INSURANCE_VAULT_ABI, functionName: "totalPendingClaims" as const },
+        ]
+      : [],
+    allowFailure: true,
+    query: {
+      refetchInterval: POLL_INTERVAL,
+      enabled: !!vaultAddress,
+    },
+  });
+
+  const d = result.data;
+  if (!d || d.length < 8) {
+    return { ...result, data: undefined };
+  }
+
+  const get = (i: number) => (d[i]?.status === "success" ? d[i].result : undefined);
+
+  const name = get(0) as string | undefined;
+  const manager = get(1) as `0x${string}` | undefined;
+  const assets = get(2) as bigint | undefined;
+  const shares = get(3) as bigint | undefined;
+  const bufferBps = get(4) as bigint | undefined;
+  const feeBps = get(5) as bigint | undefined;
+  const deployedCapital = get(6) as bigint | undefined;
+
+  // If we couldn't read even the basics, return undefined
+  if (!name || !manager || assets === undefined || shares === undefined) {
+    return { ...result, data: undefined };
+  }
+
+  // Reconstruct sharePrice safely (avoid division by zero)
+  const sharePrice = shares > 0n ? (assets * BigInt(1e18)) / shares : BigInt(1e6);
+  // availableBuffer = assets - deployedCapital (simplified, avoids the broken internal calc)
+  const dc = deployedCapital ?? 0n;
+  const availableBuffer = assets > dc ? assets - dc : 0n;
+
+  // Count policies from the vaultPolicies array length — we approximate as 0 here
+  // (policyCount is not critical for display; VaultRow reads it separately)
+  const policyCount = 0n;
+
+  const vaultInfo: [string, `0x${string}`, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint] = [
+    name,
+    manager,
+    assets,
+    shares,
+    sharePrice,
+    bufferBps ?? 0n,
+    feeBps ?? 0n,
+    availableBuffer,
+    dc,
+    policyCount,
+  ];
+
+  return { ...result, data: vaultInfo };
+}
+
+/**
+ * Smart vault info hook: tries getVaultInfo() first, falls back to individual
+ * function calls if the contract reverts (e.g. Panic 0x12 on Vault A).
+ */
+export function useVaultInfoSafe(vaultAddress: `0x${string}` | undefined) {
+  const primary = useVaultInfo(vaultAddress);
+  const fallback = useVaultInfoFallback(vaultAddress);
+
+  // If primary succeeded, use it; otherwise use fallback
+  if (primary.data !== undefined) {
+    return { ...primary, usingFallback: false };
+  }
+  return { ...fallback, usingFallback: true };
+}

@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useVaultInfo } from "@/hooks/useVaultData";
+import { useVaultInfoSafe } from "@/hooks/useVaultData";
 import {
   useVaultPolicyIds,
   useGlobalPoliciesData,
@@ -98,7 +98,7 @@ interface VaultRowProps {
 }
 
 export function VaultRow({ vaultAddress }: VaultRowProps) {
-  const { data: vaultInfo, isLoading, error } = useVaultInfo(vaultAddress);
+  const { data: vaultInfo, isLoading, error } = useVaultInfoSafe(vaultAddress);
   const { data: policyIds } = useVaultPolicyIds(vaultAddress);
   const { data: globalPolicies } = useGlobalPoliciesData(policyIds);
 
