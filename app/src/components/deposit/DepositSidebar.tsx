@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useAccount } from 'wagmi';
+import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { AmountInput } from './AmountInput';
 import { ShareCalculation } from './ShareCalculation';
 import { useUSDCBalance, useMaxWithdraw } from '@/hooks/useVaultData';
 import { useDepositFlow, type DepositState } from '@/hooks/useDepositFlow';
 import { useWithdrawFlow, type WithdrawState } from '@/hooks/useWithdrawFlow';
+import { useAddresses } from '@/hooks/useAddresses';
+import { MOCK_USDC_ABI } from '@/config/contracts';
 import { parseUSDC, formatUSDC } from '@/lib/formatting';
 
 type TabMode = 'deposit' | 'withdraw';
@@ -17,6 +19,25 @@ interface DepositSidebarProps {
   totalSupply: bigint;
   policyCount: number;
   maxWithdrawOverride?: bigint;
+}
+
+/** Faucet: mints 10,000 test USDC to the connected wallet. */
+function useFaucet(userAddress: `0x${string}` | undefined, onSuccess?: () => void) {
+  const addresses = useAddresses();
+  const { writeContract, data: txHash, isPending, error } = useWriteContract();
+  const { isSuccess, isLoading: isConfirming } = useWaitForTransactionReceipt({ hash: txHash });
+
+  const mint = useCallback(() => {
+    if (!userAddress) return;
+    writeContract({
+      address: addresses.mockUSDC,
+      abi: MOCK_USDC_ABI,
+      functionName: 'mint',
+      args: [userAddress, BigInt(10_000 * 1e6)], // 10,000 USDC (6 decimals)
+    });
+  }, [userAddress, addresses.mockUSDC, writeContract]);
+
+  return { mint, isPending, isConfirming, isSuccess, error };
 }
 
 export function DepositSidebar({
@@ -30,29 +51,29 @@ export function DepositSidebar({
   const [tab, setTab] = useState<TabMode>('deposit');
   const [inputValue, setInputValue] = useState('');
 
-  const { data: usdcBalance } = useUSDCBalance(address);
+  const { data: usdcBalance, refetch: refetchBalance } = useUSDCBalance(address);
   const { data: maxWithdraw } = useMaxWithdraw(
     maxWithdrawOverride !== undefined ? undefined : vaultAddress,
     address
   );
 
+  const faucet = useFaucet(address, refetchBalance);
+
   const parsedAmount = parseUSDC(inputValue);
 
-  // Deposit flow
   const depositFlow = useDepositFlow({
     vaultAddress,
     amount: parsedAmount,
     receiver: address ?? '0x0000000000000000000000000000000000000000',
-    onSuccess: () => setInputValue(''),
+    onSuccess: () => { setInputValue(''); refetchBalance(); },
   });
 
-  // Withdraw flow
   const withdrawFlow = useWithdrawFlow({
     vaultAddress,
     amount: parsedAmount,
     receiver: address ?? '0x0000000000000000000000000000000000000000',
     owner: address ?? '0x0000000000000000000000000000000000000000',
-    onSuccess: () => setInputValue(''),
+    onSuccess: () => { setInputValue(''); refetchBalance(); },
   });
 
   const handleTabChange = useCallback((newTab: TabMode) => {
@@ -61,10 +82,6 @@ export function DepositSidebar({
     depositFlow.reset();
     withdrawFlow.reset();
   }, [depositFlow, withdrawFlow]);
-
-  const isProcessing =
-    (tab === 'deposit' && depositFlow.state !== 'IDLE' && depositFlow.state !== 'SUCCESS' && depositFlow.state !== 'ERROR') ||
-    (tab === 'withdraw' && withdrawFlow.state !== 'IDLE' && withdrawFlow.state !== 'SUCCESS' && withdrawFlow.state !== 'ERROR');
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -101,27 +118,58 @@ export function DepositSidebar({
               Connect your wallet to deposit or withdraw.
             </p>
           </div>
-        ) : tab === 'deposit' ? (
-          <DepositTab
-            inputValue={inputValue}
-            onInputChange={setInputValue}
-            parsedAmount={parsedAmount}
-            usdcBalance={usdcBalance ?? 0n}
-            totalAssets={totalAssets}
-            totalSupply={totalSupply}
-            policyCount={policyCount}
-            flow={depositFlow}
-          />
         ) : (
-          <WithdrawTab
-            inputValue={inputValue}
-            onInputChange={setInputValue}
-            parsedAmount={parsedAmount}
-            maxWithdraw={maxWithdrawOverride ?? maxWithdraw ?? 0n}
-            totalAssets={totalAssets}
-            totalSupply={totalSupply}
-            flow={withdrawFlow}
-          />
+          <>
+            {/* Wallet USDC balance + faucet */}
+            <div className="mb-4 flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
+              <div>
+                <p className="text-xs text-gray-500">Your USDC Balance</p>
+                <p className="text-sm font-semibold text-gray-900">
+                  {usdcBalance !== undefined
+                    ? `${formatUSDC(usdcBalance)} USDC`
+                    : 'Loading...'}
+                </p>
+              </div>
+              {(usdcBalance === undefined || usdcBalance === 0n) && (
+                <button
+                  type="button"
+                  onClick={faucet.mint}
+                  disabled={faucet.isPending || faucet.isConfirming}
+                  className="rounded-md bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {faucet.isPending || faucet.isConfirming
+                    ? 'Minting...'
+                    : 'Get Test USDC'}
+                </button>
+              )}
+              {faucet.isSuccess && (
+                <span className="text-xs font-medium text-emerald-600">+10,000 USDC minted!</span>
+              )}
+            </div>
+
+            {tab === 'deposit' ? (
+              <DepositTab
+                inputValue={inputValue}
+                onInputChange={setInputValue}
+                parsedAmount={parsedAmount}
+                usdcBalance={usdcBalance ?? 0n}
+                totalAssets={totalAssets}
+                totalSupply={totalSupply}
+                policyCount={policyCount}
+                flow={depositFlow}
+              />
+            ) : (
+              <WithdrawTab
+                inputValue={inputValue}
+                onInputChange={setInputValue}
+                parsedAmount={parsedAmount}
+                maxWithdraw={maxWithdrawOverride ?? maxWithdraw ?? 0n}
+                totalAssets={totalAssets}
+                totalSupply={totalSupply}
+                flow={withdrawFlow}
+              />
+            )}
+          </>
         )}
       </div>
     </div>
