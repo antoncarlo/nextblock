@@ -44,17 +44,35 @@ export function useVaultAddresses() {
 
 /**
  * Fetch vault info for a single vault address.
+ * Uses useReadContracts with allowFailure:true so that contract reverts
+ * (e.g. Panic 0x12 division-by-zero on broken vaults) are returned as
+ * { status: 'failure', error } instead of throwing, allowing the UI to
+ * render a graceful fallback row.
  */
 export function useVaultInfo(vaultAddress: `0x${string}` | undefined) {
-  return useReadContract({
-    address: vaultAddress,
-    abi: INSURANCE_VAULT_ABI,
-    functionName: "getVaultInfo",
+  const result = useReadContracts({
+    contracts: vaultAddress
+      ? [
+          {
+            address: vaultAddress,
+            abi: INSURANCE_VAULT_ABI,
+            functionName: "getVaultInfo" as const,
+          },
+        ]
+      : [],
+    allowFailure: true,
     query: {
       refetchInterval: POLL_INTERVAL,
       enabled: !!vaultAddress,
     },
   });
+
+  const first = result.data?.[0];
+  return {
+    ...result,
+    data: first?.status === "success" ? first.result : undefined,
+    error: first?.status === "failure" ? first.error : result.error,
+  };
 }
 
 /**
@@ -71,6 +89,7 @@ export function useMultiVaultInfo(
 
   return useReadContracts({
     contracts,
+    allowFailure: true,
     query: {
       refetchInterval: POLL_INTERVAL,
       enabled: !!vaultAddresses && vaultAddresses.length > 0,
