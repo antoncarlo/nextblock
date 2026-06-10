@@ -25,9 +25,6 @@ jobs:
   frontend:
     name: frontend
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: app
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -39,17 +36,20 @@ jobs:
           cache: npm
           cache-dependency-path: app/package-lock.json
 
+      # Root ci:frontend:* scripts use npm --prefix app, which anchors npm to
+      # app/ and its lockfile instead of resolving the workspace root (which
+      # has no root lockfile). Mirrors the verified local invocation.
       - name: Install dependencies (lockfile)
-        run: npm ci
+        run: npm run ci:frontend:install
 
       - name: Lint
-        run: npm run lint
+        run: npm run ci:frontend:lint
 
       - name: Typecheck
-        run: npx tsc --noEmit
+        run: npm run ci:frontend:typecheck
 
       - name: Build
-        run: npm run build
+        run: npm run ci:frontend:build
 
   contracts:
     name: contracts
