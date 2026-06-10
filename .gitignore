@@ -1,0 +1,45 @@
+# NextBlock root gitignore
+
+# Dependencies
+node_modules/
+
+# Frontend build output and caches
+.next/
+out/
+build/
+dist/
+coverage/
+*.tsbuildinfo
+.vercel/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+lerna-debug.log*
+
+# Environment files and secrets - never commit
+.env
+.env.*
+!.env.example
+
+# Foundry artifacts (regenerable)
+contracts/cache/
+contracts/out/
+
+# Broken vendored lib metadata. The libraries themselves are restored via
+# pinned clones (forge-std v1.9.7, openzeppelin-contracts v5.4.0), see
+# contracts/README.md.
+contracts/lib/**/.git/
+
+# Stray local write-test artifact
+contracts/.write_test
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/

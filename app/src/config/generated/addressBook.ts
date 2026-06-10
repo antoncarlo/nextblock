@@ -1,0 +1,69 @@
+// Generated file. Do not edit manually.
+// Source of truth: contracts/deployments/84532-staging.json
+// Regenerate with: npm run codegen:addressbook (repository root)
+// Drift is rejected in CI by: npm run check:addressbook
+// Addresses are emitted verbatim from the deployment record, preserving the
+// EIP-55 checksum casing written by the deployment broadcast.
+
+export const NEXTBLOCK_CHAIN_ID = 84532 as const;
+
+export const NEXTBLOCK_NETWORK_NAME = "base-sepolia" as const;
+
+export const NEXTBLOCK_SCHEMA_VERSION = 1 as const;
+
+export const NEXTBLOCK_DEPLOYMENT_TIMESTAMP = 1781110174 as const;
+
+export const NEXTBLOCK_ADDRESSES = {
+  adapterRegistry: "0x947f8d2f0961129C5E3e54194d4097f2941BFcD2",
+  aiAssessor: "0xC663f0C80BF1cbCAEfB48603BB8d2be5D161B502",
+  bordereauOracle: "0xaB074a28b474312E75b89A6822537f31f8fA7Ed0",
+  claimManager: "0x504d99e92FCD13040AbAf1Ba9165871DDE3Ddd48",
+  claimReceipt: "0xcAb440CAe016b89739e287884C36E18b22101b54",
+  complianceRegistry: "0x6A77634c65D0Fe5d9b925C73d6e09d7ADC365eB9",
+  lens: "0x4E587AB5aebeBbE324138B2004477aF1DA4cE480",
+  mockOracle: "0xe9d78427EB1e4762a85Ce2c61425BadCDcA9C4A0",
+  navOracle: "0x53a3e4f21460de7CeC34Ac2318342E5e42Ec1701",
+  policyRegistry: "0x2Bf155ac5e09E045803f56A35f6E9f562788f1a2",
+  portfolioRegistry: "0x91Eb412f16bFd44bE2DBBB20C07B967B6E8AaB2E",
+  premiumDistributor: "0xa65F60Bbcf0286fc0a8D9B1560EA3e1B3e0830C9",
+  protocolRoles: "0xEE93166a2cf213243eF330a664682290b195c976",
+  usdc: "0x8d4531e76Aa3D51201F870aa826922e30217EA22",
+  vault: "0x47b1F34b1aA2683Ebd0bC3A5D0F8507Af064BCa3",
+  vaultAllocator: "0xa6356AfA399f9Bf5088aAc2987f7C372A7701e03",
+  vaultDeployer: "0x1026D55aCA2F66041675647bf759C50fFD465B3c",
+  vaultFactory: "0x7C56F056e94bE52C3B35d4C488a5962313Ab5f69",
+} as const;
+
+export const NEXTBLOCK_ROLES = {
+  allocatorBot: "0xfF6f0d49dD2187351264C4d3bbd5537bE8Ad81d2",
+  cedant: "0xfF6f0d49dD2187351264C4d3bbd5537bE8Ad81d2",
+  committee: "0xfF6f0d49dD2187351264C4d3bbd5537bE8Ad81d2",
+  curator: "0xfF6f0d49dD2187351264C4d3bbd5537bE8Ad81d2",
+  deployer: "0xfF6f0d49dD2187351264C4d3bbd5537bE8Ad81d2",
+  kycOperator: "0xfF6f0d49dD2187351264C4d3bbd5537bE8Ad81d2",
+  oracleNode: "0xfF6f0d49dD2187351264C4d3bbd5537bE8Ad81d2",
+  owner: "0xfF6f0d49dD2187351264C4d3bbd5537bE8Ad81d2",
+  sentinel: "0xfF6f0d49dD2187351264C4d3bbd5537bE8Ad81d2",
+} as const;
+
+export type NextBlockContractName = keyof typeof NEXTBLOCK_ADDRESSES;
+
+export type NextBlockRoleName = keyof typeof NEXTBLOCK_ROLES;
+
+export interface NextBlockAddressBook {
+  readonly chainId: typeof NEXTBLOCK_CHAIN_ID;
+  readonly networkName: typeof NEXTBLOCK_NETWORK_NAME;
+  readonly schemaVersion: typeof NEXTBLOCK_SCHEMA_VERSION;
+  readonly deploymentTimestamp: typeof NEXTBLOCK_DEPLOYMENT_TIMESTAMP;
+  readonly addresses: typeof NEXTBLOCK_ADDRESSES;
+  readonly roles: typeof NEXTBLOCK_ROLES;
+}
+
+export const NEXTBLOCK_ADDRESS_BOOK: NextBlockAddressBook = {
+  chainId: NEXTBLOCK_CHAIN_ID,
+  networkName: NEXTBLOCK_NETWORK_NAME,
+  schemaVersion: NEXTBLOCK_SCHEMA_VERSION,
+  deploymentTimestamp: NEXTBLOCK_DEPLOYMENT_TIMESTAMP,
+  addresses: NEXTBLOCK_ADDRESSES,
+  roles: NEXTBLOCK_ROLES,
+};
