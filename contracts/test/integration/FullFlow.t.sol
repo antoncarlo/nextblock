@@ -80,12 +80,20 @@ contract FullFlowTest is Test {
         claimReceipt.setRegistrar(address(factory));
 
         address vaultAAddr = factory.createVault(
-            "NextBlock Balanced Core", "nxbBAL", "Balanced Core",
-            managerA, 2000, 50  // 20% buffer, 0.5% fee
+            "NextBlock Balanced Core",
+            "nxbBAL",
+            "Balanced Core",
+            managerA,
+            2000,
+            50 // 20% buffer, 0.5% fee
         );
         address vaultBAddr = factory.createVault(
-            "NextBlock DeFi Alpha", "nxbALPHA", "DeFi Alpha",
-            managerB, 1500, 100  // 15% buffer, 1% fee
+            "NextBlock DeFi Alpha",
+            "nxbALPHA",
+            "DeFi Alpha",
+            managerB,
+            1500,
+            100 // 15% buffer, 1% fee
         );
 
         vaultA = InsuranceVault(vaultAAddr);
@@ -94,9 +102,21 @@ contract FullFlowTest is Test {
         // No manual setAuthorizedMinter calls needed -- factory auto-registers via registrar
 
         // Phase 3: Register + activate policies
-        registry.registerPolicy("BTC Price Protection", PolicyRegistry.VerificationType.ON_CHAIN, 50_000e6, 2_500e6, 90 days, insurer, 80_000e8);
-        registry.registerPolicy("Flight Delay", PolicyRegistry.VerificationType.ORACLE_DEPENDENT, 15_000e6, 1_200e6, 60 days, insurer, 0);
-        registry.registerPolicy("Commercial Fire", PolicyRegistry.VerificationType.OFF_CHAIN, 40_000e6, 2_400e6, 180 days, insurer, 0);
+        registry.registerPolicy(
+            "BTC Price Protection",
+            PolicyRegistry.VerificationType.ON_CHAIN,
+            50_000e6,
+            2_500e6,
+            90 days,
+            insurer,
+            80_000e8
+        );
+        registry.registerPolicy(
+            "Flight Delay", PolicyRegistry.VerificationType.ORACLE_DEPENDENT, 15_000e6, 1_200e6, 60 days, insurer, 0
+        );
+        registry.registerPolicy(
+            "Commercial Fire", PolicyRegistry.VerificationType.OFF_CHAIN, 40_000e6, 2_400e6, 180 days, insurer, 0
+        );
 
         registry.activatePolicy(0);
         registry.activatePolicy(1);
@@ -106,16 +126,16 @@ contract FullFlowTest is Test {
 
         // Phase 4: Add policies to vaults + deposit premiums
         vm.prank(managerA);
-        vaultA.addPolicy(0, 4000);  // P1: 40%
+        vaultA.addPolicy(0, 4000); // P1: 40%
         vm.prank(managerA);
-        vaultA.addPolicy(1, 2000);  // P2: 20%
+        vaultA.addPolicy(1, 2000); // P2: 20%
         vm.prank(managerA);
-        vaultA.addPolicy(2, 4000);  // P3: 40%
+        vaultA.addPolicy(2, 4000); // P3: 40%
 
         vm.prank(managerB);
-        vaultB.addPolicy(0, 6000);  // P1: 60%
+        vaultB.addPolicy(0, 6000); // P1: 60%
         vm.prank(managerB);
-        vaultB.addPolicy(1, 4000);  // P2: 40%
+        vaultB.addPolicy(1, 4000); // P2: 40%
 
         // Mint and deposit premiums
         vm.startPrank(admin);

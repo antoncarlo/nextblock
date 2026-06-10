@@ -20,7 +20,7 @@ import {VaultDeployer} from "./VaultDeployer.sol";
 ///      gated by onlyOwner.
 contract VaultFactory is Ownable, ProtocolRoleConstants {
     // --- Immutables ---
-    address public immutable asset;           // MockUSDC
+    address public immutable asset; // MockUSDC
     address public immutable policyRegistry;
     address public immutable oracle;
     address public immutable claimReceiptAddr;
@@ -77,10 +77,11 @@ contract VaultFactory is Ownable, ProtocolRoleConstants {
         address portfolioRegistry_,
         address vaultDeployer_
     ) Ownable(msg.sender) {
-        if (asset_ == address(0) || policyRegistry_ == address(0) ||
-            oracle_ == address(0) || claimReceipt_ == address(0) ||
-            protocolRoles_ == address(0) || complianceRegistry_ == address(0) ||
-            portfolioRegistry_ == address(0) || vaultDeployer_ == address(0)) {
+        if (
+            asset_ == address(0) || policyRegistry_ == address(0) || oracle_ == address(0)
+                || claimReceipt_ == address(0) || protocolRoles_ == address(0) || complianceRegistry_ == address(0)
+                || portfolioRegistry_ == address(0) || vaultDeployer_ == address(0)
+        ) {
             revert VaultFactory__InvalidParams();
         }
         vaultDeployer = VaultDeployer(vaultDeployer_);
@@ -125,7 +126,7 @@ contract VaultFactory is Ownable, ProtocolRoleConstants {
                 name: name,
                 symbol: symbol,
                 vaultName: vaultName,
-                owner: msg.sender,       // owner of the vault = caller
+                owner: msg.sender, // owner of the vault = caller
                 vaultManager: vaultManager_,
                 bufferRatioBps: bufferRatioBps_,
                 managementFeeBps: managementFeeBps_,

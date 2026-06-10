@@ -71,10 +71,9 @@ contract ProtocolRolesTest is Test {
         vm.stopPrank();
 
         vm.prank(curator);
-        vault = InsuranceVault(factory.createVault(
-            "NextBlock Balanced Core", "nxbBAL", "Balanced Core",
-            curator, 2000, 50
-        ));
+        vault = InsuranceVault(
+            factory.createVault("NextBlock Balanced Core", "nxbBAL", "Balanced Core", curator, 2000, 50)
+        );
     }
 
     // =========== ROLE CONSTANTS ===========
@@ -133,39 +132,35 @@ contract ProtocolRolesTest is Test {
         bytes32 curatorRole = protocolRoles.UNDERWRITING_CURATOR_ROLE();
         bytes32 ownerRole = protocolRoles.OWNER_ROLE();
         vm.prank(attacker);
-        vm.expectRevert(abi.encodeWithSelector(
-            IAccessControl.AccessControlUnauthorizedAccount.selector,
-            attacker,
-            ownerRole
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, attacker, ownerRole)
+        );
         protocolRoles.grantRole(curatorRole, attacker);
     }
 
     function test_revokedCurator_losesAccess() public {
         // Curator can activate a registered policy; after revoke it cannot.
         vm.prank(cedant);
-        uint256 pid = registry.registerPolicy("Treaty", PolicyRegistry.VerificationType.OFF_CHAIN, 10_000e6, 1_000e6, 90 days, insurer, 0);
+        uint256 pid = registry.registerPolicy(
+            "Treaty", PolicyRegistry.VerificationType.OFF_CHAIN, 10_000e6, 1_000e6, 90 days, insurer, 0
+        );
 
         bytes32 curatorRole = protocolRoles.UNDERWRITING_CURATOR_ROLE();
         vm.prank(admin);
         protocolRoles.revokeRole(curatorRole, curator);
 
         vm.prank(curator);
-        vm.expectRevert(abi.encodeWithSelector(
-            PolicyRegistry.PolicyRegistry__UnauthorizedRole.selector,
-            curator,
-            curatorRole
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(PolicyRegistry.PolicyRegistry__UnauthorizedRole.selector, curator, curatorRole)
+        );
         registry.activatePolicy(pid);
     }
 
     function test_requireRole_revertsForMissingRole() public {
         bytes32 sentinelRole = protocolRoles.SENTINEL_ROLE();
-        vm.expectRevert(abi.encodeWithSelector(
-            IAccessControl.AccessControlUnauthorizedAccount.selector,
-            attacker,
-            sentinelRole
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, attacker, sentinelRole)
+        );
         protocolRoles.requireRole(sentinelRole, attacker);
     }
 
@@ -174,47 +169,40 @@ contract ProtocolRolesTest is Test {
     function test_gate_registerPolicy() public {
         bytes32 cedantRole = protocolRoles.AUTHORIZED_CEDANT_ROLE();
         vm.prank(attacker);
-        vm.expectRevert(abi.encodeWithSelector(
-            PolicyRegistry.PolicyRegistry__UnauthorizedRole.selector,
-            attacker,
-            cedantRole
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(PolicyRegistry.PolicyRegistry__UnauthorizedRole.selector, attacker, cedantRole)
+        );
         registry.registerPolicy("X", PolicyRegistry.VerificationType.OFF_CHAIN, 1e6, 1e6, 1 days, insurer, 0);
     }
 
     function test_gate_activatePolicy() public {
         vm.prank(cedant);
-        uint256 pid = registry.registerPolicy("X", PolicyRegistry.VerificationType.OFF_CHAIN, 1e6, 1e6, 1 days, insurer, 0);
+        uint256 pid =
+            registry.registerPolicy("X", PolicyRegistry.VerificationType.OFF_CHAIN, 1e6, 1e6, 1 days, insurer, 0);
 
         bytes32 curatorRole = protocolRoles.UNDERWRITING_CURATOR_ROLE();
         vm.prank(attacker);
-        vm.expectRevert(abi.encodeWithSelector(
-            PolicyRegistry.PolicyRegistry__UnauthorizedRole.selector,
-            attacker,
-            curatorRole
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(PolicyRegistry.PolicyRegistry__UnauthorizedRole.selector, attacker, curatorRole)
+        );
         registry.activatePolicy(pid);
     }
 
     function test_gate_advanceTime() public {
         bytes32 ownerRole = protocolRoles.OWNER_ROLE();
         vm.prank(attacker);
-        vm.expectRevert(abi.encodeWithSelector(
-            PolicyRegistry.PolicyRegistry__UnauthorizedRole.selector,
-            attacker,
-            ownerRole
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(PolicyRegistry.PolicyRegistry__UnauthorizedRole.selector, attacker, ownerRole)
+        );
         registry.advanceTime(1 days);
     }
 
     function test_gate_createVault() public {
         bytes32 curatorRole = protocolRoles.UNDERWRITING_CURATOR_ROLE();
         vm.prank(attacker);
-        vm.expectRevert(abi.encodeWithSelector(
-            VaultFactory.VaultFactory__UnauthorizedRole.selector,
-            attacker,
-            curatorRole
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(VaultFactory.VaultFactory__UnauthorizedRole.selector, attacker, curatorRole)
+        );
         factory.createVault("X", "X", "X", curator, 2000, 50);
     }
 
@@ -227,7 +215,9 @@ contract ProtocolRolesTest is Test {
     function test_gate_addPolicy_managerWithoutRole() public {
         // Per-vault manager identity alone is NOT sufficient: role revocation blocks it.
         vm.prank(cedant);
-        uint256 pid = registry.registerPolicy("Treaty", PolicyRegistry.VerificationType.OFF_CHAIN, 10_000e6, 1_000e6, 90 days, insurer, 0);
+        uint256 pid = registry.registerPolicy(
+            "Treaty", PolicyRegistry.VerificationType.OFF_CHAIN, 10_000e6, 1_000e6, 90 days, insurer, 0
+        );
         vm.prank(curator);
         registry.activatePolicy(pid);
 
@@ -269,7 +259,9 @@ contract ProtocolRolesTest is Test {
     function test_authorized_fullRoleFlow() public {
         // Cedant registers, curator activates, curator adds to vault, depositor funds.
         vm.prank(cedant);
-        uint256 pid = registry.registerPolicy("Quota Share Treaty", PolicyRegistry.VerificationType.OFF_CHAIN, 10_000e6, 1_000e6, 90 days, insurer, 0);
+        uint256 pid = registry.registerPolicy(
+            "Quota Share Treaty", PolicyRegistry.VerificationType.OFF_CHAIN, 10_000e6, 1_000e6, 90 days, insurer, 0
+        );
 
         vm.prank(curator);
         registry.activatePolicy(pid);

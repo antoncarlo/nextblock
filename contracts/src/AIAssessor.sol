@@ -27,17 +27,17 @@ contract AIAssessor is ProtocolRoleConstants {
     // --- Enums / Structs ---
     enum Recommendation {
         MANUAL_REVIEW, // 0: default, defer entirely to the committee
-        APPROVE,       // 1: model suggests approval (advisory only)
-        REJECT         // 2: model suggests rejection (advisory only)
+        APPROVE, // 1: model suggests approval (advisory only)
+        REJECT // 2: model suggests rejection (advisory only)
     }
 
     struct Assessment {
-        uint16 scoreBps;            // claim validity score, 0..10000
-        uint16 anomalyScoreBps;     // anomaly likelihood, 0..10000
-        uint16 confidenceBps;       // model confidence, 0..10000
+        uint16 scoreBps; // claim validity score, 0..10000
+        uint16 anomalyScoreBps; // anomaly likelihood, 0..10000
+        uint16 confidenceBps; // model confidence, 0..10000
         Recommendation recommendation;
-        uint256 recommendedAmount;  // suggested reserve/payout (advisory)
-        bytes32 sourceHash;         // hash of the off-chain model report
+        uint256 recommendedAmount; // suggested reserve/payout (advisory)
+        bytes32 sourceHash; // hash of the off-chain model report
         uint64 assessedAt;
     }
 

@@ -27,72 +27,72 @@ contract DemoSetup is Script {
     // =====================================================================
 
     // P1: BTC Price Protection (ON_CHAIN)
-    uint256 constant COVERAGE_P1  = 50_000e6;
-    uint256 constant PREMIUM_P1   = 2_500e6;
-    uint256 constant DURATION_P1  = 90 days;
-    int256  constant THRESHOLD_P1 = 80_000e8;
+    uint256 constant COVERAGE_P1 = 50_000e6;
+    uint256 constant PREMIUM_P1 = 2_500e6;
+    uint256 constant DURATION_P1 = 90 days;
+    int256 constant THRESHOLD_P1 = 80_000e8;
 
     // P2: Flight Delay (ORACLE_DEPENDENT)
-    uint256 constant COVERAGE_P2  = 15_000e6;
-    uint256 constant PREMIUM_P2   = 1_200e6;
-    uint256 constant DURATION_P2  = 60 days;
+    uint256 constant COVERAGE_P2 = 15_000e6;
+    uint256 constant PREMIUM_P2 = 1_200e6;
+    uint256 constant DURATION_P2 = 60 days;
 
     // P3: Commercial Fire (OFF_CHAIN)
-    uint256 constant COVERAGE_P3  = 40_000e6;
-    uint256 constant PREMIUM_P3   = 2_400e6;
-    uint256 constant DURATION_P3  = 180 days;
+    uint256 constant COVERAGE_P3 = 40_000e6;
+    uint256 constant PREMIUM_P3 = 2_400e6;
+    uint256 constant DURATION_P3 = 180 days;
 
     // P4: ETH Crash Protection (ON_CHAIN)
-    uint256 constant COVERAGE_P4  = 30_000e6;
-    uint256 constant PREMIUM_P4   = 1_800e6;
-    uint256 constant DURATION_P4  = 90 days;
-    int256  constant THRESHOLD_P4 = 3_000e8;
+    uint256 constant COVERAGE_P4 = 30_000e6;
+    uint256 constant PREMIUM_P4 = 1_800e6;
+    uint256 constant DURATION_P4 = 90 days;
+    int256 constant THRESHOLD_P4 = 3_000e8;
 
     // P5: BTC Catastrophe Cover (ON_CHAIN)
-    uint256 constant COVERAGE_P5  = 100_000e6;
-    uint256 constant PREMIUM_P5   = 6_000e6;
-    uint256 constant DURATION_P5  = 180 days;
-    int256  constant THRESHOLD_P5 = 60_000e8;
+    uint256 constant COVERAGE_P5 = 100_000e6;
+    uint256 constant PREMIUM_P5 = 6_000e6;
+    uint256 constant DURATION_P5 = 180 days;
+    int256 constant THRESHOLD_P5 = 60_000e8;
 
     // P6: Stablecoin Depeg Guard (ON_CHAIN)
-    uint256 constant COVERAGE_P6  = 25_000e6;
-    uint256 constant PREMIUM_P6   = 3_000e6;
-    uint256 constant DURATION_P6  = 365 days;
-    int256  constant THRESHOLD_P6 = 50_000e8;
+    uint256 constant COVERAGE_P6 = 25_000e6;
+    uint256 constant PREMIUM_P6 = 3_000e6;
+    uint256 constant DURATION_P6 = 365 days;
+    int256 constant THRESHOLD_P6 = 50_000e8;
 
     // P7: Hurricane Season Cover (ORACLE_DEPENDENT)
-    uint256 constant COVERAGE_P7  = 80_000e6;
-    uint256 constant PREMIUM_P7   = 8_000e6;
-    uint256 constant DURATION_P7  = 180 days;
+    uint256 constant COVERAGE_P7 = 80_000e6;
+    uint256 constant PREMIUM_P7 = 8_000e6;
+    uint256 constant DURATION_P7 = 180 days;
 
     // P8: Earthquake Protection (ORACLE_DEPENDENT)
-    uint256 constant COVERAGE_P8  = 60_000e6;
-    uint256 constant PREMIUM_P8   = 4_200e6;
-    uint256 constant DURATION_P8  = 365 days;
+    uint256 constant COVERAGE_P8 = 60_000e6;
+    uint256 constant PREMIUM_P8 = 4_200e6;
+    uint256 constant DURATION_P8 = 365 days;
 
     // P9: Drought Index (ORACLE_DEPENDENT)
-    uint256 constant COVERAGE_P9  = 20_000e6;
-    uint256 constant PREMIUM_P9   = 2_000e6;
-    uint256 constant DURATION_P9  = 120 days;
+    uint256 constant COVERAGE_P9 = 20_000e6;
+    uint256 constant PREMIUM_P9 = 2_000e6;
+    uint256 constant DURATION_P9 = 120 days;
 
     // P10: Marine Cargo (OFF_CHAIN)
     uint256 constant COVERAGE_P10 = 45_000e6;
-    uint256 constant PREMIUM_P10  = 3_600e6;
+    uint256 constant PREMIUM_P10 = 3_600e6;
     uint256 constant DURATION_P10 = 90 days;
 
     // P11: Professional Liability (OFF_CHAIN)
     uint256 constant COVERAGE_P11 = 35_000e6;
-    uint256 constant PREMIUM_P11  = 1_750e6;
+    uint256 constant PREMIUM_P11 = 1_750e6;
     uint256 constant DURATION_P11 = 365 days;
 
     // P12: Cyber Insurance (OFF_CHAIN)
     uint256 constant COVERAGE_P12 = 70_000e6;
-    uint256 constant PREMIUM_P12  = 5_600e6;
+    uint256 constant PREMIUM_P12 = 5_600e6;
     uint256 constant DURATION_P12 = 180 days;
 
     // P13: Equipment Breakdown (OFF_CHAIN)
     uint256 constant COVERAGE_P13 = 55_000e6;
-    uint256 constant PREMIUM_P13  = 3_850e6;
+    uint256 constant PREMIUM_P13 = 3_850e6;
     uint256 constant DURATION_P13 = 365 days;
 
     // =====================================================================
@@ -258,37 +258,48 @@ contract DemoSetup is Script {
     }
 
     function _createVaultB(address deployer) internal {
-        vaultBAddr = factory.createVault("NextBlock Digital Asset Shield", "nxbDAS", "Digital Asset Shield", deployer, 2500, 100);
+        vaultBAddr = factory.createVault(
+            "NextBlock Digital Asset Shield", "nxbDAS", "Digital Asset Shield", deployer, 2500, 100
+        );
         console.log("Vault B (Digital Asset Shield):", vaultBAddr);
     }
 
     function _createVaultC(address deployer) internal {
-        vaultCAddr = factory.createVault("NextBlock Parametric Shield", "nxbPARA", "Parametric Shield", deployer, 2500, 75);
+        vaultCAddr =
+            factory.createVault("NextBlock Parametric Shield", "nxbPARA", "Parametric Shield", deployer, 2500, 75);
         console.log("Vault C (Parametric Shield):", vaultCAddr);
     }
 
     function _createVaultD(address deployer) internal {
-        vaultDAddr = factory.createVault("NextBlock Conservative Yield", "nxbCONS", "Conservative Yield", deployer, 3000, 25);
+        vaultDAddr =
+            factory.createVault("NextBlock Conservative Yield", "nxbCONS", "Conservative Yield", deployer, 3000, 25);
         console.log("Vault D (Conservative Yield):", vaultDAddr);
     }
 
     function _createVaultE(address deployer) internal {
-        vaultEAddr = factory.createVault("NextBlock Catastrophe & Specialty", "nxbCATS", "Catastrophe & Specialty", deployer, 2000, 150);
+        vaultEAddr = factory.createVault(
+            "NextBlock Catastrophe & Specialty", "nxbCATS", "Catastrophe & Specialty", deployer, 2000, 150
+        );
         console.log("Vault E (Catastrophe & Specialty):", vaultEAddr);
     }
 
     function _createVaultF(address deployer) internal {
-        vaultFAddr = factory.createVault("NextBlock Traditional Lines", "nxbTRAD", "Traditional Lines", deployer, 2500, 50);
+        vaultFAddr =
+            factory.createVault("NextBlock Traditional Lines", "nxbTRAD", "Traditional Lines", deployer, 2500, 50);
         console.log("Vault F (Traditional Lines):", vaultFAddr);
     }
 
     function _createVaultG(address deployer) internal {
-        vaultGAddr = factory.createVault("NextBlock Technology & Specialty", "nxbCYBR", "Technology & Specialty", deployer, 2000, 100);
+        vaultGAddr = factory.createVault(
+            "NextBlock Technology & Specialty", "nxbCYBR", "Technology & Specialty", deployer, 2000, 100
+        );
         console.log("Vault G (Technology & Specialty):", vaultGAddr);
     }
 
     function _createVaultH(address deployer) internal {
-        vaultHAddr = factory.createVault("NextBlock Multi-Line Diversified", "nxbMLTI", "Multi-Line Diversified", deployer, 2000, 75);
+        vaultHAddr = factory.createVault(
+            "NextBlock Multi-Line Diversified", "nxbMLTI", "Multi-Line Diversified", deployer, 2000, 75
+        );
         console.log("Vault H (Multi-Line Diversified):", vaultHAddr);
     }
 
@@ -315,47 +326,151 @@ contract DemoSetup is Script {
     }
 
     function _registerOnChainPolicies(address deployer) internal {
-        p1 = registry.registerPolicy("BTC Price Protection", PolicyRegistry.VerificationType.ON_CHAIN, COVERAGE_P1, PREMIUM_P1, DURATION_P1, deployer, THRESHOLD_P1);
+        p1 = registry.registerPolicy(
+            "BTC Price Protection",
+            PolicyRegistry.VerificationType.ON_CHAIN,
+            COVERAGE_P1,
+            PREMIUM_P1,
+            DURATION_P1,
+            deployer,
+            THRESHOLD_P1
+        );
         console.log("P1  (BTC Price Protection) registered, id:", p1);
 
-        p4 = registry.registerPolicy("ETH Crash Protection", PolicyRegistry.VerificationType.ON_CHAIN, COVERAGE_P4, PREMIUM_P4, DURATION_P4, deployer, THRESHOLD_P4);
+        p4 = registry.registerPolicy(
+            "ETH Crash Protection",
+            PolicyRegistry.VerificationType.ON_CHAIN,
+            COVERAGE_P4,
+            PREMIUM_P4,
+            DURATION_P4,
+            deployer,
+            THRESHOLD_P4
+        );
         console.log("P4  (ETH Crash Protection) registered, id:", p4);
 
-        p5 = registry.registerPolicy("BTC Catastrophe Cover", PolicyRegistry.VerificationType.ON_CHAIN, COVERAGE_P5, PREMIUM_P5, DURATION_P5, deployer, THRESHOLD_P5);
+        p5 = registry.registerPolicy(
+            "BTC Catastrophe Cover",
+            PolicyRegistry.VerificationType.ON_CHAIN,
+            COVERAGE_P5,
+            PREMIUM_P5,
+            DURATION_P5,
+            deployer,
+            THRESHOLD_P5
+        );
         console.log("P5  (BTC Catastrophe Cover) registered, id:", p5);
 
-        p6 = registry.registerPolicy("Stablecoin Depeg Guard", PolicyRegistry.VerificationType.ON_CHAIN, COVERAGE_P6, PREMIUM_P6, DURATION_P6, deployer, THRESHOLD_P6);
+        p6 = registry.registerPolicy(
+            "Stablecoin Depeg Guard",
+            PolicyRegistry.VerificationType.ON_CHAIN,
+            COVERAGE_P6,
+            PREMIUM_P6,
+            DURATION_P6,
+            deployer,
+            THRESHOLD_P6
+        );
         console.log("P6  (Stablecoin Depeg Guard) registered, id:", p6);
     }
 
     function _registerOraclePolicies(address deployer) internal {
-        p2 = registry.registerPolicy("Flight Delay", PolicyRegistry.VerificationType.ORACLE_DEPENDENT, COVERAGE_P2, PREMIUM_P2, DURATION_P2, deployer, 0);
+        p2 = registry.registerPolicy(
+            "Flight Delay",
+            PolicyRegistry.VerificationType.ORACLE_DEPENDENT,
+            COVERAGE_P2,
+            PREMIUM_P2,
+            DURATION_P2,
+            deployer,
+            0
+        );
         console.log("P2  (Flight Delay) registered, id:", p2);
 
-        p7 = registry.registerPolicy("Hurricane Season Cover", PolicyRegistry.VerificationType.ORACLE_DEPENDENT, COVERAGE_P7, PREMIUM_P7, DURATION_P7, deployer, 0);
+        p7 = registry.registerPolicy(
+            "Hurricane Season Cover",
+            PolicyRegistry.VerificationType.ORACLE_DEPENDENT,
+            COVERAGE_P7,
+            PREMIUM_P7,
+            DURATION_P7,
+            deployer,
+            0
+        );
         console.log("P7  (Hurricane Season Cover) registered, id:", p7);
 
-        p8 = registry.registerPolicy("Earthquake Protection", PolicyRegistry.VerificationType.ORACLE_DEPENDENT, COVERAGE_P8, PREMIUM_P8, DURATION_P8, deployer, 0);
+        p8 = registry.registerPolicy(
+            "Earthquake Protection",
+            PolicyRegistry.VerificationType.ORACLE_DEPENDENT,
+            COVERAGE_P8,
+            PREMIUM_P8,
+            DURATION_P8,
+            deployer,
+            0
+        );
         console.log("P8  (Earthquake Protection) registered, id:", p8);
 
-        p9 = registry.registerPolicy("Drought Index", PolicyRegistry.VerificationType.ORACLE_DEPENDENT, COVERAGE_P9, PREMIUM_P9, DURATION_P9, deployer, 0);
+        p9 = registry.registerPolicy(
+            "Drought Index",
+            PolicyRegistry.VerificationType.ORACLE_DEPENDENT,
+            COVERAGE_P9,
+            PREMIUM_P9,
+            DURATION_P9,
+            deployer,
+            0
+        );
         console.log("P9  (Drought Index) registered, id:", p9);
     }
 
     function _registerOffChainPolicies(address deployer) internal {
-        p3 = registry.registerPolicy("Commercial Fire", PolicyRegistry.VerificationType.OFF_CHAIN, COVERAGE_P3, PREMIUM_P3, DURATION_P3, deployer, 0);
+        p3 = registry.registerPolicy(
+            "Commercial Fire",
+            PolicyRegistry.VerificationType.OFF_CHAIN,
+            COVERAGE_P3,
+            PREMIUM_P3,
+            DURATION_P3,
+            deployer,
+            0
+        );
         console.log("P3  (Commercial Fire) registered, id:", p3);
 
-        p10 = registry.registerPolicy("Marine Cargo", PolicyRegistry.VerificationType.OFF_CHAIN, COVERAGE_P10, PREMIUM_P10, DURATION_P10, deployer, 0);
+        p10 = registry.registerPolicy(
+            "Marine Cargo",
+            PolicyRegistry.VerificationType.OFF_CHAIN,
+            COVERAGE_P10,
+            PREMIUM_P10,
+            DURATION_P10,
+            deployer,
+            0
+        );
         console.log("P10 (Marine Cargo) registered, id:", p10);
 
-        p11 = registry.registerPolicy("Professional Liability", PolicyRegistry.VerificationType.OFF_CHAIN, COVERAGE_P11, PREMIUM_P11, DURATION_P11, deployer, 0);
+        p11 = registry.registerPolicy(
+            "Professional Liability",
+            PolicyRegistry.VerificationType.OFF_CHAIN,
+            COVERAGE_P11,
+            PREMIUM_P11,
+            DURATION_P11,
+            deployer,
+            0
+        );
         console.log("P11 (Professional Liability) registered, id:", p11);
 
-        p12 = registry.registerPolicy("Cyber Insurance", PolicyRegistry.VerificationType.OFF_CHAIN, COVERAGE_P12, PREMIUM_P12, DURATION_P12, deployer, 0);
+        p12 = registry.registerPolicy(
+            "Cyber Insurance",
+            PolicyRegistry.VerificationType.OFF_CHAIN,
+            COVERAGE_P12,
+            PREMIUM_P12,
+            DURATION_P12,
+            deployer,
+            0
+        );
         console.log("P12 (Cyber Insurance) registered, id:", p12);
 
-        p13 = registry.registerPolicy("Equipment Breakdown", PolicyRegistry.VerificationType.OFF_CHAIN, COVERAGE_P13, PREMIUM_P13, DURATION_P13, deployer, 0);
+        p13 = registry.registerPolicy(
+            "Equipment Breakdown",
+            PolicyRegistry.VerificationType.OFF_CHAIN,
+            COVERAGE_P13,
+            PREMIUM_P13,
+            DURATION_P13,
+            deployer,
+            0
+        );
         console.log("P13 (Equipment Breakdown) registered, id:", p13);
     }
 
@@ -410,18 +525,18 @@ contract DemoSetup is Script {
     function _addPoliciesAndFundVaultA() internal {
         InsuranceVault vault = InsuranceVault(vaultAAddr);
         // Vault A: P1, P2, P3, P7, P10 -- 5 policies, each 2000 BPS
-        vault.addPolicy(p1,  2000);
-        vault.addPolicy(p2,  2000);
-        vault.addPolicy(p3,  2000);
-        vault.addPolicy(p7,  2000);
+        vault.addPolicy(p1, 2000);
+        vault.addPolicy(p2, 2000);
+        vault.addPolicy(p3, 2000);
+        vault.addPolicy(p7, 2000);
         vault.addPolicy(p10, 2000);
 
         uint256 premiums = PREMIUM_P1 + PREMIUM_P2 + PREMIUM_P3 + PREMIUM_P7 + PREMIUM_P10;
         usdc.approve(vaultAAddr, premiums);
-        vault.depositPremium(p1,  PREMIUM_P1);
-        vault.depositPremium(p2,  PREMIUM_P2);
-        vault.depositPremium(p3,  PREMIUM_P3);
-        vault.depositPremium(p7,  PREMIUM_P7);
+        vault.depositPremium(p1, PREMIUM_P1);
+        vault.depositPremium(p2, PREMIUM_P2);
+        vault.depositPremium(p3, PREMIUM_P3);
+        vault.depositPremium(p7, PREMIUM_P7);
         vault.depositPremium(p10, PREMIUM_P10);
         console.log("Vault A: P1,P2,P3,P7,P10 (5x2000 BPS), premiums: $17,700");
     }
@@ -463,14 +578,14 @@ contract DemoSetup is Script {
     function _addPoliciesAndFundVaultD() internal {
         InsuranceVault vault = InsuranceVault(vaultDAddr);
         // Vault D: P3, P10, P11, P13 -- 4 policies, each 2500 BPS
-        vault.addPolicy(p3,  2500);
+        vault.addPolicy(p3, 2500);
         vault.addPolicy(p10, 2500);
         vault.addPolicy(p11, 2500);
         vault.addPolicy(p13, 2500);
 
         uint256 premiums = PREMIUM_P3 + PREMIUM_P10 + PREMIUM_P11 + PREMIUM_P13;
         usdc.approve(vaultDAddr, premiums);
-        vault.depositPremium(p3,  PREMIUM_P3);
+        vault.depositPremium(p3, PREMIUM_P3);
         vault.depositPremium(p10, PREMIUM_P10);
         vault.depositPremium(p11, PREMIUM_P11);
         vault.depositPremium(p13, PREMIUM_P13);
@@ -480,16 +595,16 @@ contract DemoSetup is Script {
     function _addPoliciesAndFundVaultE() internal {
         InsuranceVault vault = InsuranceVault(vaultEAddr);
         // Vault E: P5, P7, P8, P12 -- 4 policies, each 2500 BPS
-        vault.addPolicy(p5,  2500);
-        vault.addPolicy(p7,  2500);
-        vault.addPolicy(p8,  2500);
+        vault.addPolicy(p5, 2500);
+        vault.addPolicy(p7, 2500);
+        vault.addPolicy(p8, 2500);
         vault.addPolicy(p12, 2500);
 
         uint256 premiums = PREMIUM_P5 + PREMIUM_P7 + PREMIUM_P8 + PREMIUM_P12;
         usdc.approve(vaultEAddr, premiums);
-        vault.depositPremium(p5,  PREMIUM_P5);
-        vault.depositPremium(p7,  PREMIUM_P7);
-        vault.depositPremium(p8,  PREMIUM_P8);
+        vault.depositPremium(p5, PREMIUM_P5);
+        vault.depositPremium(p7, PREMIUM_P7);
+        vault.depositPremium(p8, PREMIUM_P8);
         vault.depositPremium(p12, PREMIUM_P12);
         console.log("Vault E: P5,P7,P8,P12 (4x2500 BPS), premiums: $23,800");
     }
@@ -497,13 +612,13 @@ contract DemoSetup is Script {
     function _addPoliciesAndFundVaultF() internal {
         InsuranceVault vault = InsuranceVault(vaultFAddr);
         // Vault F: P3, P10, P11 -- 3 policies: 3333, 3333, 3334 BPS
-        vault.addPolicy(p3,  3333);
+        vault.addPolicy(p3, 3333);
         vault.addPolicy(p10, 3333);
         vault.addPolicy(p11, 3334);
 
         uint256 premiums = PREMIUM_P3 + PREMIUM_P10 + PREMIUM_P11;
         usdc.approve(vaultFAddr, premiums);
-        vault.depositPremium(p3,  PREMIUM_P3);
+        vault.depositPremium(p3, PREMIUM_P3);
         vault.depositPremium(p10, PREMIUM_P10);
         vault.depositPremium(p11, PREMIUM_P11);
         console.log("Vault F: P3,P10,P11 (3333+3333+3334 BPS), premiums: $7,750");
@@ -512,13 +627,13 @@ contract DemoSetup is Script {
     function _addPoliciesAndFundVaultG() internal {
         InsuranceVault vault = InsuranceVault(vaultGAddr);
         // Vault G: P6, P12, P13 -- 3 policies: 3333, 3333, 3334 BPS
-        vault.addPolicy(p6,  3333);
+        vault.addPolicy(p6, 3333);
         vault.addPolicy(p12, 3333);
         vault.addPolicy(p13, 3334);
 
         uint256 premiums = PREMIUM_P6 + PREMIUM_P12 + PREMIUM_P13;
         usdc.approve(vaultGAddr, premiums);
-        vault.depositPremium(p6,  PREMIUM_P6);
+        vault.depositPremium(p6, PREMIUM_P6);
         vault.depositPremium(p12, PREMIUM_P12);
         vault.depositPremium(p13, PREMIUM_P13);
         console.log("Vault G: P6,P12,P13 (3333+3333+3334 BPS), premiums: $12,450");
@@ -527,19 +642,19 @@ contract DemoSetup is Script {
     function _addPoliciesAndFundVaultH() internal {
         InsuranceVault vault = InsuranceVault(vaultHAddr);
         // Vault H: P1, P2, P3, P7, P10, P12 -- 6 policies: 5x1666 + 1670 BPS
-        vault.addPolicy(p1,  1666);
-        vault.addPolicy(p2,  1666);
-        vault.addPolicy(p3,  1666);
-        vault.addPolicy(p7,  1666);
+        vault.addPolicy(p1, 1666);
+        vault.addPolicy(p2, 1666);
+        vault.addPolicy(p3, 1666);
+        vault.addPolicy(p7, 1666);
         vault.addPolicy(p10, 1666);
         vault.addPolicy(p12, 1670);
 
         uint256 premiums = PREMIUM_P1 + PREMIUM_P2 + PREMIUM_P3 + PREMIUM_P7 + PREMIUM_P10 + PREMIUM_P12;
         usdc.approve(vaultHAddr, premiums);
-        vault.depositPremium(p1,  PREMIUM_P1);
-        vault.depositPremium(p2,  PREMIUM_P2);
-        vault.depositPremium(p3,  PREMIUM_P3);
-        vault.depositPremium(p7,  PREMIUM_P7);
+        vault.depositPremium(p1, PREMIUM_P1);
+        vault.depositPremium(p2, PREMIUM_P2);
+        vault.depositPremium(p3, PREMIUM_P3);
+        vault.depositPremium(p7, PREMIUM_P7);
         vault.depositPremium(p10, PREMIUM_P10);
         vault.depositPremium(p12, PREMIUM_P12);
         console.log("Vault H: P1,P2,P3,P7,P10,P12 (5x1666+1670 BPS), premiums: $23,300");

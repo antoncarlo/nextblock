@@ -74,8 +74,8 @@ contract VaultFactoryTest is Test {
             "nxbBAL",
             "Balanced Core",
             managerA,
-            2000,   // 20% buffer
-            50      // 0.5% fee
+            2000, // 20% buffer
+            50 // 0.5% fee
         );
 
         assertTrue(vault != address(0));
@@ -85,14 +85,7 @@ contract VaultFactoryTest is Test {
 
     function test_createVault_correctConfig() public {
         vm.prank(admin);
-        address vault = factory.createVault(
-            "NextBlock Balanced Core",
-            "nxbBAL",
-            "Balanced Core",
-            managerA,
-            2000,
-            50
-        );
+        address vault = factory.createVault("NextBlock Balanced Core", "nxbBAL", "Balanced Core", managerA, 2000, 50);
 
         InsuranceVault v = InsuranceVault(vault);
         assertEq(v.vaultManager(), managerA);
@@ -105,25 +98,16 @@ contract VaultFactoryTest is Test {
         // Vault creation is permissioned: caller without UNDERWRITING_CURATOR_ROLE reverts
         bytes32 curatorRole = protocolRoles.UNDERWRITING_CURATOR_ROLE();
         vm.prank(notAdmin);
-        vm.expectRevert(abi.encodeWithSelector(
-            VaultFactory.VaultFactory__UnauthorizedRole.selector,
-            notAdmin,
-            curatorRole
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(VaultFactory.VaultFactory__UnauthorizedRole.selector, notAdmin, curatorRole)
+        );
         factory.createVault("Community Vault", "nxbCOM", "Community", managerA, 2000, 50);
     }
 
     function test_createVault_curatorNonOwnerCanCreate() public {
         // A curator that is not the factory owner can create; vault owner = caller
         vm.prank(managerA);
-        address vault = factory.createVault(
-            "Curator Vault",
-            "nxbCUR",
-            "Curator Vault",
-            managerA,
-            2000,
-            50
-        );
+        address vault = factory.createVault("Curator Vault", "nxbCUR", "Curator Vault", managerA, 2000, 50);
 
         assertTrue(vault != address(0));
         assertTrue(factory.isVault(vault));
@@ -135,25 +119,17 @@ contract VaultFactoryTest is Test {
     function test_createVault_managerNotCurator_reverts() public {
         // The designated vault manager must hold UNDERWRITING_CURATOR_ROLE
         vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSelector(
-            VaultFactory.VaultFactory__ManagerNotCurator.selector,
-            notAdmin
-        ));
+        vm.expectRevert(abi.encodeWithSelector(VaultFactory.VaultFactory__ManagerNotCurator.selector, notAdmin));
         factory.createVault("Test", "TEST", "Test Vault", notAdmin, 2000, 50);
     }
 
     function test_createVault_multiple() public {
         vm.startPrank(admin);
 
-        address vaultAAddr = factory.createVault(
-            "NextBlock Balanced Core", "nxbBAL", "Balanced Core",
-            managerA, 2000, 50
-        );
+        address vaultAAddr =
+            factory.createVault("NextBlock Balanced Core", "nxbBAL", "Balanced Core", managerA, 2000, 50);
 
-        address vaultBAddr = factory.createVault(
-            "NextBlock DeFi Alpha", "nxbALPHA", "DeFi Alpha",
-            managerB, 1500, 100
-        );
+        address vaultBAddr = factory.createVault("NextBlock DeFi Alpha", "nxbALPHA", "DeFi Alpha", managerB, 1500, 100);
 
         vm.stopPrank();
 
@@ -170,10 +146,7 @@ contract VaultFactoryTest is Test {
     function test_createVault_autoRegistersMinter() public {
         // Factory auto-calls claimReceipt.setAuthorizedMinter(vault, true) inside createVault
         vm.prank(admin);
-        address vault = factory.createVault(
-            "NextBlock Balanced Core", "nxbBAL", "Balanced Core",
-            managerA, 2000, 50
-        );
+        address vault = factory.createVault("NextBlock Balanced Core", "nxbBAL", "Balanced Core", managerA, 2000, 50);
 
         // Verify the vault is registered as an authorized minter on ClaimReceipt
         assertTrue(claimReceipt.authorizedMinters(vault));
@@ -183,10 +156,7 @@ contract VaultFactoryTest is Test {
         // Verify that factory (as registrar) can add minters but non-registrar cannot
         // A curator (non-factory-owner) creates a vault -- factory is registrar so it works
         vm.prank(managerA);
-        address vault = factory.createVault(
-            "Test Vault", "TEST", "Test",
-            managerA, 2000, 50
-        );
+        address vault = factory.createVault("Test Vault", "TEST", "Test", managerA, 2000, 50);
 
         // Vault should be auto-registered as minter via the registrar role
         assertTrue(claimReceipt.authorizedMinters(vault));
@@ -198,18 +168,19 @@ contract VaultFactoryTest is Test {
     function test_createVault_invalidManager() public {
         vm.prank(admin);
         vm.expectRevert(VaultFactory.VaultFactory__InvalidParams.selector);
-        factory.createVault(
-            "Test", "TEST", "Test Vault",
-            address(0), 2000, 50
-        );
+        factory.createVault("Test", "TEST", "Test Vault", address(0), 2000, 50);
     }
 
     function test_createVault_invalidBufferRatio() public {
         vm.prank(admin);
         vm.expectRevert(VaultFactory.VaultFactory__InvalidParams.selector);
         factory.createVault(
-            "Test", "TEST", "Test Vault",
-            managerA, 10001, 50 // > 100%
+            "Test",
+            "TEST",
+            "Test Vault",
+            managerA,
+            10001,
+            50 // > 100%
         );
     }
 
@@ -237,19 +208,64 @@ contract VaultFactoryTest is Test {
         vm.startPrank(admin);
 
         vm.expectRevert(VaultFactory.VaultFactory__InvalidParams.selector);
-        new VaultFactory(address(0), address(registry), address(oracle), address(claimReceipt), address(protocolRoles), address(compliance), address(portfolioRegistry), address(1));
+        new VaultFactory(
+            address(0),
+            address(registry),
+            address(oracle),
+            address(claimReceipt),
+            address(protocolRoles),
+            address(compliance),
+            address(portfolioRegistry),
+            address(1)
+        );
 
         vm.expectRevert(VaultFactory.VaultFactory__InvalidParams.selector);
-        new VaultFactory(address(usdc), address(0), address(oracle), address(claimReceipt), address(protocolRoles), address(compliance), address(portfolioRegistry), address(1));
+        new VaultFactory(
+            address(usdc),
+            address(0),
+            address(oracle),
+            address(claimReceipt),
+            address(protocolRoles),
+            address(compliance),
+            address(portfolioRegistry),
+            address(1)
+        );
 
         vm.expectRevert(VaultFactory.VaultFactory__InvalidParams.selector);
-        new VaultFactory(address(usdc), address(registry), address(oracle), address(claimReceipt), address(0), address(compliance), address(portfolioRegistry), address(1));
+        new VaultFactory(
+            address(usdc),
+            address(registry),
+            address(oracle),
+            address(claimReceipt),
+            address(0),
+            address(compliance),
+            address(portfolioRegistry),
+            address(1)
+        );
 
         vm.expectRevert(VaultFactory.VaultFactory__InvalidParams.selector);
-        new VaultFactory(address(usdc), address(registry), address(oracle), address(claimReceipt), address(protocolRoles), address(0), address(portfolioRegistry), address(1));
+        new VaultFactory(
+            address(usdc),
+            address(registry),
+            address(oracle),
+            address(claimReceipt),
+            address(protocolRoles),
+            address(0),
+            address(portfolioRegistry),
+            address(1)
+        );
 
         vm.expectRevert(VaultFactory.VaultFactory__InvalidParams.selector);
-        new VaultFactory(address(usdc), address(registry), address(oracle), address(claimReceipt), address(protocolRoles), address(compliance), address(0), address(1));
+        new VaultFactory(
+            address(usdc),
+            address(registry),
+            address(oracle),
+            address(claimReceipt),
+            address(protocolRoles),
+            address(compliance),
+            address(0),
+            address(1)
+        );
 
         vm.stopPrank();
     }
@@ -266,10 +282,7 @@ contract VaultFactoryTest is Test {
             2000,
             50
         );
-        factory.createVault(
-            "NextBlock Balanced Core", "nxbBAL", "Balanced Core",
-            managerA, 2000, 50
-        );
+        factory.createVault("NextBlock Balanced Core", "nxbBAL", "Balanced Core", managerA, 2000, 50);
     }
     // =========== VAULT DEPLOYER (EIP-170 split) ===========
 
@@ -320,5 +333,4 @@ contract VaultFactoryTest is Test {
             portfolioRegistry: address(portfolioRegistry)
         });
     }
-
 }

@@ -122,9 +122,9 @@ contract PortfolioRegistryTest is Test {
         bytes32 cedantRole = protocolRoles.AUTHORIZED_CEDANT_ROLE();
         PortfolioRegistry.SubmissionParams memory p = _params();
         vm.prank(attacker);
-        vm.expectRevert(abi.encodeWithSelector(
-            PortfolioRegistry.PortfolioRegistry__UnauthorizedRole.selector, attacker, cedantRole
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(PortfolioRegistry.PortfolioRegistry__UnauthorizedRole.selector, attacker, cedantRole)
+        );
         registry.submitPortfolio(p);
     }
 
@@ -198,18 +198,24 @@ contract PortfolioRegistryTest is Test {
         uint256 pid = _submit();
         bytes32 curatorRole = protocolRoles.UNDERWRITING_CURATOR_ROLE();
         vm.prank(attacker);
-        vm.expectRevert(abi.encodeWithSelector(
-            PortfolioRegistry.PortfolioRegistry__UnauthorizedRole.selector, attacker, curatorRole
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PortfolioRegistry.PortfolioRegistry__UnauthorizedRole.selector, attacker, curatorRole
+            )
+        );
         registry.startReview(pid);
     }
 
     function test_startReview_wrongStatus_reverts() public {
         uint256 pid = _submitToApproved();
         vm.prank(curator);
-        vm.expectRevert(abi.encodeWithSelector(
-            PortfolioRegistry.PortfolioRegistry__InvalidStatus.selector, pid, PortfolioRegistry.PortfolioStatus.APPROVED
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PortfolioRegistry.PortfolioRegistry__InvalidStatus.selector,
+                pid,
+                PortfolioRegistry.PortfolioStatus.APPROVED
+            )
+        );
         registry.startReview(pid);
     }
 
@@ -220,9 +226,11 @@ contract PortfolioRegistryTest is Test {
 
         bytes32 curatorRole = protocolRoles.UNDERWRITING_CURATOR_ROLE();
         vm.prank(attacker);
-        vm.expectRevert(abi.encodeWithSelector(
-            PortfolioRegistry.PortfolioRegistry__UnauthorizedRole.selector, attacker, curatorRole
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PortfolioRegistry.PortfolioRegistry__UnauthorizedRole.selector, attacker, curatorRole
+            )
+        );
         registry.approvePortfolio(pid, EXPECTED_LOSS_6500);
     }
 
@@ -230,9 +238,13 @@ contract PortfolioRegistryTest is Test {
         uint256 pid = _submit();
         // SUBMITTED -> APPROVED directly is not allowed
         vm.prank(curator);
-        vm.expectRevert(abi.encodeWithSelector(
-            PortfolioRegistry.PortfolioRegistry__InvalidStatus.selector, pid, PortfolioRegistry.PortfolioStatus.SUBMITTED
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PortfolioRegistry.PortfolioRegistry__InvalidStatus.selector,
+                pid,
+                PortfolioRegistry.PortfolioStatus.SUBMITTED
+            )
+        );
         registry.approvePortfolio(pid, EXPECTED_LOSS_6500);
     }
 
@@ -242,9 +254,9 @@ contract PortfolioRegistryTest is Test {
         registry.startReview(pid);
 
         vm.prank(curator);
-        vm.expectRevert(abi.encodeWithSelector(
-            PortfolioRegistry.PortfolioRegistry__InvalidLossBps.selector, uint16(10_001)
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(PortfolioRegistry.PortfolioRegistry__InvalidLossBps.selector, uint16(10_001))
+        );
         registry.approvePortfolio(pid, 10_001);
     }
 
@@ -272,18 +284,26 @@ contract PortfolioRegistryTest is Test {
         registry.rejectPortfolio(pid, "rejected");
 
         vm.prank(curator);
-        vm.expectRevert(abi.encodeWithSelector(
-            PortfolioRegistry.PortfolioRegistry__InvalidStatus.selector, pid, PortfolioRegistry.PortfolioStatus.REJECTED
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PortfolioRegistry.PortfolioRegistry__InvalidStatus.selector,
+                pid,
+                PortfolioRegistry.PortfolioStatus.REJECTED
+            )
+        );
         registry.startReview(pid);
     }
 
     function test_activatePortfolio_requiresApproved() public {
         uint256 pid = _submit();
         vm.prank(curator);
-        vm.expectRevert(abi.encodeWithSelector(
-            PortfolioRegistry.PortfolioRegistry__InvalidStatus.selector, pid, PortfolioRegistry.PortfolioStatus.SUBMITTED
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PortfolioRegistry.PortfolioRegistry__InvalidStatus.selector,
+                pid,
+                PortfolioRegistry.PortfolioStatus.SUBMITTED
+            )
+        );
         registry.activatePortfolio(pid);
     }
 
@@ -316,18 +336,24 @@ contract PortfolioRegistryTest is Test {
         bytes32 sentinelRole = protocolRoles.SENTINEL_ROLE();
 
         vm.prank(curator);
-        vm.expectRevert(abi.encodeWithSelector(
-            PortfolioRegistry.PortfolioRegistry__UnauthorizedRole.selector, curator, sentinelRole
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PortfolioRegistry.PortfolioRegistry__UnauthorizedRole.selector, curator, sentinelRole
+            )
+        );
         registry.pausePortfolio(pid);
     }
 
     function test_pause_requiresActive() public {
         uint256 pid = _submitToApproved();
         vm.prank(sentinel);
-        vm.expectRevert(abi.encodeWithSelector(
-            PortfolioRegistry.PortfolioRegistry__InvalidStatus.selector, pid, PortfolioRegistry.PortfolioStatus.APPROVED
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PortfolioRegistry.PortfolioRegistry__InvalidStatus.selector,
+                pid,
+                PortfolioRegistry.PortfolioStatus.APPROVED
+            )
+        );
         registry.pausePortfolio(pid);
     }
 
@@ -355,18 +381,22 @@ contract PortfolioRegistryTest is Test {
 
     function test_markExpired_beforeWindow_reverts() public {
         uint256 pid = _submitToActive();
-        vm.expectRevert(abi.encodeWithSelector(
-            PortfolioRegistry.PortfolioRegistry__NotYetExpired.selector, pid, expiry
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(PortfolioRegistry.PortfolioRegistry__NotYetExpired.selector, pid, expiry)
+        );
         registry.markExpired(pid);
     }
 
     function test_markExpired_wrongStatus_reverts() public {
         uint256 pid = _submitToApproved(); // not yet ACTIVE
         vm.warp(uint256(expiry));
-        vm.expectRevert(abi.encodeWithSelector(
-            PortfolioRegistry.PortfolioRegistry__InvalidStatus.selector, pid, PortfolioRegistry.PortfolioStatus.APPROVED
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PortfolioRegistry.PortfolioRegistry__InvalidStatus.selector,
+                pid,
+                PortfolioRegistry.PortfolioStatus.APPROVED
+            )
+        );
         registry.markExpired(pid);
     }
 
@@ -389,18 +419,22 @@ contract PortfolioRegistryTest is Test {
     function test_updateMetadata_notOwnPortfolio_reverts() public {
         uint256 pid = _submit();
         vm.prank(otherCedant); // holds cedant role but does not own this portfolio
-        vm.expectRevert(abi.encodeWithSelector(
-            PortfolioRegistry.PortfolioRegistry__NotCedantOfPortfolio.selector, pid, otherCedant
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(PortfolioRegistry.PortfolioRegistry__NotCedantOfPortfolio.selector, pid, otherCedant)
+        );
         registry.updateMetadata(pid, "ipfs://QmHijack", keccak256("x"));
     }
 
     function test_updateMetadata_afterApproval_reverts() public {
         uint256 pid = _submitToApproved();
         vm.prank(cedant);
-        vm.expectRevert(abi.encodeWithSelector(
-            PortfolioRegistry.PortfolioRegistry__InvalidStatus.selector, pid, PortfolioRegistry.PortfolioStatus.APPROVED
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PortfolioRegistry.PortfolioRegistry__InvalidStatus.selector,
+                pid,
+                PortfolioRegistry.PortfolioStatus.APPROVED
+            )
+        );
         registry.updateMetadata(pid, "ipfs://QmLate", keccak256("late"));
     }
 
@@ -437,9 +471,9 @@ contract PortfolioRegistryTest is Test {
 
         if (lossBps > 10_000) {
             vm.prank(curator);
-            vm.expectRevert(abi.encodeWithSelector(
-                PortfolioRegistry.PortfolioRegistry__InvalidLossBps.selector, lossBps
-            ));
+            vm.expectRevert(
+                abi.encodeWithSelector(PortfolioRegistry.PortfolioRegistry__InvalidLossBps.selector, lossBps)
+            );
             registry.approvePortfolio(pid, lossBps);
         } else {
             vm.prank(curator);
@@ -472,9 +506,9 @@ contract PortfolioRegistryTest is Test {
         vm.warp(warpTo);
 
         if (warpTo < expiry) {
-            vm.expectRevert(abi.encodeWithSelector(
-                PortfolioRegistry.PortfolioRegistry__NotYetExpired.selector, pid, expiry
-            ));
+            vm.expectRevert(
+                abi.encodeWithSelector(PortfolioRegistry.PortfolioRegistry__NotYetExpired.selector, pid, expiry)
+            );
             registry.markExpired(pid);
         } else {
             registry.markExpired(pid);

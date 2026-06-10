@@ -30,19 +30,30 @@ contract SanityCheck is Script, ProtocolRoleConstants {
     string internal json;
 
     function run() external {
-        string memory path = vm.envOr(
-            "DEPLOYMENT_FILE",
-            string.concat("deployments/", vm.toString(block.chainid), "-staging.json")
-        );
+        string memory path =
+            vm.envOr("DEPLOYMENT_FILE", string.concat("deployments/", vm.toString(block.chainid), "-staging.json"));
         json = vm.readFile(path);
         console2.log("checking deployment:", path);
 
         // 1. Address book: every module must have code.
         string[17] memory keys = [
-            "usdc", "protocolRoles", "policyRegistry", "claimReceipt", "mockOracle",
-            "complianceRegistry", "portfolioRegistry", "navOracle", "aiAssessor",
-            "premiumDistributor", "vaultAllocator", "claimManager", "bordereauOracle",
-            "adapterRegistry", "vaultFactory", "vault", "lens"
+            "usdc",
+            "protocolRoles",
+            "policyRegistry",
+            "claimReceipt",
+            "mockOracle",
+            "complianceRegistry",
+            "portfolioRegistry",
+            "navOracle",
+            "aiAssessor",
+            "premiumDistributor",
+            "vaultAllocator",
+            "claimManager",
+            "bordereauOracle",
+            "adapterRegistry",
+            "vaultFactory",
+            "vault",
+            "lens"
         ];
         for (uint256 i = 0; i < keys.length; i++) {
             if (_addr(keys[i]).code.length == 0) {

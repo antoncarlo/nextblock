@@ -61,10 +61,7 @@ contract ClaimManagerTest is Test {
         assessor = new AIAssessor(address(protocolRoles));
 
         claimManager = new ClaimManager(
-            address(protocolRoles),
-            address(portfolioRegistry),
-            address(assessor),
-            address(claimReceipt)
+            address(protocolRoles), address(portfolioRegistry), address(assessor), address(claimReceipt)
         );
 
         // Roles
@@ -109,18 +106,20 @@ contract ClaimManagerTest is Test {
 
         // Approved + ACTIVE portfolio owned by cedant
         vm.prank(cedant);
-        pid = portfolioRegistry.submitPortfolio(PortfolioRegistry.SubmissionParams({
-            name: "EU Property CAT QS 2026",
-            metadataURI: "ipfs://QmDocs",
-            documentHash: keccak256("docs"),
-            lineOfBusiness: "Property CAT",
-            jurisdiction: "EU",
-            structureType: PortfolioRegistry.StructureType.QUOTA_SHARE,
-            coverageLimit: COVERAGE_150K,
-            cededPremium: 15_000e6,
-            inceptionTime: uint64(block.timestamp),
-            expiryTime: uint64(block.timestamp + 365 days)
-        }));
+        pid = portfolioRegistry.submitPortfolio(
+            PortfolioRegistry.SubmissionParams({
+                name: "EU Property CAT QS 2026",
+                metadataURI: "ipfs://QmDocs",
+                documentHash: keccak256("docs"),
+                lineOfBusiness: "Property CAT",
+                jurisdiction: "EU",
+                structureType: PortfolioRegistry.StructureType.QUOTA_SHARE,
+                coverageLimit: COVERAGE_150K,
+                cededPremium: 15_000e6,
+                inceptionTime: uint64(block.timestamp),
+                expiryTime: uint64(block.timestamp + 365 days)
+            })
+        );
         vm.startPrank(admin);
         portfolioRegistry.startReview(pid);
         portfolioRegistry.approvePortfolio(pid, 6_500); // expectedLossBps mock
@@ -144,8 +143,7 @@ contract ClaimManagerTest is Test {
     function _assess(uint256 claimId, uint16 anomalyBps) internal {
         vm.prank(oracleNode);
         assessor.publishAssessment(
-            claimId, 8_000, anomalyBps, 9_000,
-            AIAssessor.Recommendation.APPROVE, CLAIM_50K, AI_SOURCE
+            claimId, 8_000, anomalyBps, 9_000, AIAssessor.Recommendation.APPROVE, CLAIM_50K, AI_SOURCE
         );
         claimManager.attachAssessment(claimId);
     }
@@ -179,9 +177,9 @@ contract ClaimManagerTest is Test {
         protocolRoles.grantRole(cedantRole, otherCedant);
 
         vm.prank(otherCedant);
-        vm.expectRevert(abi.encodeWithSelector(
-            ClaimManager.ClaimManager__NotPortfolioCedant.selector, pid, otherCedant
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(ClaimManager.ClaimManager__NotPortfolioCedant.selector, pid, otherCedant)
+        );
         claimManager.submitClaim(address(vault), pid, CLAIM_50K, ClaimManager.ClaimType.NON_PARAMETRIC, EVIDENCE);
 
         // No role at all
@@ -192,10 +190,14 @@ contract ClaimManagerTest is Test {
 
     function test_submitClaim_exceedsCoverage_reverts() public {
         vm.prank(cedant);
-        vm.expectRevert(abi.encodeWithSelector(
-            ClaimManager.ClaimManager__AmountExceedsCoverage.selector, COVERAGE_150K + 1, COVERAGE_150K
-        ));
-        claimManager.submitClaim(address(vault), pid, COVERAGE_150K + 1, ClaimManager.ClaimType.NON_PARAMETRIC, EVIDENCE);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ClaimManager.ClaimManager__AmountExceedsCoverage.selector, COVERAGE_150K + 1, COVERAGE_150K
+            )
+        );
+        claimManager.submitClaim(
+            address(vault), pid, COVERAGE_150K + 1, ClaimManager.ClaimType.NON_PARAMETRIC, EVIDENCE
+        );
     }
 
     // =========== AI IS ADVISORY ONLY ===========
@@ -210,7 +212,7 @@ contract ClaimManagerTest is Test {
 
         ClaimManager.Claim memory c = claimManager.getClaim(claimId);
         assertEq(uint8(c.status), uint8(ClaimManager.ClaimStatus.ASSESSED));
-        (, , uint256 pendingClaims,,,,,) = vault.getVaultAccounting();
+        (,, uint256 pendingClaims,,,,,) = vault.getVaultAccounting();
         assertEq(pendingClaims, 0);
         assertEq(usdc.balanceOf(cedant), 0);
     }
@@ -251,9 +253,11 @@ contract ClaimManagerTest is Test {
 
         ClaimManager.Claim memory c = claimManager.getClaim(claimId);
         vm.prank(committee);
-        vm.expectRevert(abi.encodeWithSelector(
-            ClaimManager.ClaimManager__DisputeWindowActive.selector, claimId, c.challengeDeadline
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ClaimManager.ClaimManager__DisputeWindowActive.selector, claimId, c.challengeDeadline
+            )
+        );
         claimManager.approveClaim(claimId, CLAIM_50K);
     }
 
@@ -263,9 +267,11 @@ contract ClaimManagerTest is Test {
         vm.warp(block.timestamp + claimManager.disputeWindow() + 1);
 
         vm.prank(committee);
-        vm.expectRevert(abi.encodeWithSelector(
-            ClaimManager.ClaimManager__InvalidStatus.selector, claimId, ClaimManager.ClaimStatus.SUBMITTED
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ClaimManager.ClaimManager__InvalidStatus.selector, claimId, ClaimManager.ClaimStatus.SUBMITTED
+            )
+        );
         claimManager.approveClaim(claimId, CLAIM_50K);
     }
 
@@ -277,16 +283,16 @@ contract ClaimManagerTest is Test {
         bytes32 committeeRole = protocolRoles.CLAIMS_COMMITTEE_ROLE();
         // Sentinel CANNOT approve (power separation)
         vm.prank(sentinel);
-        vm.expectRevert(abi.encodeWithSelector(
-            ClaimManager.ClaimManager__UnauthorizedRole.selector, sentinel, committeeRole
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(ClaimManager.ClaimManager__UnauthorizedRole.selector, sentinel, committeeRole)
+        );
         claimManager.approveClaim(claimId, CLAIM_50K);
 
         // Oracle node cannot approve either
         vm.prank(oracleNode);
-        vm.expectRevert(abi.encodeWithSelector(
-            ClaimManager.ClaimManager__UnauthorizedRole.selector, oracleNode, committeeRole
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(ClaimManager.ClaimManager__UnauthorizedRole.selector, oracleNode, committeeRole)
+        );
         claimManager.approveClaim(claimId, CLAIM_50K);
     }
 
@@ -315,7 +321,7 @@ contract ClaimManagerTest is Test {
 
         ClaimManager.Claim memory c = claimManager.getClaim(claimId);
         assertEq(c.approvedAmount, 30_000e6);
-        (, , uint256 pendingClaims,,,,,) = vault.getVaultAccounting();
+        (,, uint256 pendingClaims,,,,,) = vault.getVaultAccounting();
         assertEq(pendingClaims, 30_000e6);
     }
 
@@ -333,9 +339,9 @@ contract ClaimManagerTest is Test {
         // Sentinel cannot resolve its own dispute (committee authority)
         bytes32 committeeRole = protocolRoles.CLAIMS_COMMITTEE_ROLE();
         vm.prank(sentinel);
-        vm.expectRevert(abi.encodeWithSelector(
-            ClaimManager.ClaimManager__UnauthorizedRole.selector, sentinel, committeeRole
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(ClaimManager.ClaimManager__UnauthorizedRole.selector, sentinel, committeeRole)
+        );
         claimManager.resolveDispute(claimId, true);
 
         // Committee dismisses the dispute -> back to ASSESSED, unfrozen
@@ -376,7 +382,7 @@ contract ClaimManagerTest is Test {
         assertEq(uint8(claimManager.getClaim(claimId).status), uint8(ClaimManager.ClaimStatus.PAID));
 
         // Reserve fully consumed
-        (, , uint256 pendingClaims,,,,,) = vault.getVaultAccounting();
+        (,, uint256 pendingClaims,,,,,) = vault.getVaultAccounting();
         assertEq(pendingClaims, 0);
     }
 
@@ -384,9 +390,11 @@ contract ClaimManagerTest is Test {
         uint256 claimId = _toApproved(CLAIM_50K);
         claimManager.executeClaim(claimId);
 
-        vm.expectRevert(abi.encodeWithSelector(
-            ClaimManager.ClaimManager__InvalidStatus.selector, claimId, ClaimManager.ClaimStatus.PAID
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ClaimManager.ClaimManager__InvalidStatus.selector, claimId, ClaimManager.ClaimStatus.PAID
+            )
+        );
         claimManager.executeClaim(claimId);
     }
 
@@ -409,21 +417,23 @@ contract ClaimManagerTest is Test {
         // Second claim: only 50K free remains; 100K must revert at the VAULT level
         uint256 claimId2 = _submit(100_000e6, ClaimManager.ClaimType.PARAMETRIC);
         vm.prank(committee);
-        vm.expectRevert(abi.encodeWithSelector(
-            InsuranceVault.InsuranceVault__ClaimReserveInsufficientFunds.selector, 100_000e6, 50_000e6
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                InsuranceVault.InsuranceVault__ClaimReserveInsufficientFunds.selector, 100_000e6, 50_000e6
+            )
+        );
         claimManager.approveClaim(claimId2, 100_000e6);
     }
 
     function test_rejectAfterApproval_releasesReserve() public {
         uint256 claimId = _toApproved(CLAIM_50K);
-        (, , uint256 reservedBefore,,,,,) = vault.getVaultAccounting();
+        (,, uint256 reservedBefore,,,,,) = vault.getVaultAccounting();
         assertEq(reservedBefore, CLAIM_50K);
 
         vm.prank(committee);
         claimManager.rejectClaim(claimId, "post-approval audit failed");
 
-        (, , uint256 reservedAfter,,,,,) = vault.getVaultAccounting();
+        (,, uint256 reservedAfter,,,,,) = vault.getVaultAccounting();
         assertEq(reservedAfter, 0);
         assertEq(uint8(claimManager.getClaim(claimId).status), uint8(ClaimManager.ClaimStatus.REJECTED));
     }
@@ -445,17 +455,11 @@ contract ClaimManagerTest is Test {
         address[3] memory callers = [attacker, committee, sentinel];
         for (uint256 i = 0; i < callers.length; i++) {
             vm.startPrank(callers[i]);
-            vm.expectRevert(abi.encodeWithSelector(
-                InsuranceVault.InsuranceVault__NotClaimManager.selector, callers[i]
-            ));
+            vm.expectRevert(abi.encodeWithSelector(InsuranceVault.InsuranceVault__NotClaimManager.selector, callers[i]));
             vault.reservePortfolioClaim(0, pid, 1e6);
-            vm.expectRevert(abi.encodeWithSelector(
-                InsuranceVault.InsuranceVault__NotClaimManager.selector, callers[i]
-            ));
+            vm.expectRevert(abi.encodeWithSelector(InsuranceVault.InsuranceVault__NotClaimManager.selector, callers[i]));
             vault.payPortfolioClaim(0, pid, callers[i], 1e6);
-            vm.expectRevert(abi.encodeWithSelector(
-                InsuranceVault.InsuranceVault__NotClaimManager.selector, callers[i]
-            ));
+            vm.expectRevert(abi.encodeWithSelector(InsuranceVault.InsuranceVault__NotClaimManager.selector, callers[i]));
             vault.releasePortfolioClaimReserve(0, pid, 1e6);
             vm.stopPrank();
         }
@@ -463,9 +467,7 @@ contract ClaimManagerTest is Test {
 
     function test_setClaimManager_onlyOwnerRole() public {
         vm.prank(attacker);
-        vm.expectRevert(abi.encodeWithSelector(
-            InsuranceVault.InsuranceVault__UnauthorizedCaller.selector, attacker
-        ));
+        vm.expectRevert(abi.encodeWithSelector(InsuranceVault.InsuranceVault__UnauthorizedCaller.selector, attacker));
         vault.setClaimManager(attacker);
     }
 
@@ -500,9 +502,9 @@ contract ClaimManagerTest is Test {
         approved = bound(approved, 1, requested * 2);
         if (approved > requested) {
             vm.prank(committee);
-            vm.expectRevert(abi.encodeWithSelector(
-                ClaimManager.ClaimManager__ApprovedAmountInvalid.selector, approved, requested
-            ));
+            vm.expectRevert(
+                abi.encodeWithSelector(ClaimManager.ClaimManager__ApprovedAmountInvalid.selector, approved, requested)
+            );
             claimManager.approveClaim(claimId, approved);
         } else {
             vm.prank(committee);
@@ -522,7 +524,7 @@ contract ClaimManagerTest is Test {
 
         // Conservation: vault paid exactly the approved amount, never more
         assertEq(balanceBefore - usdc.balanceOf(address(vault)), amount);
-        (, , uint256 pendingClaims,,,,,) = vault.getVaultAccounting();
+        (,, uint256 pendingClaims,,,,,) = vault.getVaultAccounting();
         assertEq(pendingClaims, 0);
     }
 }

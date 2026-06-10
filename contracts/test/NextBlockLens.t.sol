@@ -134,18 +134,20 @@ contract NextBlockLensTest is Test {
 
         // ACTIVE portfolio owned by cedant
         vm.prank(cedant);
-        pid = portfolioRegistry.submitPortfolio(PortfolioRegistry.SubmissionParams({
-            name: "EU Property CAT QS 2026",
-            metadataURI: "ipfs://QmDocs",
-            documentHash: keccak256("docs"),
-            lineOfBusiness: "Property CAT",
-            jurisdiction: "EU",
-            structureType: PortfolioRegistry.StructureType.QUOTA_SHARE,
-            coverageLimit: COVERAGE_1M,
-            cededPremium: PREMIUM_100K,
-            inceptionTime: uint64(block.timestamp),
-            expiryTime: uint64(block.timestamp + 365 days)
-        }));
+        pid = portfolioRegistry.submitPortfolio(
+            PortfolioRegistry.SubmissionParams({
+                name: "EU Property CAT QS 2026",
+                metadataURI: "ipfs://QmDocs",
+                documentHash: keccak256("docs"),
+                lineOfBusiness: "Property CAT",
+                jurisdiction: "EU",
+                structureType: PortfolioRegistry.StructureType.QUOTA_SHARE,
+                coverageLimit: COVERAGE_1M,
+                cededPremium: PREMIUM_100K,
+                inceptionTime: uint64(block.timestamp),
+                expiryTime: uint64(block.timestamp + 365 days)
+            })
+        );
         vm.startPrank(admin);
         portfolioRegistry.startReview(pid);
         portfolioRegistry.approvePortfolio(pid, 6_500); // expectedLossBps mock
@@ -243,8 +245,14 @@ contract NextBlockLensTest is Test {
 
         // COHERENCE REQUIREMENT: the lens must NEVER contradict the vault.
         (
-            uint256 balance, uint256 upr, uint256 pendingClaims, uint256 deployed,
-            uint256 portfolioAllocated, uint256 buffer, uint256 capacity, uint256 cap
+            uint256 balance,
+            uint256 upr,
+            uint256 pendingClaims,
+            uint256 deployed,
+            uint256 portfolioAllocated,
+            uint256 buffer,
+            uint256 capacity,
+            uint256 cap
         ) = vault.getVaultAccounting();
         assertEq(v.balance, balance);
         assertEq(v.unearnedPremiums, upr);
@@ -525,9 +533,9 @@ contract NextBlockLensTest is Test {
         NextBlockLens.ModuleAddresses memory m = _allModules();
 
         vm.prank(outsider);
-        vm.expectRevert(abi.encodeWithSelector(
-            NextBlockLens.NextBlockLens__UnauthorizedRole.selector, outsider, ownerRole
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(NextBlockLens.NextBlockLens__UnauthorizedRole.selector, outsider, ownerRole)
+        );
         emptyLens.setModules(m);
 
         // Gradual rollout: OWNER adds modules as they land on Base Sepolia

@@ -46,32 +46,32 @@ contract ClaimManager is ProtocolRoleConstants, ReentrancyGuard {
     ///         full AI-gate + dispute-window + committee path.
     enum ClaimType {
         NON_PARAMETRIC, // 0: default institutional path
-        PARAMETRIC      // 1: objective-trigger path (limited)
+        PARAMETRIC // 1: objective-trigger path (limited)
     }
 
     enum ClaimStatus {
         SUBMITTED, // 0
-        ASSESSED,  // 1: AI advisory assessment attached
-        DISPUTED,  // 2: sentinel dispute pending committee resolution
-        APPROVED,  // 3: committee approved; reserve taken in the vault
-        PAID,      // 4: paid out by the vault
-        REJECTED   // 5: terminal rejection
+        ASSESSED, // 1: AI advisory assessment attached
+        DISPUTED, // 2: sentinel dispute pending committee resolution
+        APPROVED, // 3: committee approved; reserve taken in the vault
+        PAID, // 4: paid out by the vault
+        REJECTED // 5: terminal rejection
     }
 
     struct Claim {
         uint256 claimId;
         uint256 portfolioId;
         address vault;
-        address claimant;        // the portfolio's cedant
+        address claimant; // the portfolio's cedant
         uint256 requestedAmount; // USDC 6 decimals
-        uint256 approvedAmount;  // set by the committee (<= requested)
+        uint256 approvedAmount; // set by the committee (<= requested)
         ClaimType claimType;
         ClaimStatus status;
-        bytes32 evidenceHash;    // off-chain evidence bundle anchor
+        bytes32 evidenceHash; // off-chain evidence bundle anchor
         uint64 submittedAt;
         uint64 challengeDeadline; // submittedAt + disputeWindow
-        bool frozen;             // sentinel operational freeze / anomaly latch
-        uint256 receiptId;       // ClaimReceipt minted at approval
+        bool frozen; // sentinel operational freeze / anomaly latch
+        uint256 receiptId; // ClaimReceipt minted at approval
     }
 
     // --- State ---
@@ -96,7 +96,13 @@ contract ClaimManager is ProtocolRoleConstants, ReentrancyGuard {
         bytes32 evidenceHash,
         uint64 challengeDeadline
     );
-    event ClaimAssessed(uint256 indexed claimId, AIAssessor.Recommendation recommendation, uint16 scoreBps, uint16 anomalyScoreBps, bytes32 sourceHash);
+    event ClaimAssessed(
+        uint256 indexed claimId,
+        AIAssessor.Recommendation recommendation,
+        uint16 scoreBps,
+        uint16 anomalyScoreBps,
+        bytes32 sourceHash
+    );
     event ClaimAnomalyFlagged(uint256 indexed claimId, uint16 anomalyScoreBps);
     event ClaimDisputed(uint256 indexed claimId, address indexed sentinel, string reason);
     event ClaimDisputeResolved(uint256 indexed claimId, address indexed committee, bool upheld);
@@ -128,15 +134,10 @@ contract ClaimManager is ProtocolRoleConstants, ReentrancyGuard {
         _;
     }
 
-    constructor(
-        address protocolRoles_,
-        address portfolioRegistry_,
-        address aiAssessor_,
-        address claimReceipt_
-    ) {
+    constructor(address protocolRoles_, address portfolioRegistry_, address aiAssessor_, address claimReceipt_) {
         if (
-            protocolRoles_ == address(0) || portfolioRegistry_ == address(0) ||
-            aiAssessor_ == address(0) || claimReceipt_ == address(0)
+            protocolRoles_ == address(0) || portfolioRegistry_ == address(0) || aiAssessor_ == address(0)
+                || claimReceipt_ == address(0)
         ) {
             revert ClaimManager__InvalidParams();
         }
@@ -166,13 +167,11 @@ contract ClaimManager is ProtocolRoleConstants, ReentrancyGuard {
     /// @notice Submit a claim against a portfolio. Only the portfolio's cedant
     ///         (holding AUTHORIZED_CEDANT_ROLE). The portfolio must be on risk or
     ///         recently expired (losses occurred during coverage).
-    function submitClaim(
-        address vault,
-        uint256 portfolioId,
-        uint256 amount,
-        ClaimType claimType,
-        bytes32 evidenceHash
-    ) external onlyProtocolRole(AUTHORIZED_CEDANT_ROLE) returns (uint256 claimId) {
+    function submitClaim(address vault, uint256 portfolioId, uint256 amount, ClaimType claimType, bytes32 evidenceHash)
+        external
+        onlyProtocolRole(AUTHORIZED_CEDANT_ROLE)
+        returns (uint256 claimId)
+    {
         if (vault == address(0) || amount == 0 || evidenceHash == bytes32(0)) {
             revert ClaimManager__InvalidParams();
         }
@@ -180,9 +179,9 @@ contract ClaimManager is ProtocolRoleConstants, ReentrancyGuard {
         PortfolioRegistry.Portfolio memory pf = portfolioRegistry.getPortfolio(portfolioId);
         if (pf.cedant != msg.sender) revert ClaimManager__NotPortfolioCedant(portfolioId, msg.sender);
         if (
-            pf.status != PortfolioRegistry.PortfolioStatus.ACTIVE &&
-            pf.status != PortfolioRegistry.PortfolioStatus.PAUSED &&
-            pf.status != PortfolioRegistry.PortfolioStatus.EXPIRED
+            pf.status != PortfolioRegistry.PortfolioStatus.ACTIVE
+                && pf.status != PortfolioRegistry.PortfolioStatus.PAUSED
+                && pf.status != PortfolioRegistry.PortfolioStatus.EXPIRED
         ) {
             revert ClaimManager__PortfolioNotClaimable(portfolioId);
         }
@@ -291,10 +290,7 @@ contract ClaimManager is ProtocolRoleConstants, ReentrancyGuard {
     ///         PARAMETRIC: limited objective-trigger path; window may be skipped
     ///         but committee approval and freeze checks still apply.
     ///         The vault's reservePortfolioClaim enforces solvency (insolvency guard).
-    function approveClaim(uint256 claimId, uint256 approvedAmount)
-        external
-        onlyProtocolRole(CLAIMS_COMMITTEE_ROLE)
-    {
+    function approveClaim(uint256 claimId, uint256 approvedAmount) external onlyProtocolRole(CLAIMS_COMMITTEE_ROLE) {
         Claim storage c = _getClaim(claimId);
         if (c.frozen) revert ClaimManager__ClaimFrozenError(claimId);
         if (approvedAmount == 0 || approvedAmount > c.requestedAmount) {

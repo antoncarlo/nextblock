@@ -44,8 +44,7 @@ contract DemoFlowTest is Test {
         uint256 fees = demo.distributor().accruedProtocolFees() + demo.distributor().accruedUnderwritingFees();
         assertEq(usdc.balanceOf(address(demo.distributor())), fees);
         assertEq(
-            usdc.balanceOf(address(demo.vault())),
-            demo.LP_CAPITAL() + (demo.PREMIUM() - fees) - demo.CLAIM_AMOUNT()
+            usdc.balanceOf(address(demo.vault())), demo.LP_CAPITAL() + (demo.PREMIUM() - fees) - demo.CLAIM_AMOUNT()
         );
     }
 
@@ -85,13 +84,12 @@ contract DemoFlowTest is Test {
         ClaimManager cm = demo.claimManager();
         address actor = demo.actor();
         address vaultAddr = address(demo.vault()); // hoisted: getters must not
-        uint256 pid = demo.pid();                  // consume prank/expectRevert
+        uint256 pid = demo.pid(); // consume prank/expectRevert
         uint256 amount = 10_000e6;
 
         vm.prank(actor);
-        uint256 claimId = cm.submitClaim(
-            vaultAddr, pid, amount, ClaimManager.ClaimType.NON_PARAMETRIC, keccak256("np-evidence")
-        );
+        uint256 claimId =
+            cm.submitClaim(vaultAddr, pid, amount, ClaimManager.ClaimType.NON_PARAMETRIC, keccak256("np-evidence"));
 
         // Committee CANNOT approve before AI assessment + elapsed window
         vm.prank(actor);
@@ -108,9 +106,9 @@ contract DemoFlowTest is Test {
         // Still challengeable: window active
         uint64 deadline = cm.getClaim(claimId).challengeDeadline; // hoisted
         vm.prank(actor);
-        vm.expectRevert(abi.encodeWithSelector(
-            ClaimManager.ClaimManager__DisputeWindowActive.selector, claimId, deadline
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(ClaimManager.ClaimManager__DisputeWindowActive.selector, claimId, deadline)
+        );
         cm.approveClaim(claimId, amount);
 
         // After the window: committee approves, vault reserves and pays

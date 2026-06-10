@@ -38,7 +38,9 @@ contract ClaimReceiptTest is Test {
     function test_setAuthorizedMinter_onlyOwnerOrRegistrar() public {
         // Non-owner, non-registrar cannot add minters
         vm.prank(notAuthorized);
-        vm.expectRevert(abi.encodeWithSelector(ClaimReceipt.ClaimReceipt__UnauthorizedRegistrar.selector, notAuthorized));
+        vm.expectRevert(
+            abi.encodeWithSelector(ClaimReceipt.ClaimReceipt__UnauthorizedRegistrar.selector, notAuthorized)
+        );
         cr.setAuthorizedMinter(vault2, true);
     }
 
@@ -132,10 +134,11 @@ contract ClaimReceiptTest is Test {
 
         // Another address tries to markExercised
         vm.prank(notAuthorized);
-        vm.expectRevert(abi.encodeWithSelector(
-            ClaimReceipt.ClaimReceipt__OnlyIssuingVault.selector,
-            receiptId, notAuthorized, vault
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ClaimReceipt.ClaimReceipt__OnlyIssuingVault.selector, receiptId, notAuthorized, vault
+            )
+        );
         cr.markExercised(receiptId);
     }
 

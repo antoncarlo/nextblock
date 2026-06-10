@@ -48,15 +48,15 @@ contract NavOracle is ProtocolRoleConstants {
 
     // --- Structs ---
     struct NavAttestation {
-        uint256 nav;           // vault NAV in USDC (6 decimals)
-        uint16 confidenceBps;  // model confidence, 0..10000
-        uint64 updatedAt;      // publish timestamp
-        bytes32 sourceHash;    // hash of the off-chain report/payload
+        uint256 nav; // vault NAV in USDC (6 decimals)
+        uint16 confidenceBps; // model confidence, 0..10000
+        uint64 updatedAt; // publish timestamp
+        bytes32 sourceHash; // hash of the off-chain report/payload
     }
 
     struct RiskAttestation {
-        uint16 riskScoreBps;   // expected-loss / risk score, 0..10000
-        uint16 confidenceBps;  // model confidence, 0..10000
+        uint16 riskScoreBps; // expected-loss / risk score, 0..10000
+        uint16 confidenceBps; // model confidence, 0..10000
         uint64 updatedAt;
         bytes32 sourceHash;
     }
@@ -86,8 +86,12 @@ contract NavOracle is ProtocolRoleConstants {
 
     // --- Events ---
     event NavPublished(address indexed vault, uint256 nav, uint16 confidenceBps, bytes32 sourceHash);
-    event PortfolioRiskPublished(uint256 indexed portfolioId, uint16 riskScoreBps, uint16 confidenceBps, bytes32 sourceHash);
-    event NavAnomalyDetected(address indexed vault, uint256 attemptedNav, uint256 lastAcceptedNav, uint256 deviationBps);
+    event PortfolioRiskPublished(
+        uint256 indexed portfolioId, uint16 riskScoreBps, uint16 confidenceBps, bytes32 sourceHash
+    );
+    event NavAnomalyDetected(
+        address indexed vault, uint256 attemptedNav, uint256 lastAcceptedNav, uint256 deviationBps
+    );
     event FeedPaused(address indexed vault, address indexed by);
     event FeedUnpaused(address indexed vault, address indexed by);
     event DeviationAcknowledged(address indexed vault, address indexed sentinel);
@@ -166,10 +170,7 @@ contract NavOracle is ProtocolRoleConstants {
         if (deviationWaiver[vault]) deviationWaiver[vault] = false;
 
         _vaultNav[vault] = NavAttestation({
-            nav: nav,
-            confidenceBps: confidenceBps,
-            updatedAt: uint64(block.timestamp),
-            sourceHash: sourceHash
+            nav: nav, confidenceBps: confidenceBps, updatedAt: uint64(block.timestamp), sourceHash: sourceHash
         });
 
         emit NavPublished(vault, nav, confidenceBps, sourceHash);
@@ -268,9 +269,7 @@ contract NavOracle is ProtocolRoleConstants {
     /// @return valid True only if an attestation exists, is fresh and the feed is live
     function tryGetNav(address vault) external view returns (bool valid, NavAttestation memory att) {
         att = _vaultNav[vault];
-        valid = !vaultFeedPaused[vault]
-            && att.updatedAt != 0
-            && uint64(block.timestamp) <= att.updatedAt + maxStaleness;
+        valid = !vaultFeedPaused[vault] && att.updatedAt != 0 && uint64(block.timestamp) <= att.updatedAt + maxStaleness;
     }
 
     /// @notice Strict risk-score read: reverts if never published or stale.
@@ -288,11 +287,7 @@ contract NavOracle is ProtocolRoleConstants {
     }
 
     /// @notice Non-reverting risk read for frontend/indexer use.
-    function tryGetPortfolioRisk(uint256 portfolioId)
-        external
-        view
-        returns (bool valid, RiskAttestation memory att)
-    {
+    function tryGetPortfolioRisk(uint256 portfolioId) external view returns (bool valid, RiskAttestation memory att) {
         att = _portfolioRisk[portfolioId];
         valid = att.updatedAt != 0 && uint64(block.timestamp) <= att.updatedAt + maxStaleness;
     }

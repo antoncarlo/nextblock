@@ -39,7 +39,7 @@ contract InsuranceVaultHardeningTest is Test {
     uint64 public kycExpiry;
 
     uint256 constant BUFFER_2000 = 2000; // 20%
-    uint256 constant FEE_50 = 50;        // 0.5%
+    uint256 constant FEE_50 = 50; // 0.5%
     uint256 constant COVERAGE_100K = 100_000e6;
     uint256 constant PREMIUM_10K = 10_000e6;
 
@@ -111,18 +111,20 @@ contract InsuranceVaultHardeningTest is Test {
 
     function _approvedPortfolio() internal returns (uint256 pid) {
         vm.prank(cedant);
-        pid = portfolioRegistry.submitPortfolio(PortfolioRegistry.SubmissionParams({
-            name: "EU Property CAT QS 2026",
-            metadataURI: "ipfs://QmDocs",
-            documentHash: keccak256("docs"),
-            lineOfBusiness: "Property CAT",
-            jurisdiction: "EU",
-            structureType: PortfolioRegistry.StructureType.QUOTA_SHARE,
-            coverageLimit: COVERAGE_100K,
-            cededPremium: PREMIUM_10K,
-            inceptionTime: uint64(block.timestamp),
-            expiryTime: uint64(block.timestamp + 365 days)
-        }));
+        pid = portfolioRegistry.submitPortfolio(
+            PortfolioRegistry.SubmissionParams({
+                name: "EU Property CAT QS 2026",
+                metadataURI: "ipfs://QmDocs",
+                documentHash: keccak256("docs"),
+                lineOfBusiness: "Property CAT",
+                jurisdiction: "EU",
+                structureType: PortfolioRegistry.StructureType.QUOTA_SHARE,
+                coverageLimit: COVERAGE_100K,
+                cededPremium: PREMIUM_10K,
+                inceptionTime: uint64(block.timestamp),
+                expiryTime: uint64(block.timestamp + 365 days)
+            })
+        );
         vm.prank(admin);
         portfolioRegistry.startReview(pid);
         vm.prank(admin);
@@ -166,9 +168,9 @@ contract InsuranceVaultHardeningTest is Test {
         uint256 shares = vault.balanceOf(lp);
 
         vm.prank(lp);
-        vm.expectRevert(abi.encodeWithSelector(
-            ComplianceRegistry.ComplianceRegistry__ReceiverNotWhitelisted.selector, outsider
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(ComplianceRegistry.ComplianceRegistry__ReceiverNotWhitelisted.selector, outsider)
+        );
         vault.transfer(outsider, shares);
     }
 
@@ -190,9 +192,7 @@ contract InsuranceVaultHardeningTest is Test {
         assertEq(vault.maxWithdraw(lp), 0);
 
         vm.prank(lp);
-        vm.expectRevert(abi.encodeWithSelector(
-            ComplianceRegistry.ComplianceRegistry__AddressBlocked.selector, lp
-        ));
+        vm.expectRevert(abi.encodeWithSelector(ComplianceRegistry.ComplianceRegistry__AddressBlocked.selector, lp));
         vault.transfer(lp2, 1);
 
         // Direct withdraw also blocked at the share-burn hook
@@ -235,9 +235,7 @@ contract InsuranceVaultHardeningTest is Test {
 
     function test_depositCap_onlyOwnerRole() public {
         vm.prank(outsider);
-        vm.expectRevert(abi.encodeWithSelector(
-            InsuranceVault.InsuranceVault__UnauthorizedCaller.selector, outsider
-        ));
+        vm.expectRevert(abi.encodeWithSelector(InsuranceVault.InsuranceVault__UnauthorizedCaller.selector, outsider));
         vault.setDepositCap(1);
     }
 
@@ -276,9 +274,7 @@ contract InsuranceVaultHardeningTest is Test {
 
         // Phase 9.5: even the curator cannot allocate directly
         vm.prank(managerA);
-        vm.expectRevert(abi.encodeWithSelector(
-            InsuranceVault.InsuranceVault__NotVaultAllocator.selector, managerA
-        ));
+        vm.expectRevert(abi.encodeWithSelector(InsuranceVault.InsuranceVault__NotVaultAllocator.selector, managerA));
         vault.allocateToPortfolio(pid, 10_000e6);
 
         // ...and neither can an EOA that merely holds ALLOCATOR_ROLE without
@@ -288,9 +284,7 @@ contract InsuranceVaultHardeningTest is Test {
         vm.prank(admin);
         protocolRoles.grantRole(allocRole, roleOnly);
         vm.prank(roleOnly);
-        vm.expectRevert(abi.encodeWithSelector(
-            InsuranceVault.InsuranceVault__NotVaultAllocator.selector, roleOnly
-        ));
+        vm.expectRevert(abi.encodeWithSelector(InsuranceVault.InsuranceVault__NotVaultAllocator.selector, roleOnly));
         vault.allocateToPortfolio(pid, 10_000e6);
     }
 
@@ -317,24 +311,24 @@ contract InsuranceVaultHardeningTest is Test {
 
     function test_allocate_submittedPortfolio_reverts() public {
         vm.prank(cedant);
-        uint256 pid = portfolioRegistry.submitPortfolio(PortfolioRegistry.SubmissionParams({
-            name: "Pending Treaty",
-            metadataURI: "ipfs://x",
-            documentHash: keccak256("x"),
-            lineOfBusiness: "Marine",
-            jurisdiction: "UK",
-            structureType: PortfolioRegistry.StructureType.XOL,
-            coverageLimit: COVERAGE_100K,
-            cededPremium: PREMIUM_10K,
-            inceptionTime: uint64(block.timestamp),
-            expiryTime: uint64(block.timestamp + 365 days)
-        }));
+        uint256 pid = portfolioRegistry.submitPortfolio(
+            PortfolioRegistry.SubmissionParams({
+                name: "Pending Treaty",
+                metadataURI: "ipfs://x",
+                documentHash: keccak256("x"),
+                lineOfBusiness: "Marine",
+                jurisdiction: "UK",
+                structureType: PortfolioRegistry.StructureType.XOL,
+                coverageLimit: COVERAGE_100K,
+                cededPremium: PREMIUM_10K,
+                inceptionTime: uint64(block.timestamp),
+                expiryTime: uint64(block.timestamp + 365 days)
+            })
+        );
         _deposit(lp, 100_000e6);
 
         vm.prank(allocator);
-        vm.expectRevert(abi.encodeWithSelector(
-            InsuranceVault.InsuranceVault__PortfolioNotAllocatable.selector, pid
-        ));
+        vm.expectRevert(abi.encodeWithSelector(InsuranceVault.InsuranceVault__PortfolioNotAllocatable.selector, pid));
         vault.allocateToPortfolio(pid, 10_000e6);
     }
 
@@ -347,9 +341,7 @@ contract InsuranceVaultHardeningTest is Test {
 
         _deposit(lp, 100_000e6);
         vm.prank(allocator);
-        vm.expectRevert(abi.encodeWithSelector(
-            InsuranceVault.InsuranceVault__PortfolioNotAllocatable.selector, pid
-        ));
+        vm.expectRevert(abi.encodeWithSelector(InsuranceVault.InsuranceVault__PortfolioNotAllocatable.selector, pid));
         vault.allocateToPortfolio(pid, 10_000e6);
     }
 
@@ -359,23 +351,30 @@ contract InsuranceVaultHardeningTest is Test {
 
         uint256 capacity = vault.underwritingCapacity(); // 80K
         vm.prank(allocator);
-        vm.expectRevert(abi.encodeWithSelector(
-            InsuranceVault.InsuranceVault__AllocationExceedsCapacity.selector, capacity + 1, capacity
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                InsuranceVault.InsuranceVault__AllocationExceedsCapacity.selector, capacity + 1, capacity
+            )
+        );
         vault.allocateToPortfolio(pid, capacity + 1);
     }
 
     function test_allocate_exceedsCoverageLimit_reverts() public {
         uint256 pid = _approvedPortfolio(); // coverage 100K
-        _deposit(lp, 200_000e6);            // capacity 160K > coverage
+        _deposit(lp, 200_000e6); // capacity 160K > coverage
 
         vm.prank(allocator);
         vault.allocateToPortfolio(pid, COVERAGE_100K); // fill coverage
 
         vm.prank(allocator);
-        vm.expectRevert(abi.encodeWithSelector(
-            InsuranceVault.InsuranceVault__AllocationExceedsCoverage.selector, pid, COVERAGE_100K + 1e6, COVERAGE_100K
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                InsuranceVault.InsuranceVault__AllocationExceedsCoverage.selector,
+                pid,
+                COVERAGE_100K + 1e6,
+                COVERAGE_100K
+            )
+        );
         vault.allocateToPortfolio(pid, 1e6);
     }
 
@@ -410,9 +409,11 @@ contract InsuranceVaultHardeningTest is Test {
         vault.allocateToPortfolio(pid, 10_000e6);
 
         vm.prank(allocator);
-        vm.expectRevert(abi.encodeWithSelector(
-            InsuranceVault.InsuranceVault__DeallocationExceedsAllocation.selector, pid, 10_000e6 + 1, 10_000e6
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                InsuranceVault.InsuranceVault__DeallocationExceedsAllocation.selector, pid, 10_000e6 + 1, 10_000e6
+            )
+        );
         vault.deallocateFromPortfolio(pid, 10_000e6 + 1);
     }
 
@@ -437,16 +438,13 @@ contract InsuranceVaultHardeningTest is Test {
     function test_withdraw_cannotConsumeUPR() public {
         // Premium cash in the vault is a liability until earned
         vm.startPrank(admin);
-        uint256 polId = policyRegistry.currentTime() >= 0
-            ? 0
-            : 0; // placeholder to keep stack flat
+        uint256 polId = policyRegistry.currentTime() >= 0 ? 0 : 0; // placeholder to keep stack flat
         vm.stopPrank();
 
         // Register + activate a legacy policy and fund its premium
         vm.prank(cedant);
         polId = policyRegistry.registerPolicy(
-            "Treaty Premium", PolicyRegistry.VerificationType.OFF_CHAIN,
-            50_000e6, PREMIUM_10K, 180 days, cedant, 0
+            "Treaty Premium", PolicyRegistry.VerificationType.OFF_CHAIN, 50_000e6, PREMIUM_10K, 180 days, cedant, 0
         );
         vm.prank(admin);
         policyRegistry.activatePolicy(polId);
@@ -559,8 +557,10 @@ contract InsuranceVaultHardeningTest is Test {
         vault.allocateToPortfolio(pid, allocAmt);
 
         // Invariant: committed capital never exceeds investable share of free capital
-        assertLe(vault.totalPortfolioAllocated() + vault.totalDeployedCapital(),
-                 depositAmt * (10_000 - BUFFER_2000) / 10_000 + 1);
+        assertLe(
+            vault.totalPortfolioAllocated() + vault.totalDeployedCapital(),
+            depositAmt * (10_000 - BUFFER_2000) / 10_000 + 1
+        );
         // Withdrawals capped by remaining liquidity
         assertLe(vault.maxWithdraw(lp), depositAmt - allocAmt + 1);
     }

@@ -59,10 +59,10 @@ contract PremiumDistributor is ProtocolRoleConstants, ReentrancyGuard {
 
     // --- Accounting ---
     struct PremiumAccounting {
-        uint256 gross;           // total premium received for the portfolio
-        uint256 lpQuota;         // forwarded to the vault
-        uint256 protocolFees;    // accrued protocol fees
-        uint256 underwritingFees;// accrued underwriting fees
+        uint256 gross; // total premium received for the portfolio
+        uint256 lpQuota; // forwarded to the vault
+        uint256 protocolFees; // accrued protocol fees
+        uint256 underwritingFees; // accrued underwriting fees
     }
 
     mapping(uint256 => PremiumAccounting) public premiumAccounting;
@@ -157,8 +157,8 @@ contract PremiumDistributor is ProtocolRoleConstants, ReentrancyGuard {
     /// @param grossAmount Gross premium in USDC (6 decimals)
     function receivePremium(uint256 portfolioId, uint256 grossAmount) external nonReentrant {
         if (
-            !protocolRoles.hasRole(AUTHORIZED_CEDANT_ROLE, msg.sender) &&
-            !protocolRoles.hasRole(PREMIUM_DEPOSITOR_ROLE, msg.sender)
+            !protocolRoles.hasRole(AUTHORIZED_CEDANT_ROLE, msg.sender)
+                && !protocolRoles.hasRole(PREMIUM_DEPOSITOR_ROLE, msg.sender)
         ) {
             revert PremiumDistributor__UnauthorizedPremiumSource(msg.sender);
         }

@@ -15,16 +15,16 @@ import {ProtocolRoles, ProtocolRoleConstants} from "./ProtocolRoles.sol";
 contract PolicyRegistry is Ownable, ProtocolRoleConstants {
     // --- Enums ---
     enum VerificationType {
-        ON_CHAIN,          // 0: Trigger verifiable on-chain (e.g., BTC price)
-        ORACLE_DEPENDENT,  // 1: Requires oracle data (e.g., flight delay)
-        OFF_CHAIN          // 2: Manual insurer assessment (e.g., commercial fire)
+        ON_CHAIN, // 0: Trigger verifiable on-chain (e.g., BTC price)
+        ORACLE_DEPENDENT, // 1: Requires oracle data (e.g., flight delay)
+        OFF_CHAIN // 2: Manual insurer assessment (e.g., commercial fire)
     }
 
     enum PolicyStatus {
-        REGISTERED,  // 0: Created but not yet active
-        ACTIVE,      // 1: Active and accruing premium
-        CLAIMED,     // 2: Claim triggered (set by vault, not registry)
-        EXPIRED      // 3: Duration elapsed without claim
+        REGISTERED, // 0: Created but not yet active
+        ACTIVE, // 1: Active and accruing premium
+        CLAIMED, // 2: Claim triggered (set by vault, not registry)
+        EXPIRED // 3: Duration elapsed without claim
     }
 
     // --- Structs ---
@@ -32,12 +32,12 @@ contract PolicyRegistry is Ownable, ProtocolRoleConstants {
         uint256 id;
         string name;
         VerificationType verificationType;
-        uint256 coverageAmount;     // USDC 6 decimals
-        uint256 premiumAmount;      // USDC 6 decimals
-        uint256 duration;           // seconds
-        uint256 startTime;          // set on activatePolicy()
-        address insurer;            // receives ClaimReceipt on claim
-        int256 triggerThreshold;    // ON_CHAIN: BTC price threshold (8 dec). Others: unused.
+        uint256 coverageAmount; // USDC 6 decimals
+        uint256 premiumAmount; // USDC 6 decimals
+        uint256 duration; // seconds
+        uint256 startTime; // set on activatePolicy()
+        address insurer; // receives ClaimReceipt on claim
+        int256 triggerThreshold; // ON_CHAIN: BTC price threshold (8 dec). Others: unused.
         PolicyStatus status;
     }
 

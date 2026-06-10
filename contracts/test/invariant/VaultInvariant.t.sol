@@ -164,8 +164,8 @@ contract VaultHandler is Test {
         if (maxAlloc == 0) return 0;
 
         uint256 current = vault.portfolioAllocation(pid);
-        uint256 limit = vaultAllocator.investableBase(address(vault))
-            * vaultAllocator.maxPortfolioConcentrationBps() / 10_000;
+        uint256 limit =
+            vaultAllocator.investableBase(address(vault)) * vaultAllocator.maxPortfolioConcentrationBps() / 10_000;
         if (current >= limit) return 0;
         if (limit - current < maxAlloc) maxAlloc = limit - current;
 
@@ -174,8 +174,8 @@ contract VaultHandler is Test {
 
         // Per-cedant concentration room (both invariant portfolios share a cedant).
         address pfCedant = portfolioRegistry.getPortfolio(pid).cedant;
-        uint256 cedantLimit = vaultAllocator.investableBase(address(vault))
-            * vaultAllocator.maxCedantConcentrationBps() / 10_000;
+        uint256 cedantLimit =
+            vaultAllocator.investableBase(address(vault)) * vaultAllocator.maxCedantConcentrationBps() / 10_000;
         uint256 cedantExp = vaultAllocator.cedantExposure(address(vault), pfCedant);
         if (cedantExp >= cedantLimit) return 0;
         if (cedantLimit - cedantExp < maxAlloc) maxAlloc = cedantLimit - cedantExp;
@@ -274,13 +274,9 @@ contract VaultInvariantTest is Test {
         claimReceipt = new ClaimReceipt();
         compliance = new ComplianceRegistry(address(protocolRoles));
         portfolioRegistry = new PortfolioRegistry(address(protocolRoles));
-        distributor = new PremiumDistributor(
-            address(usdc), address(protocolRoles), address(portfolioRegistry)
-        );
+        distributor = new PremiumDistributor(address(usdc), address(protocolRoles), address(portfolioRegistry));
         // Advisory oracle disabled (address(0)): documented MVP configuration.
-        vaultAllocator = new VaultAllocator(
-            address(protocolRoles), address(portfolioRegistry), address(0)
-        );
+        vaultAllocator = new VaultAllocator(address(protocolRoles), address(portfolioRegistry), address(0));
         assessor = new AIAssessor(address(protocolRoles));
         claimManagerC = new ClaimManager(
             address(protocolRoles), address(portfolioRegistry), address(assessor), address(claimReceipt)
@@ -323,8 +319,7 @@ contract VaultInvariantTest is Test {
 
         // Legacy policy for premium flow (long duration so it never expires mid-run)
         uint256 polId = policyRegistry.registerPolicy(
-            "Premium Conduit", PolicyRegistry.VerificationType.OFF_CHAIN,
-            1_000_000e6, 1_000e6, 3650 days, cedant, 0
+            "Premium Conduit", PolicyRegistry.VerificationType.OFF_CHAIN, 1_000_000e6, 1_000e6, 3650 days, cedant, 0
         );
         policyRegistry.activatePolicy(polId);
         vm.stopPrank();
@@ -356,40 +351,44 @@ contract VaultInvariantTest is Test {
         }
         vm.stopPrank();
 
-        handler = new VaultHandler(VaultHandler.HandlerConfig({
-            vault: vault,
-            usdc: usdc,
-            policyRegistry: policyRegistry,
-            portfolioRegistry: portfolioRegistry,
-            distributor: distributor,
-            vaultAllocator: vaultAllocator,
-            claimManager: claimManagerC,
-            admin: admin,
-            committee: committee,
-            allocator: allocator,
-            cedant: cedant,
-            lps: lps,
-            portfolioIds: portfolioIds,
-            legacyPolicyId: polId
-        }));
+        handler = new VaultHandler(
+            VaultHandler.HandlerConfig({
+                vault: vault,
+                usdc: usdc,
+                policyRegistry: policyRegistry,
+                portfolioRegistry: portfolioRegistry,
+                distributor: distributor,
+                vaultAllocator: vaultAllocator,
+                claimManager: claimManagerC,
+                admin: admin,
+                committee: committee,
+                allocator: allocator,
+                cedant: cedant,
+                lps: lps,
+                portfolioIds: portfolioIds,
+                legacyPolicyId: polId
+            })
+        );
 
         targetContract(address(handler));
     }
 
     function _approvedPortfolio(string memory name, uint256 coverage) internal returns (uint256 pid) {
         vm.prank(cedant);
-        pid = portfolioRegistry.submitPortfolio(PortfolioRegistry.SubmissionParams({
-            name: name,
-            metadataURI: "ipfs://QmInv",
-            documentHash: keccak256(bytes(name)),
-            lineOfBusiness: "Mixed",
-            jurisdiction: "EU",
-            structureType: PortfolioRegistry.StructureType.QUOTA_SHARE,
-            coverageLimit: coverage,
-            cededPremium: 1_000e6,
-            inceptionTime: uint64(block.timestamp),
-            expiryTime: uint64(block.timestamp + 3650 days)
-        }));
+        pid = portfolioRegistry.submitPortfolio(
+            PortfolioRegistry.SubmissionParams({
+                name: name,
+                metadataURI: "ipfs://QmInv",
+                documentHash: keccak256(bytes(name)),
+                lineOfBusiness: "Mixed",
+                jurisdiction: "EU",
+                structureType: PortfolioRegistry.StructureType.QUOTA_SHARE,
+                coverageLimit: coverage,
+                cededPremium: 1_000e6,
+                inceptionTime: uint64(block.timestamp),
+                expiryTime: uint64(block.timestamp + 3650 days)
+            })
+        );
         vm.prank(admin);
         portfolioRegistry.startReview(pid);
         vm.prank(admin);
@@ -402,8 +401,7 @@ contract VaultInvariantTest is Test {
         uint256 balance = usdc.balanceOf(address(vault));
         assertEq(
             balance,
-            handler.ghost_deposited() + handler.ghost_premiums()
-                - handler.ghost_withdrawn() - handler.ghost_payouts(),
+            handler.ghost_deposited() + handler.ghost_premiums() - handler.ghost_withdrawn() - handler.ghost_payouts(),
             "USDC conservation violated"
         );
     }
@@ -448,8 +446,7 @@ contract VaultInvariantTest is Test {
             uint256 pendingClaims,
             uint256 deployedCapital,
             uint256 portfolioAllocated,
-            uint256 availableBuffer,
-            ,
+            uint256 availableBuffer,,
         ) = vault.getVaultAccounting();
 
         uint256 reserved = upr + pendingClaims + deployedCapital + portfolioAllocated;

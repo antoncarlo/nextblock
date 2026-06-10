@@ -53,18 +53,18 @@ contract NextBlockLens is ProtocolRoleConstants {
     /// @notice Availability of a piece of data, instead of reverting views.
     enum DataStatus {
         UNAVAILABLE, // 0: module not configured / not deployed / call failed
-        NONE,        // 1: module live but no data for this key yet
-        AVAILABLE,   // 2: fresh, usable data
-        STALE,       // 3: data exists but violates the freshness guard
-        PAUSED       // 4: feed/module paused by the Sentinel
+        NONE, // 1: module live but no data for this key yet
+        AVAILABLE, // 2: fresh, usable data
+        STALE, // 3: data exists but violates the freshness guard
+        PAUSED // 4: feed/module paused by the Sentinel
     }
 
     /// @notice Explicit provenance of the data (UI labelling requirement).
     enum DataSource {
-        ONCHAIN,        // 0: canonical on-chain protocol state
-        MOCK_ORACLE,    // 1: Braino.ai/WAVENURE MOCK feed (testnet, not verified)
+        ONCHAIN, // 0: canonical on-chain protocol state
+        MOCK_ORACLE, // 1: Braino.ai/WAVENURE MOCK feed (testnet, not verified)
         LEGACY_RETIRED, // 2: surface removed in Phase 9.5 (kept for labelling)
-        NOT_AVAILABLE   // 3: no source (module missing)
+        NOT_AVAILABLE // 3: no source (module missing)
     }
 
     // --- Module address book ---
@@ -87,12 +87,12 @@ contract NextBlockLens is ProtocolRoleConstants {
         uint256 lensVersion;
         uint256 chainId;
         ModuleAddresses modules;
-        uint256 vaultCount;       // VaultFactory (0 if unavailable)
-        uint256 portfolioCount;   // PortfolioRegistry
-        uint256 claimCount;       // ClaimManager
-        uint256 assertionCount;   // BordereauOracle
-        uint256 adapterCount;     // AdapterRegistry
-        uint256 proposalCount;    // VaultAllocator
+        uint256 vaultCount; // VaultFactory (0 if unavailable)
+        uint256 portfolioCount; // PortfolioRegistry
+        uint256 claimCount; // ClaimManager
+        uint256 assertionCount; // BordereauOracle
+        uint256 adapterCount; // AdapterRegistry
+        uint256 proposalCount; // VaultAllocator
     }
 
     struct VaultDashboardView {
@@ -103,26 +103,26 @@ contract NextBlockLens is ProtocolRoleConstants {
         address manager;
         uint256 totalAssets;
         uint256 totalShares;
-        uint256 sharePrice;          // assets per 1e18 shares (vault's own math)
-        uint256 balance;             // raw USDC balance
-        uint256 unearnedPremiums;    // UPR (vault accounting)
-        uint256 pendingClaims;       // claim reserves
-        uint256 deployedCapital;     // legacy policy deployment
-        uint256 portfolioAllocated;  // portfolio exposure
+        uint256 sharePrice; // assets per 1e18 shares (vault's own math)
+        uint256 balance; // raw USDC balance
+        uint256 unearnedPremiums; // UPR (vault accounting)
+        uint256 pendingClaims; // claim reserves
+        uint256 deployedCapital; // legacy policy deployment
+        uint256 portfolioAllocated; // portfolio exposure
         uint256 availableBuffer;
         uint256 underwritingCapacity;
-        uint256 depositCap;          // 0 = uncapped
+        uint256 depositCap; // 0 = uncapped
         uint256 bufferRatioBps;
         uint256 managementFeeBps;
         uint256 accumulatedFees;
-        address boundClaimManager;   // sole claim path (Phase 9.5)
+        address boundClaimManager; // sole claim path (Phase 9.5)
         address boundVaultAllocator; // sole allocation path (Phase 9.5)
     }
 
     struct LPStatusView {
         uint8 schemaVersion;
         DataStatus complianceStatus; // compliance module availability
-        DataStatus vaultStatus;      // vault availability
+        DataStatus vaultStatus; // vault availability
         address lp;
         address vault;
         bool whitelisted;
@@ -132,11 +132,11 @@ contract NextBlockLens is ProtocolRoleConstants {
         uint16 jurisdictionCode;
         bool canReceive;
         uint256 shareBalance;
-        uint256 assetValue;          // vault.convertToAssets(shareBalance)
+        uint256 assetValue; // vault.convertToAssets(shareBalance)
         uint256 maxDeposit;
         uint256 maxWithdraw;
         uint256 maxRedeem;
-        bool redemptionEligible;     // maxRedeem > 0
+        bool redemptionEligible; // maxRedeem > 0
     }
 
     struct PortfolioStatusView {
@@ -144,10 +144,10 @@ contract NextBlockLens is ProtocolRoleConstants {
         DataStatus status;
         PortfolioRegistry.Portfolio portfolio;
         bool allocatable;
-        uint256 allocatedExposure;   // in the queried vault (0 if vault unset)
-        uint256 premiumRecorded;     // vault-recorded portfolio premium
-        DataStatus riskStatus;       // NavOracle risk attestation availability
-        DataSource riskSource;       // MOCK_ORACLE while Braino.ai feed is mocked
+        uint256 allocatedExposure; // in the queried vault (0 if vault unset)
+        uint256 premiumRecorded; // vault-recorded portfolio premium
+        DataStatus riskStatus; // NavOracle risk attestation availability
+        DataSource riskSource; // MOCK_ORACLE while Braino.ai feed is mocked
         uint16 riskScoreBps;
         uint16 riskConfidenceBps;
         uint64 riskUpdatedAt;
@@ -158,15 +158,15 @@ contract NextBlockLens is ProtocolRoleConstants {
         uint8 schemaVersion;
         DataStatus status;
         uint256 portfolioId;
-        address vault;               // routing target (portfolioVault)
+        address vault; // routing target (portfolioVault)
         uint256 gross;
         uint256 lpQuota;
         uint256 protocolFees;
         uint256 underwritingFees;
         uint256 protocolFeeBps;
         uint256 underwritingFeeBps;
-        uint256 totalGrossReceived;      // distributor-wide
-        uint256 accruedProtocolFees;     // distributor-wide, unclaimed
+        uint256 totalGrossReceived; // distributor-wide
+        uint256 accruedProtocolFees; // distributor-wide, unclaimed
         uint256 accruedUnderwritingFees; // distributor-wide, unclaimed
     }
 
@@ -184,8 +184,8 @@ contract NextBlockLens is ProtocolRoleConstants {
 
     struct OracleDashboardView {
         uint8 schemaVersion;
-        DataStatus status;       // PAUSED > NONE > STALE > AVAILABLE precedence
-        DataSource source;       // MOCK_ORACLE while feeds are mocked
+        DataStatus status; // PAUSED > NONE > STALE > AVAILABLE precedence
+        DataSource source; // MOCK_ORACLE while feeds are mocked
         uint256 nav;
         uint16 confidenceBps;
         uint64 updatedAt;
@@ -200,7 +200,7 @@ contract NextBlockLens is ProtocolRoleConstants {
 
     struct BordereauDashboardView {
         uint8 schemaVersion;
-        DataStatus status;       // NONE when nothing finalized for the key
+        DataStatus status; // NONE when nothing finalized for the key
         BordereauOracle.Assertion latestFinalized; // zeroed when status != AVAILABLE
         uint64 liveness;
         uint256 assertionCount;
@@ -410,8 +410,9 @@ contract NextBlockLens is ProtocolRoleConstants {
 
         if (!_live(modules.portfolioRegistry)) return v;
 
-        try PortfolioRegistry(modules.portfolioRegistry).getPortfolio(portfolioId)
-        returns (PortfolioRegistry.Portfolio memory p) {
+        try PortfolioRegistry(modules.portfolioRegistry).getPortfolio(portfolioId) returns (
+            PortfolioRegistry.Portfolio memory p
+        ) {
             v.status = DataStatus.AVAILABLE;
             v.portfolio = p;
             v.allocatable = PortfolioRegistry(modules.portfolioRegistry).isAllocatable(portfolioId);

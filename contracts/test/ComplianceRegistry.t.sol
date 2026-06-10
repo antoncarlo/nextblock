@@ -49,36 +49,36 @@ contract ComplianceRegistryTest is Test {
     function test_setWhitelist_onlyKycOperator() public {
         bytes32 kycRole = protocolRoles.KYC_OPERATOR_ROLE();
         vm.prank(attacker);
-        vm.expectRevert(abi.encodeWithSelector(
-            ComplianceRegistry.ComplianceRegistry__UnauthorizedRole.selector, attacker, kycRole
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(ComplianceRegistry.ComplianceRegistry__UnauthorizedRole.selector, attacker, kycRole)
+        );
         compliance.setWhitelist(lp, true);
     }
 
     function test_setJurisdiction_onlyKycOperator() public {
         bytes32 kycRole = protocolRoles.KYC_OPERATOR_ROLE();
         vm.prank(attacker);
-        vm.expectRevert(abi.encodeWithSelector(
-            ComplianceRegistry.ComplianceRegistry__UnauthorizedRole.selector, attacker, kycRole
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(ComplianceRegistry.ComplianceRegistry__UnauthorizedRole.selector, attacker, kycRole)
+        );
         compliance.setJurisdiction(lp, 44);
     }
 
     function test_setKycExpiry_onlyKycOperator() public {
         bytes32 kycRole = protocolRoles.KYC_OPERATOR_ROLE();
         vm.prank(attacker);
-        vm.expectRevert(abi.encodeWithSelector(
-            ComplianceRegistry.ComplianceRegistry__UnauthorizedRole.selector, attacker, kycRole
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(ComplianceRegistry.ComplianceRegistry__UnauthorizedRole.selector, attacker, kycRole)
+        );
         compliance.setKycExpiry(lp, validExpiry);
     }
 
     function test_setInvestorLimit_onlyKycOperator() public {
         bytes32 kycRole = protocolRoles.KYC_OPERATOR_ROLE();
         vm.prank(attacker);
-        vm.expectRevert(abi.encodeWithSelector(
-            ComplianceRegistry.ComplianceRegistry__UnauthorizedRole.selector, attacker, kycRole
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(ComplianceRegistry.ComplianceRegistry__UnauthorizedRole.selector, attacker, kycRole)
+        );
         compliance.setInvestorLimit(lp, 1_000_000e6);
     }
 
@@ -87,9 +87,11 @@ contract ComplianceRegistryTest is Test {
 
         // KYC operator cannot block (role separation)
         vm.prank(kycOperator);
-        vm.expectRevert(abi.encodeWithSelector(
-            ComplianceRegistry.ComplianceRegistry__UnauthorizedRole.selector, kycOperator, sentinelRole
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ComplianceRegistry.ComplianceRegistry__UnauthorizedRole.selector, kycOperator, sentinelRole
+            )
+        );
         compliance.setBlocked(lp, true);
 
         vm.prank(sentinel);
@@ -201,27 +203,25 @@ contract ComplianceRegistryTest is Test {
 
     function test_requireCanReceive_specificErrors() public {
         // Not whitelisted
-        vm.expectRevert(abi.encodeWithSelector(
-            ComplianceRegistry.ComplianceRegistry__ReceiverNotWhitelisted.selector, lp
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(ComplianceRegistry.ComplianceRegistry__ReceiverNotWhitelisted.selector, lp)
+        );
         compliance.requireCanReceive(lp);
 
         // Blocked takes precedence
         _onboard(lp);
         vm.prank(sentinel);
         compliance.setBlocked(lp, true);
-        vm.expectRevert(abi.encodeWithSelector(
-            ComplianceRegistry.ComplianceRegistry__AddressBlocked.selector, lp
-        ));
+        vm.expectRevert(abi.encodeWithSelector(ComplianceRegistry.ComplianceRegistry__AddressBlocked.selector, lp));
         compliance.requireCanReceive(lp);
 
         // Expired KYC
         vm.prank(sentinel);
         compliance.setBlocked(lp, false);
         vm.warp(uint256(validExpiry) + 1);
-        vm.expectRevert(abi.encodeWithSelector(
-            ComplianceRegistry.ComplianceRegistry__KycExpired.selector, lp, validExpiry
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(ComplianceRegistry.ComplianceRegistry__KycExpired.selector, lp, validExpiry)
+        );
         compliance.requireCanReceive(lp);
     }
 
@@ -231,9 +231,7 @@ contract ComplianceRegistryTest is Test {
         vm.prank(sentinel);
         compliance.setBlocked(lp, true);
 
-        vm.expectRevert(abi.encodeWithSelector(
-            ComplianceRegistry.ComplianceRegistry__AddressBlocked.selector, lp
-        ));
+        vm.expectRevert(abi.encodeWithSelector(ComplianceRegistry.ComplianceRegistry__AddressBlocked.selector, lp));
         compliance.requireCanTransfer(lp, lp2, 1_000e6);
     }
 

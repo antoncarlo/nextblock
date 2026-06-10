@@ -54,9 +54,7 @@ contract PremiumDistributorTest is Test {
         claimReceipt = new ClaimReceipt();
         compliance = new ComplianceRegistry(address(protocolRoles));
         portfolioRegistry = new PortfolioRegistry(address(protocolRoles));
-        distributor = new PremiumDistributor(
-            address(usdc), address(protocolRoles), address(portfolioRegistry)
-        );
+        distributor = new PremiumDistributor(address(usdc), address(protocolRoles), address(portfolioRegistry));
 
         // Roles
         protocolRoles.grantRole(protocolRoles.UNDERWRITING_CURATOR_ROLE(), managerA);
@@ -96,18 +94,20 @@ contract PremiumDistributorTest is Test {
         inception = uint64(block.timestamp);
         expiry = uint64(block.timestamp + 365 days);
         vm.prank(cedant);
-        pid = portfolioRegistry.submitPortfolio(PortfolioRegistry.SubmissionParams({
-            name: "EU Property CAT QS 2026",
-            metadataURI: "ipfs://QmDocs",
-            documentHash: keccak256("docs"),
-            lineOfBusiness: "Property CAT",
-            jurisdiction: "EU",
-            structureType: PortfolioRegistry.StructureType.QUOTA_SHARE,
-            coverageLimit: COVERAGE_1M,
-            cededPremium: GROSS_100K,
-            inceptionTime: inception,
-            expiryTime: expiry
-        }));
+        pid = portfolioRegistry.submitPortfolio(
+            PortfolioRegistry.SubmissionParams({
+                name: "EU Property CAT QS 2026",
+                metadataURI: "ipfs://QmDocs",
+                documentHash: keccak256("docs"),
+                lineOfBusiness: "Property CAT",
+                jurisdiction: "EU",
+                structureType: PortfolioRegistry.StructureType.QUOTA_SHARE,
+                coverageLimit: COVERAGE_1M,
+                cededPremium: GROSS_100K,
+                inceptionTime: inception,
+                expiryTime: expiry
+            })
+        );
         vm.startPrank(admin);
         portfolioRegistry.startReview(pid);
         portfolioRegistry.approvePortfolio(pid, 6_500); // expectedLossBps mock
@@ -133,32 +133,34 @@ contract PremiumDistributorTest is Test {
     // =========== CONFIGURATION ===========
 
     function test_defaults() public view {
-        assertEq(distributor.protocolFeeBps(), distributor.DEFAULT_PROTOCOL_FEE_BPS());      // 1.5%
+        assertEq(distributor.protocolFeeBps(), distributor.DEFAULT_PROTOCOL_FEE_BPS()); // 1.5%
         assertEq(distributor.underwritingFeeBps(), distributor.DEFAULT_UNDERWRITING_FEE_BPS()); // 10%
     }
 
     function test_setPremiumSplit_onlyOwnerRole() public {
         bytes32 ownerRole = protocolRoles.OWNER_ROLE();
         vm.prank(attacker);
-        vm.expectRevert(abi.encodeWithSelector(
-            PremiumDistributor.PremiumDistributor__UnauthorizedRole.selector, attacker, ownerRole
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PremiumDistributor.PremiumDistributor__UnauthorizedRole.selector, attacker, ownerRole
+            )
+        );
         distributor.setPremiumSplit(100, 500);
     }
 
     function test_setPremiumSplit_bounds() public {
         uint256 maxP = distributor.MAX_PROTOCOL_FEE_BPS();
         vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSelector(
-            PremiumDistributor.PremiumDistributor__FeeAboveMax.selector, maxP + 1, maxP
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(PremiumDistributor.PremiumDistributor__FeeAboveMax.selector, maxP + 1, maxP)
+        );
         distributor.setPremiumSplit(maxP + 1, 500);
 
         uint256 maxU = distributor.MAX_UNDERWRITING_FEE_BPS();
         vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSelector(
-            PremiumDistributor.PremiumDistributor__FeeAboveMax.selector, maxU + 1, maxU
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(PremiumDistributor.PremiumDistributor__FeeAboveMax.selector, maxU + 1, maxU)
+        );
         distributor.setPremiumSplit(100, maxU + 1);
 
         vm.prank(admin);
@@ -170,9 +172,11 @@ contract PremiumDistributorTest is Test {
     function test_setPortfolioVault_onlyCurator() public {
         bytes32 curatorRole = protocolRoles.UNDERWRITING_CURATOR_ROLE();
         vm.prank(attacker);
-        vm.expectRevert(abi.encodeWithSelector(
-            PremiumDistributor.PremiumDistributor__UnauthorizedRole.selector, attacker, curatorRole
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PremiumDistributor.PremiumDistributor__UnauthorizedRole.selector, attacker, curatorRole
+            )
+        );
         distributor.setPortfolioVault(pid, address(vault));
     }
 
@@ -180,9 +184,9 @@ contract PremiumDistributorTest is Test {
         _receive(10_000e6);
 
         vm.prank(managerA);
-        vm.expectRevert(abi.encodeWithSelector(
-            PremiumDistributor.PremiumDistributor__VaultChangeAfterFunding.selector, pid
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(PremiumDistributor.PremiumDistributor__VaultChangeAfterFunding.selector, pid)
+        );
         distributor.setPortfolioVault(pid, makeAddr("otherVault"));
     }
 
@@ -243,9 +247,9 @@ contract PremiumDistributorTest is Test {
 
         vm.startPrank(attacker);
         usdc.approve(address(distributor), 1_000e6);
-        vm.expectRevert(abi.encodeWithSelector(
-            PremiumDistributor.PremiumDistributor__UnauthorizedPremiumSource.selector, attacker
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(PremiumDistributor.PremiumDistributor__UnauthorizedPremiumSource.selector, attacker)
+        );
         distributor.receivePremium(pid, 1_000e6);
         vm.stopPrank();
     }
@@ -253,18 +257,20 @@ contract PremiumDistributorTest is Test {
     function test_receivePremium_vaultNotSet_reverts() public {
         // New approved portfolio without routing
         vm.prank(cedant);
-        uint256 pid2 = portfolioRegistry.submitPortfolio(PortfolioRegistry.SubmissionParams({
-            name: "Unrouted Treaty",
-            metadataURI: "ipfs://x",
-            documentHash: keccak256("x"),
-            lineOfBusiness: "Marine",
-            jurisdiction: "UK",
-            structureType: PortfolioRegistry.StructureType.XOL,
-            coverageLimit: COVERAGE_1M,
-            cededPremium: GROSS_100K,
-            inceptionTime: inception,
-            expiryTime: expiry
-        }));
+        uint256 pid2 = portfolioRegistry.submitPortfolio(
+            PortfolioRegistry.SubmissionParams({
+                name: "Unrouted Treaty",
+                metadataURI: "ipfs://x",
+                documentHash: keccak256("x"),
+                lineOfBusiness: "Marine",
+                jurisdiction: "UK",
+                structureType: PortfolioRegistry.StructureType.XOL,
+                coverageLimit: COVERAGE_1M,
+                cededPremium: GROSS_100K,
+                inceptionTime: inception,
+                expiryTime: expiry
+            })
+        );
         vm.startPrank(admin);
         portfolioRegistry.startReview(pid2);
         portfolioRegistry.approvePortfolio(pid2, 5_000);
@@ -272,9 +278,7 @@ contract PremiumDistributorTest is Test {
 
         vm.startPrank(cedant);
         usdc.approve(address(distributor), 1_000e6);
-        vm.expectRevert(abi.encodeWithSelector(
-            PremiumDistributor.PremiumDistributor__VaultNotSet.selector, pid2
-        ));
+        vm.expectRevert(abi.encodeWithSelector(PremiumDistributor.PremiumDistributor__VaultNotSet.selector, pid2));
         distributor.receivePremium(pid2, 1_000e6);
         vm.stopPrank();
     }
@@ -289,9 +293,9 @@ contract PremiumDistributorTest is Test {
 
         vm.startPrank(cedant);
         usdc.approve(address(distributor), 1_000e6);
-        vm.expectRevert(abi.encodeWithSelector(
-            PremiumDistributor.PremiumDistributor__PortfolioNotAllocatable.selector, pid
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(PremiumDistributor.PremiumDistributor__PortfolioNotAllocatable.selector, pid)
+        );
         distributor.receivePremium(pid, 1_000e6);
         vm.stopPrank();
     }
@@ -326,9 +330,11 @@ contract PremiumDistributorTest is Test {
         _receive(GROSS_100K);
         bytes32 ownerRole = protocolRoles.OWNER_ROLE();
         vm.prank(attacker);
-        vm.expectRevert(abi.encodeWithSelector(
-            PremiumDistributor.PremiumDistributor__UnauthorizedRole.selector, attacker, ownerRole
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PremiumDistributor.PremiumDistributor__UnauthorizedRole.selector, attacker, ownerRole
+            )
+        );
         distributor.claimProtocolFees(attacker);
     }
 
@@ -383,9 +389,7 @@ contract PremiumDistributorTest is Test {
 
         vm.startPrank(attacker);
         usdc.approve(address(vault), 1_000e6);
-        vm.expectRevert(abi.encodeWithSelector(
-            InsuranceVault.InsuranceVault__UnauthorizedCaller.selector, attacker
-        ));
+        vm.expectRevert(abi.encodeWithSelector(InsuranceVault.InsuranceVault__UnauthorizedCaller.selector, attacker));
         vault.recordPortfolioPremium(pid, 1_000e6);
         vm.stopPrank();
     }

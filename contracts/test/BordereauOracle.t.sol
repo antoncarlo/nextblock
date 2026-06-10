@@ -41,18 +41,20 @@ contract BordereauOracleTest is Test {
         vm.stopPrank();
 
         vm.prank(cedant);
-        pid = portfolioRegistry.submitPortfolio(PortfolioRegistry.SubmissionParams({
-            name: "EU Property CAT QS 2026",
-            metadataURI: "ipfs://QmDocs",
-            documentHash: keccak256("docs"),
-            lineOfBusiness: "Property CAT",
-            jurisdiction: "EU",
-            structureType: PortfolioRegistry.StructureType.QUOTA_SHARE,
-            coverageLimit: 1_000_000e6,
-            cededPremium: DECLARED_100K,
-            inceptionTime: uint64(block.timestamp),
-            expiryTime: uint64(block.timestamp + 365 days)
-        }));
+        pid = portfolioRegistry.submitPortfolio(
+            PortfolioRegistry.SubmissionParams({
+                name: "EU Property CAT QS 2026",
+                metadataURI: "ipfs://QmDocs",
+                documentHash: keccak256("docs"),
+                lineOfBusiness: "Property CAT",
+                jurisdiction: "EU",
+                structureType: PortfolioRegistry.StructureType.QUOTA_SHARE,
+                coverageLimit: 1_000_000e6,
+                cededPremium: DECLARED_100K,
+                inceptionTime: uint64(block.timestamp),
+                expiryTime: uint64(block.timestamp + 365 days)
+            })
+        );
     }
 
     function _propose() internal returns (uint256 id) {
@@ -84,9 +86,9 @@ contract BordereauOracleTest is Test {
 
     function test_propose_unauthorized_reverts() public {
         vm.prank(attacker);
-        vm.expectRevert(abi.encodeWithSelector(
-            BordereauOracle.BordereauOracle__UnauthorizedProposer.selector, attacker
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(BordereauOracle.BordereauOracle__UnauthorizedProposer.selector, attacker)
+        );
         bordereau.proposeAssertion(pid, BordereauOracle.AssertionType.PREMIUM_BORDEREAU, DATA_HASH, "", 1);
     }
 
@@ -106,9 +108,9 @@ contract BordereauOracleTest is Test {
         uint256 id = _propose();
         BordereauOracle.Assertion memory a = bordereau.getAssertion(id);
 
-        vm.expectRevert(abi.encodeWithSelector(
-            BordereauOracle.BordereauOracle__LivenessActive.selector, id, a.livenessDeadline
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(BordereauOracle.BordereauOracle__LivenessActive.selector, id, a.livenessDeadline)
+        );
         bordereau.finalizeAssertion(id);
     }
 
@@ -136,14 +138,18 @@ contract BordereauOracleTest is Test {
 
         // Cannot dispute or re-finalize a finalized assertion
         vm.prank(sentinel);
-        vm.expectRevert(abi.encodeWithSelector(
-            BordereauOracle.BordereauOracle__InvalidStatus.selector, id, BordereauOracle.AssertionStatus.FINALIZED
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                BordereauOracle.BordereauOracle__InvalidStatus.selector, id, BordereauOracle.AssertionStatus.FINALIZED
+            )
+        );
         bordereau.disputeAssertion(id, "late");
 
-        vm.expectRevert(abi.encodeWithSelector(
-            BordereauOracle.BordereauOracle__InvalidStatus.selector, id, BordereauOracle.AssertionStatus.FINALIZED
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                BordereauOracle.BordereauOracle__InvalidStatus.selector, id, BordereauOracle.AssertionStatus.FINALIZED
+            )
+        );
         bordereau.finalizeAssertion(id);
     }
 
@@ -163,11 +169,13 @@ contract BordereauOracleTest is Test {
     }
 
     function test_latestFinalized_noneReverts() public {
-        vm.expectRevert(abi.encodeWithSelector(
-            BordereauOracle.BordereauOracle__NoFinalizedAssertion.selector,
-            pid,
-            BordereauOracle.AssertionType.CLAIMS_BORDEREAU
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                BordereauOracle.BordereauOracle__NoFinalizedAssertion.selector,
+                pid,
+                BordereauOracle.AssertionType.CLAIMS_BORDEREAU
+            )
+        );
         bordereau.latestFinalized(pid, BordereauOracle.AssertionType.CLAIMS_BORDEREAU);
     }
 
@@ -178,9 +186,9 @@ contract BordereauOracleTest is Test {
 
         bytes32 sentinelRole = protocolRoles.SENTINEL_ROLE();
         vm.prank(attacker);
-        vm.expectRevert(abi.encodeWithSelector(
-            BordereauOracle.BordereauOracle__UnauthorizedRole.selector, attacker, sentinelRole
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(BordereauOracle.BordereauOracle__UnauthorizedRole.selector, attacker, sentinelRole)
+        );
         bordereau.disputeAssertion(id, "x");
 
         vm.prank(sentinel);
@@ -198,9 +206,9 @@ contract BordereauOracleTest is Test {
 
         vm.warp(uint256(a.livenessDeadline) + 1);
         vm.prank(sentinel);
-        vm.expectRevert(abi.encodeWithSelector(
-            BordereauOracle.BordereauOracle__LivenessElapsed.selector, id, a.livenessDeadline
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(BordereauOracle.BordereauOracle__LivenessElapsed.selector, id, a.livenessDeadline)
+        );
         bordereau.disputeAssertion(id, "too late");
     }
 
@@ -212,9 +220,9 @@ contract BordereauOracleTest is Test {
         // The Sentinel CANNOT resolve its own dispute
         bytes32 committeeRole = protocolRoles.CLAIMS_COMMITTEE_ROLE();
         vm.prank(sentinel);
-        vm.expectRevert(abi.encodeWithSelector(
-            BordereauOracle.BordereauOracle__UnauthorizedRole.selector, sentinel, committeeRole
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(BordereauOracle.BordereauOracle__UnauthorizedRole.selector, sentinel, committeeRole)
+        );
         bordereau.resolveDispute(id, true);
 
         // Committee upholds -> terminal rejection
@@ -224,9 +232,11 @@ contract BordereauOracleTest is Test {
 
         // Rejected is terminal: cannot finalize
         vm.warp(block.timestamp + 365 days);
-        vm.expectRevert(abi.encodeWithSelector(
-            BordereauOracle.BordereauOracle__InvalidStatus.selector, id, BordereauOracle.AssertionStatus.REJECTED
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                BordereauOracle.BordereauOracle__InvalidStatus.selector, id, BordereauOracle.AssertionStatus.REJECTED
+            )
+        );
         bordereau.finalizeAssertion(id);
     }
 
@@ -284,9 +294,9 @@ contract BordereauOracleTest is Test {
         vm.warp(block.timestamp + elapsed);
 
         if (uint64(block.timestamp) <= deadline) {
-            vm.expectRevert(abi.encodeWithSelector(
-                BordereauOracle.BordereauOracle__LivenessActive.selector, id, deadline
-            ));
+            vm.expectRevert(
+                abi.encodeWithSelector(BordereauOracle.BordereauOracle__LivenessActive.selector, id, deadline)
+            );
             bordereau.finalizeAssertion(id);
         } else {
             bordereau.finalizeAssertion(id);

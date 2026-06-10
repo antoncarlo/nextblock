@@ -47,11 +47,9 @@ contract PolicyRegistryTest is Test {
     function test_advanceTime_onlyOwnerRole() public {
         bytes32 ownerRole = protocolRoles.OWNER_ROLE();
         vm.prank(notAdmin);
-        vm.expectRevert(abi.encodeWithSelector(
-            PolicyRegistry.PolicyRegistry__UnauthorizedRole.selector,
-            notAdmin,
-            ownerRole
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(PolicyRegistry.PolicyRegistry__UnauthorizedRole.selector, notAdmin, ownerRole)
+        );
         registry.advanceTime(30 days);
     }
 
@@ -69,11 +67,11 @@ contract PolicyRegistryTest is Test {
         uint256 policyId = registry.registerPolicy(
             "BTC Price Protection",
             PolicyRegistry.VerificationType.ON_CHAIN,
-            50_000e6,   // coverage
-            2_500e6,    // premium
-            90 days,    // duration
+            50_000e6, // coverage
+            2_500e6, // premium
+            90 days, // duration
             insurer,
-            80_000e8    // threshold
+            80_000e8 // threshold
         );
 
         assertEq(policyId, 0);
@@ -90,8 +88,12 @@ contract PolicyRegistryTest is Test {
 
     function test_registerPolicy_incrementsId() public {
         vm.startPrank(admin);
-        uint256 id0 = registry.registerPolicy("P1", PolicyRegistry.VerificationType.ON_CHAIN, 50_000e6, 2_500e6, 90 days, insurer, 80_000e8);
-        uint256 id1 = registry.registerPolicy("P2", PolicyRegistry.VerificationType.ORACLE_DEPENDENT, 15_000e6, 1_200e6, 60 days, insurer, 0);
+        uint256 id0 = registry.registerPolicy(
+            "P1", PolicyRegistry.VerificationType.ON_CHAIN, 50_000e6, 2_500e6, 90 days, insurer, 80_000e8
+        );
+        uint256 id1 = registry.registerPolicy(
+            "P2", PolicyRegistry.VerificationType.ORACLE_DEPENDENT, 15_000e6, 1_200e6, 60 days, insurer, 0
+        );
         vm.stopPrank();
 
         assertEq(id0, 0);
@@ -102,25 +104,25 @@ contract PolicyRegistryTest is Test {
     function test_registerPolicy_onlyAuthorizedCedant() public {
         bytes32 cedantRole = protocolRoles.AUTHORIZED_CEDANT_ROLE();
         vm.prank(notAdmin);
-        vm.expectRevert(abi.encodeWithSelector(
-            PolicyRegistry.PolicyRegistry__UnauthorizedRole.selector,
-            notAdmin,
-            cedantRole
-        ));
-        registry.registerPolicy("P1", PolicyRegistry.VerificationType.ON_CHAIN, 50_000e6, 2_500e6, 90 days, insurer, 80_000e8);
+        vm.expectRevert(
+            abi.encodeWithSelector(PolicyRegistry.PolicyRegistry__UnauthorizedRole.selector, notAdmin, cedantRole)
+        );
+        registry.registerPolicy(
+            "P1", PolicyRegistry.VerificationType.ON_CHAIN, 50_000e6, 2_500e6, 90 days, insurer, 80_000e8
+        );
     }
 
     function test_activatePolicy_onlyUnderwritingCurator() public {
         vm.prank(admin);
-        uint256 pid = registry.registerPolicy("P1", PolicyRegistry.VerificationType.ON_CHAIN, 50_000e6, 2_500e6, 90 days, insurer, 80_000e8);
+        uint256 pid = registry.registerPolicy(
+            "P1", PolicyRegistry.VerificationType.ON_CHAIN, 50_000e6, 2_500e6, 90 days, insurer, 80_000e8
+        );
 
         bytes32 curatorRole = protocolRoles.UNDERWRITING_CURATOR_ROLE();
         vm.prank(notAdmin);
-        vm.expectRevert(abi.encodeWithSelector(
-            PolicyRegistry.PolicyRegistry__UnauthorizedRole.selector,
-            notAdmin,
-            curatorRole
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(PolicyRegistry.PolicyRegistry__UnauthorizedRole.selector, notAdmin, curatorRole)
+        );
         registry.activatePolicy(pid);
     }
 
@@ -146,7 +148,9 @@ contract PolicyRegistryTest is Test {
 
         // Zero insurer
         vm.expectRevert(PolicyRegistry.PolicyRegistry__InvalidParams.selector);
-        registry.registerPolicy("P1", PolicyRegistry.VerificationType.ON_CHAIN, 50_000e6, 2_500e6, 90 days, address(0), 0);
+        registry.registerPolicy(
+            "P1", PolicyRegistry.VerificationType.ON_CHAIN, 50_000e6, 2_500e6, 90 days, address(0), 0
+        );
 
         vm.stopPrank();
     }
@@ -155,7 +159,9 @@ contract PolicyRegistryTest is Test {
 
     function test_activatePolicy() public {
         vm.startPrank(admin);
-        uint256 pid = registry.registerPolicy("P1", PolicyRegistry.VerificationType.ON_CHAIN, 50_000e6, 2_500e6, 90 days, insurer, 80_000e8);
+        uint256 pid = registry.registerPolicy(
+            "P1", PolicyRegistry.VerificationType.ON_CHAIN, 50_000e6, 2_500e6, 90 days, insurer, 80_000e8
+        );
         registry.activatePolicy(pid);
         vm.stopPrank();
 
@@ -166,16 +172,20 @@ contract PolicyRegistryTest is Test {
 
     function test_activatePolicy_notRegistered() public {
         vm.startPrank(admin);
-        uint256 pid = registry.registerPolicy("P1", PolicyRegistry.VerificationType.ON_CHAIN, 50_000e6, 2_500e6, 90 days, insurer, 80_000e8);
+        uint256 pid = registry.registerPolicy(
+            "P1", PolicyRegistry.VerificationType.ON_CHAIN, 50_000e6, 2_500e6, 90 days, insurer, 80_000e8
+        );
         registry.activatePolicy(pid);
 
         // Try to activate again (already ACTIVE)
-        vm.expectRevert(abi.encodeWithSelector(
-            PolicyRegistry.PolicyRegistry__InvalidStatus.selector,
-            pid,
-            PolicyRegistry.PolicyStatus.ACTIVE,
-            PolicyRegistry.PolicyStatus.REGISTERED
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                PolicyRegistry.PolicyRegistry__InvalidStatus.selector,
+                pid,
+                PolicyRegistry.PolicyStatus.ACTIVE,
+                PolicyRegistry.PolicyStatus.REGISTERED
+            )
+        );
         registry.activatePolicy(pid);
         vm.stopPrank();
     }
@@ -190,7 +200,9 @@ contract PolicyRegistryTest is Test {
 
     function test_isPolicyExpired_notExpired() public {
         vm.startPrank(admin);
-        uint256 pid = registry.registerPolicy("P1", PolicyRegistry.VerificationType.ON_CHAIN, 50_000e6, 2_500e6, 90 days, insurer, 80_000e8);
+        uint256 pid = registry.registerPolicy(
+            "P1", PolicyRegistry.VerificationType.ON_CHAIN, 50_000e6, 2_500e6, 90 days, insurer, 80_000e8
+        );
         registry.activatePolicy(pid);
         vm.stopPrank();
 
@@ -199,7 +211,9 @@ contract PolicyRegistryTest is Test {
 
     function test_isPolicyExpired_expired() public {
         vm.startPrank(admin);
-        uint256 pid = registry.registerPolicy("P1", PolicyRegistry.VerificationType.ON_CHAIN, 50_000e6, 2_500e6, 90 days, insurer, 80_000e8);
+        uint256 pid = registry.registerPolicy(
+            "P1", PolicyRegistry.VerificationType.ON_CHAIN, 50_000e6, 2_500e6, 90 days, insurer, 80_000e8
+        );
         registry.activatePolicy(pid);
         registry.advanceTime(91 days);
         vm.stopPrank();
@@ -209,7 +223,9 @@ contract PolicyRegistryTest is Test {
 
     function test_getRemainingDuration() public {
         vm.startPrank(admin);
-        uint256 pid = registry.registerPolicy("P1", PolicyRegistry.VerificationType.ON_CHAIN, 50_000e6, 2_500e6, 90 days, insurer, 80_000e8);
+        uint256 pid = registry.registerPolicy(
+            "P1", PolicyRegistry.VerificationType.ON_CHAIN, 50_000e6, 2_500e6, 90 days, insurer, 80_000e8
+        );
         registry.activatePolicy(pid);
         registry.advanceTime(30 days);
         vm.stopPrank();
@@ -219,7 +235,9 @@ contract PolicyRegistryTest is Test {
 
     function test_getRemainingDuration_expired() public {
         vm.startPrank(admin);
-        uint256 pid = registry.registerPolicy("P1", PolicyRegistry.VerificationType.ON_CHAIN, 50_000e6, 2_500e6, 90 days, insurer, 80_000e8);
+        uint256 pid = registry.registerPolicy(
+            "P1", PolicyRegistry.VerificationType.ON_CHAIN, 50_000e6, 2_500e6, 90 days, insurer, 80_000e8
+        );
         registry.activatePolicy(pid);
         registry.advanceTime(100 days);
         vm.stopPrank();
@@ -229,7 +247,9 @@ contract PolicyRegistryTest is Test {
 
     function test_getRemainingDuration_notActive() public {
         vm.prank(admin);
-        uint256 pid = registry.registerPolicy("P1", PolicyRegistry.VerificationType.ON_CHAIN, 50_000e6, 2_500e6, 90 days, insurer, 80_000e8);
+        uint256 pid = registry.registerPolicy(
+            "P1", PolicyRegistry.VerificationType.ON_CHAIN, 50_000e6, 2_500e6, 90 days, insurer, 80_000e8
+        );
 
         // Not yet activated
         assertEq(registry.getRemainingDuration(pid), 0);

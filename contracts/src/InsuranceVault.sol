@@ -51,11 +51,11 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
     // --- Structs ---
     struct VaultPolicy {
         uint256 policyId;
-        uint256 allocationWeight;   // Basis points (sum should = 10000)
-        uint256 premiumDeposited;   // Actual USDC deposited for this policy
-        uint256 coverageAmount;     // This vault's coverage for this policy
-        bool claimed;               // Per-vault claim status
-        uint256 claimAmount;        // Amount claimed (0 if not claimed)
+        uint256 allocationWeight; // Basis points (sum should = 10000)
+        uint256 premiumDeposited; // Actual USDC deposited for this policy
+        uint256 coverageAmount; // This vault's coverage for this policy
+        bool claimed; // Per-vault claim status
+        uint256 claimAmount; // Amount claimed (0 if not claimed)
     }
 
     // --- State ---
@@ -66,8 +66,8 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
     uint256 public totalAllocationWeight;
     uint256 public totalPendingClaims;
     uint256 public totalDeployedCapital;
-    uint256 public bufferRatioBps;       // 2000 = 20%, 1500 = 15%
-    uint256 public managementFeeBps;     // 50 = 0.5%, 100 = 1%
+    uint256 public bufferRatioBps; // 2000 = 20%, 1500 = 15%
+    uint256 public managementFeeBps; // 50 = 0.5%, 100 = 1%
     uint256 public accumulatedFees;
     uint256 public lastFeeTimestamp;
     string public vaultName;
@@ -130,7 +130,9 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
     event PortfolioPremiumRecorded(uint256 indexed portfolioId, address indexed from, uint256 amount);
     event ClaimManagerUpdated(address indexed claimManager);
     event VaultAllocatorUpdated(address indexed vaultAllocator);
-    event PortfolioClaimReserved(uint256 indexed claimId, uint256 indexed portfolioId, uint256 amount, uint256 allocationReleased);
+    event PortfolioClaimReserved(
+        uint256 indexed claimId, uint256 indexed portfolioId, uint256 amount, uint256 allocationReleased
+    );
     event PortfolioClaimReserveReleased(uint256 indexed claimId, uint256 indexed portfolioId, uint256 amount);
     event PortfolioClaimPaid(uint256 indexed claimId, uint256 indexed portfolioId, address indexed to, uint256 amount);
 
@@ -207,11 +209,7 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
         address portfolioRegistry;
     }
 
-    constructor(VaultInitParams memory p)
-        ERC4626(p.asset)
-        ERC20(p.name, p.symbol)
-        Ownable(p.owner)
-    {
+    constructor(VaultInitParams memory p) ERC4626(p.asset) ERC20(p.name, p.symbol) Ownable(p.owner) {
         if (p.protocolRoles == address(0)) revert InsuranceVault__InvalidParams();
         // Compliance and portfolio registries are mandatory: RWA shares cannot be ungated.
         if (p.complianceRegistry == address(0) || p.portfolioRegistry == address(0)) {
@@ -325,20 +323,22 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
     ///      Capital is committed exclusively through allocateToPortfolio(), where
     ///      the buffer ratio is enforced (underwritingCapacity). Deposited but
     ///      unallocated capital remains withdrawable.
-    function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override checkExpiredPolicies {
+    function _deposit(address caller, address receiver, uint256 assets, uint256 shares)
+        internal
+        override
+        checkExpiredPolicies
+    {
         _accrueFeesInternal();
 
         super._deposit(caller, receiver, assets, shares);
     }
 
     /// @dev Override withdraw to accrue fees, validate buffer, and update accounting.
-    function _withdraw(
-        address caller,
-        address receiver,
-        address owner_,
-        uint256 assets,
-        uint256 shares
-    ) internal override checkExpiredPolicies {
+    function _withdraw(address caller, address receiver, address owner_, uint256 assets, uint256 shares)
+        internal
+        override
+        checkExpiredPolicies
+    {
         _accrueFeesInternal();
 
         uint256 available = _availableBuffer();
@@ -389,7 +389,9 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
         onlyProtocolRole(PREMIUM_DEPOSITOR_ROLE)
         checkExpiredPolicies
     {
-        if (!policyAdded[policyId]) revert InsuranceVault__PolicyNotInVault(policyId);
+        if (!policyAdded[policyId]) {
+            revert InsuranceVault__PolicyNotInVault(policyId);
+        }
         if (amount == 0) revert InsuranceVault__InvalidParams();
 
         _accrueFeesInternal();
@@ -424,11 +426,7 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
     ///         from the withdrawal buffer until deallocated.
     /// @param portfolioId Portfolio id in the PortfolioRegistry
     /// @param amount USDC amount to commit (6 decimals)
-    function allocateToPortfolio(uint256 portfolioId, uint256 amount)
-        external
-        onlyVaultAllocator
-        checkExpiredPolicies
-    {
+    function allocateToPortfolio(uint256 portfolioId, uint256 amount) external onlyVaultAllocator checkExpiredPolicies {
         if (amount == 0) revert InsuranceVault__InvalidParams();
         if (!portfolioRegistry.isAllocatable(portfolioId)) {
             revert InsuranceVault__PortfolioNotAllocatable(portfolioId);
@@ -529,10 +527,7 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
     ///         net of UPR (a liability) and existing claim reserves. The portion
     ///         of the portfolio's committed allocation absorbed by the claim is
     ///         released (capital converts from underwriting commitment to reserve).
-    function reservePortfolioClaim(uint256 claimId, uint256 portfolioId, uint256 amount)
-        external
-        onlyClaimManager
-    {
+    function reservePortfolioClaim(uint256 claimId, uint256 portfolioId, uint256 amount) external onlyClaimManager {
         if (amount == 0) revert InsuranceVault__InvalidParams();
 
         _accrueFeesInternal();
@@ -632,26 +627,28 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
     // --- Frontend View Helpers ---
 
     /// @notice Aggregated vault info for frontend (reduces RPC calls).
-    function getVaultInfo() external view returns (
-        string memory name,
-        address manager,
-        uint256 assets,
-        uint256 shares,
-        uint256 sharePrice,
-        uint256 bufferBps,
-        uint256 feeBps,
-        uint256 availableBuffer,
-        uint256 deployedCapital,
-        uint256 policyCount
-    ) {
+    function getVaultInfo()
+        external
+        view
+        returns (
+            string memory name,
+            address manager,
+            uint256 assets,
+            uint256 shares,
+            uint256 sharePrice,
+            uint256 bufferBps,
+            uint256 feeBps,
+            uint256 availableBuffer,
+            uint256 deployedCapital,
+            uint256 policyCount
+        )
+    {
         uint256 totalShares = totalSupply();
         uint256 totalAssetsVal = totalAssets();
 
         // sharePrice in USDC decimals (6 decimals precision)
         // If no shares, price is 1:1 (1e6 = $1.00)
-        uint256 price = totalShares > 0
-            ? (totalAssetsVal * 1e18) / totalShares
-            : 1e6;
+        uint256 price = totalShares > 0 ? (totalAssetsVal * 1e18) / totalShares : 1e6;
 
         return (
             vaultName,
@@ -669,17 +666,21 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
 
     /// @notice Get vault policy info for frontend.
     /// @param policyId The policy to query
-    function getVaultPolicy(uint256 policyId) external view returns (
-        uint256 allocationWeight,
-        uint256 premium,
-        uint256 earnedPremium,
-        uint256 coverage,
-        uint256 duration,
-        uint256 startTime,
-        uint256 timeRemaining,
-        bool claimed,
-        bool expired
-    ) {
+    function getVaultPolicy(uint256 policyId)
+        external
+        view
+        returns (
+            uint256 allocationWeight,
+            uint256 premium,
+            uint256 earnedPremium,
+            uint256 coverage,
+            uint256 duration,
+            uint256 startTime,
+            uint256 timeRemaining,
+            bool claimed,
+            bool expired
+        )
+    {
         // Assign directly to named return variables to minimize stack depth
         {
             VaultPolicy storage vp = vaultPolicies[policyId];
@@ -726,16 +727,20 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
 
     /// @notice Aggregated hardening accounting for frontend/indexer (additive view;
     ///         getVaultInfo() is preserved unchanged for ABI stability).
-    function getVaultAccounting() external view returns (
-        uint256 balance,
-        uint256 unearnedPremiums,
-        uint256 pendingClaims,
-        uint256 deployedCapital,
-        uint256 portfolioAllocated,
-        uint256 availableBuffer,
-        uint256 capacity,
-        uint256 cap
-    ) {
+    function getVaultAccounting()
+        external
+        view
+        returns (
+            uint256 balance,
+            uint256 unearnedPremiums,
+            uint256 pendingClaims,
+            uint256 deployedCapital,
+            uint256 portfolioAllocated,
+            uint256 availableBuffer,
+            uint256 capacity,
+            uint256 cap
+        )
+    {
         return (
             IERC20(asset()).balanceOf(address(this)),
             _totalUnearnedPremiums(),

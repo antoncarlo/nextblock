@@ -50,18 +50,18 @@ contract VaultAllocator is ProtocolRoleConstants {
 
     // --- Enums / Structs ---
     enum ProposalStatus {
-        PROPOSED,  // 0: pending execution
-        EXECUTED,  // 1: applied on the vault
+        PROPOSED, // 0: pending execution
+        EXECUTED, // 1: applied on the vault
         CANCELLED, // 2: cancelled by proposer or Sentinel
-        EXPIRED    // 3: TTL elapsed without execution
+        EXPIRED // 3: TTL elapsed without execution
     }
 
     struct AllocationProposal {
         uint256 proposalId;
         address vault;
         uint256 portfolioId;
-        uint256 amount;          // USDC, 6 decimals
-        bool isDeallocation;     // risk-reduction proposals skip oracle/concentration
+        uint256 amount; // USDC, 6 decimals
+        bool isDeallocation; // risk-reduction proposals skip oracle/concentration
         address proposer;
         uint64 proposedAt;
         uint64 expiresAt;
@@ -139,9 +139,7 @@ contract VaultAllocator is ProtocolRoleConstants {
         maxCedantConcentrationBps = DEFAULT_MAX_CEDANT_CONCENTRATION_BPS;
 
         emit ProposalTtlUpdated(DEFAULT_PROPOSAL_TTL);
-        emit ConcentrationLimitsUpdated(
-            DEFAULT_MAX_PORTFOLIO_CONCENTRATION_BPS, DEFAULT_MAX_CEDANT_CONCENTRATION_BPS
-        );
+        emit ConcentrationLimitsUpdated(DEFAULT_MAX_PORTFOLIO_CONCENTRATION_BPS, DEFAULT_MAX_CEDANT_CONCENTRATION_BPS);
         emit NavOracleSet(navOracle_);
     }
 
@@ -152,7 +150,9 @@ contract VaultAllocator is ProtocolRoleConstants {
         external
         onlyProtocolRole(OWNER_ROLE)
     {
-        if (maxPortfolioBps == 0 || maxPortfolioBps > BASIS_POINTS) revert VaultAllocator__InvalidParams();
+        if (maxPortfolioBps == 0 || maxPortfolioBps > BASIS_POINTS) {
+            revert VaultAllocator__InvalidParams();
+        }
         if (maxCedantBps == 0 || maxCedantBps > BASIS_POINTS) revert VaultAllocator__InvalidParams();
         if (maxCedantBps < maxPortfolioBps) revert VaultAllocator__InvalidParams();
         maxPortfolioConcentrationBps = maxPortfolioBps;
@@ -223,7 +223,7 @@ contract VaultAllocator is ProtocolRoleConstants {
         uint256 assigned;
         for (uint256 i = 0; i < n; i++) {
             uint256 legAmount = i == n - 1
-                ? totalAmount - assigned // remainder to the last leg (exact conservation)
+                ? totalAmount - assigned  // remainder to the last leg (exact conservation)
                 : totalAmount * weightsBps[i] / BASIS_POINTS;
             assigned += legAmount;
 

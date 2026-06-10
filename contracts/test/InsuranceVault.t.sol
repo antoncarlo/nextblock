@@ -76,8 +76,8 @@ contract InsuranceVaultTest is Test {
                 vaultName: "Balanced Core",
                 owner: admin,
                 vaultManager: managerA,
-                bufferRatioBps: 2000,   // 20% buffer
-                managementFeeBps: 50,   // 0.5% management fee
+                bufferRatioBps: 2000, // 20% buffer
+                managementFeeBps: 50, // 0.5% management fee
                 registry: address(registry),
                 oracle: address(oracle),
                 claimReceipt: address(claimReceipt),
@@ -91,9 +91,33 @@ contract InsuranceVaultTest is Test {
         claimReceipt.setAuthorizedMinter(address(vaultA), true);
 
         // Register 3 policies
-        registry.registerPolicy("BTC Price Protection", PolicyRegistry.VerificationType.ON_CHAIN, COVERAGE_50K, PREMIUM_2500, NINETY_DAYS, insurer, BTC_THRESHOLD_80K);
-        registry.registerPolicy("Flight Delay", PolicyRegistry.VerificationType.ORACLE_DEPENDENT, COVERAGE_15K, PREMIUM_1200, 60 days, insurer, 0);
-        registry.registerPolicy("Commercial Fire", PolicyRegistry.VerificationType.OFF_CHAIN, COVERAGE_40K, PREMIUM_2400, 180 days, insurer, 0);
+        registry.registerPolicy(
+            "BTC Price Protection",
+            PolicyRegistry.VerificationType.ON_CHAIN,
+            COVERAGE_50K,
+            PREMIUM_2500,
+            NINETY_DAYS,
+            insurer,
+            BTC_THRESHOLD_80K
+        );
+        registry.registerPolicy(
+            "Flight Delay",
+            PolicyRegistry.VerificationType.ORACLE_DEPENDENT,
+            COVERAGE_15K,
+            PREMIUM_1200,
+            60 days,
+            insurer,
+            0
+        );
+        registry.registerPolicy(
+            "Commercial Fire",
+            PolicyRegistry.VerificationType.OFF_CHAIN,
+            COVERAGE_40K,
+            PREMIUM_2400,
+            180 days,
+            insurer,
+            0
+        );
 
         // Activate all policies
         registry.activatePolicy(0);
@@ -104,9 +128,9 @@ contract InsuranceVaultTest is Test {
 
         // Vault manager adds policies
         vm.startPrank(managerA);
-        vaultA.addPolicy(0, 4000);  // P1: 40%
-        vaultA.addPolicy(1, 2000);  // P2: 20%
-        vaultA.addPolicy(2, 4000);  // P3: 40%
+        vaultA.addPolicy(0, 4000); // P1: 40%
+        vaultA.addPolicy(1, 2000); // P2: 20%
+        vaultA.addPolicy(2, 4000); // P3: 40%
         vm.stopPrank();
 
         // Admin deposits premiums
@@ -275,10 +299,10 @@ contract InsuranceVaultTest is Test {
 
     function test_depositPremium_separate() public {
         // Verify premiums were deposited correctly
-        (,,uint256 premium,,,) = vaultA.vaultPolicies(0);
+        (,, uint256 premium,,,) = vaultA.vaultPolicies(0);
         assertEq(premium, PREMIUM_2500);
 
-        (,,uint256 premium2,,,) = vaultA.vaultPolicies(1);
+        (,, uint256 premium2,,,) = vaultA.vaultPolicies(1);
         assertEq(premium2, PREMIUM_1200);
     }
 
@@ -318,7 +342,7 @@ contract InsuranceVaultTest is Test {
         vm.stopPrank();
 
         // Verify premium was deposited
-        (,,uint256 premium,,,) = vaultA.vaultPolicies(0);
+        (,, uint256 premium,,,) = vaultA.vaultPolicies(0);
         assertEq(premium, PREMIUM_2500 + 1_000e6);
     }
 
@@ -331,7 +355,9 @@ contract InsuranceVaultTest is Test {
 
         vm.startPrank(unauthorized);
         usdc.approve(address(vaultA), 1_000e6);
-        vm.expectRevert(abi.encodeWithSelector(InsuranceVault.InsuranceVault__UnauthorizedCaller.selector, unauthorized));
+        vm.expectRevert(
+            abi.encodeWithSelector(InsuranceVault.InsuranceVault__UnauthorizedCaller.selector, unauthorized)
+        );
         vaultA.depositPremium(0, 1_000e6);
         vm.stopPrank();
     }
@@ -464,12 +490,9 @@ contract InsuranceVaultTest is Test {
             string memory name,
             address manager,
             uint256 assets,
-            uint256 shares,
-            ,
+            uint256 shares,,
             uint256 bufferBps,
-            uint256 feeBps,
-            ,
-            ,
+            uint256 feeBps,,,
             uint256 policyCount
         ) = vaultA.getVaultInfo();
 

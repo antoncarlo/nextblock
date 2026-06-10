@@ -21,56 +21,56 @@ contract PortfolioRegistry is ProtocolRoleConstants {
     // --- Enums ---
     /// @notice Reinsurance structure of the ceded portfolio/treaty.
     enum StructureType {
-        QUOTA_SHARE,  // 0: proportional quota share
-        XOL,          // 1: excess of loss
-        SURPLUS,      // 2: surplus share
-        PARAMETRIC,   // 3: parametric trigger
-        OTHER         // 4: other/bespoke structure
+        QUOTA_SHARE, // 0: proportional quota share
+        XOL, // 1: excess of loss
+        SURPLUS, // 2: surplus share
+        PARAMETRIC, // 3: parametric trigger
+        OTHER // 4: other/bespoke structure
     }
 
     /// @notice Institutional portfolio lifecycle status.
     enum PortfolioStatus {
-        SUBMITTED,     // 0: submitted by cedant, awaiting review
-        UNDER_REVIEW,  // 1: Underwriting Curator reviewing / AI assessment in progress
-        APPROVED,      // 2: approved by Underwriting Curator, not yet on risk
-        ACTIVE,        // 3: on risk, allocatable by vaults
-        PAUSED,        // 4: paused by Sentinel (risk action)
-        EXPIRED,       // 5: coverage period elapsed
-        REJECTED       // 6: rejected during review
+        SUBMITTED, // 0: submitted by cedant, awaiting review
+        UNDER_REVIEW, // 1: Underwriting Curator reviewing / AI assessment in progress
+        APPROVED, // 2: approved by Underwriting Curator, not yet on risk
+        ACTIVE, // 3: on risk, allocatable by vaults
+        PAUSED, // 4: paused by Sentinel (risk action)
+        EXPIRED, // 5: coverage period elapsed
+        REJECTED // 6: rejected during review
     }
 
     // --- Structs ---
     struct Portfolio {
         uint256 portfolioId;
-        address cedant;            // submitting cedant / reinsurer
-        string  name;              // display name (e.g., "EU Property CAT QS 2026")
-        string  metadataURI;       // IPFS / document store pointer
-        bytes32 documentHash;      // hash of the off-chain documentation bundle
-        string  lineOfBusiness;    // e.g., "Property CAT", "Marine", "D&O"
-        string  jurisdiction;      // e.g., "EU", "BS", "UK"
+        address cedant; // submitting cedant / reinsurer
+        string name; // display name (e.g., "EU Property CAT QS 2026")
+        string metadataURI; // IPFS / document store pointer
+        bytes32 documentHash; // hash of the off-chain documentation bundle
+        string lineOfBusiness; // e.g., "Property CAT", "Marine", "D&O"
+        string jurisdiction; // e.g., "EU", "BS", "UK"
         StructureType structureType;
-        uint256 coverageLimit;     // ceded coverage limit, USDC 6 decimals
-        uint256 cededPremium;      // expected ceded premium, USDC 6 decimals
-        uint16  expectedLossBps;   // Braino.ai risk score mock, set at approval (<= MAX_BPS)
-        uint64  inceptionTime;     // coverage inception (unix)
-        uint64  expiryTime;        // coverage expiry (unix)
+        uint256 coverageLimit; // ceded coverage limit, USDC 6 decimals
+        uint256 cededPremium; // expected ceded premium, USDC 6 decimals
+        uint16 expectedLossBps; // Braino.ai risk score mock, set at approval (<= MAX_BPS)
+        uint64 inceptionTime; // coverage inception (unix)
+        uint64 expiryTime; // coverage expiry (unix)
         PortfolioStatus status;
-        uint64  submittedAt;
-        uint64  updatedAt;
+        uint64 submittedAt;
+        uint64 updatedAt;
     }
 
     /// @notice Cedant-supplied submission parameters (packed to keep stack shallow).
     struct SubmissionParams {
-        string  name;
-        string  metadataURI;
+        string name;
+        string metadataURI;
         bytes32 documentHash;
-        string  lineOfBusiness;
-        string  jurisdiction;
+        string lineOfBusiness;
+        string jurisdiction;
         StructureType structureType;
         uint256 coverageLimit;
         uint256 cededPremium;
-        uint64  inceptionTime;
-        uint64  expiryTime;
+        uint64 inceptionTime;
+        uint64 expiryTime;
     }
 
     // --- State ---
@@ -136,11 +136,8 @@ contract PortfolioRegistry is ProtocolRoleConstants {
         returns (uint256 portfolioId)
     {
         if (
-            p.coverageLimit == 0 ||
-            p.cededPremium == 0 ||
-            p.expiryTime <= p.inceptionTime ||
-            p.documentHash == bytes32(0) ||
-            bytes(p.name).length == 0
+            p.coverageLimit == 0 || p.cededPremium == 0 || p.expiryTime <= p.inceptionTime
+                || p.documentHash == bytes32(0) || bytes(p.name).length == 0
         ) {
             revert PortfolioRegistry__InvalidParams();
         }

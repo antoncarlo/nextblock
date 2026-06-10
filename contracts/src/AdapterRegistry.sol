@@ -38,18 +38,18 @@ interface IRiskPoolAdapter {
 contract AdapterRegistry is ProtocolRoleConstants {
     // --- Enums / Structs ---
     enum AdapterStatus {
-        PENDING,    // 0: registered, awaiting governance activation
-        ACTIVE,     // 1: eligible for future allocator integration
-        DISABLED,   // 2: paused by Sentinel/governance (reversible)
-        DEPRECATED  // 3: terminal removal
+        PENDING, // 0: registered, awaiting governance activation
+        ACTIVE, // 1: eligible for future allocator integration
+        DISABLED, // 2: paused by Sentinel/governance (reversible)
+        DEPRECATED // 3: terminal removal
     }
 
     struct Adapter {
-        bytes32 adapterId;     // e.g., keccak256("ENSURO_V3")
-        address adapter;       // external contract implementing IRiskPoolAdapter
-        string name;           // display name (e.g., "Ensuro")
-        bytes32 metadataHash;  // hash of due-diligence/integration docs
-        uint256 exposureCap;   // max exposure via this adapter (USDC, 6 decimals)
+        bytes32 adapterId; // e.g., keccak256("ENSURO_V3")
+        address adapter; // external contract implementing IRiskPoolAdapter
+        string name; // display name (e.g., "Ensuro")
+        bytes32 metadataHash; // hash of due-diligence/integration docs
+        uint256 exposureCap; // max exposure via this adapter (USDC, 6 decimals)
         AdapterStatus status;
         uint64 registeredAt;
         uint64 updatedAt;
@@ -63,7 +63,9 @@ contract AdapterRegistry is ProtocolRoleConstants {
     bytes32[] private _adapterIds;
 
     // --- Events ---
-    event AdapterRegistered(bytes32 indexed adapterId, address indexed adapter, string name, bytes32 metadataHash, uint256 exposureCap);
+    event AdapterRegistered(
+        bytes32 indexed adapterId, address indexed adapter, string name, bytes32 metadataHash, uint256 exposureCap
+    );
     event AdapterActivated(bytes32 indexed adapterId, address indexed by);
     event AdapterDisabled(bytes32 indexed adapterId, address indexed by);
     event AdapterDeprecated(bytes32 indexed adapterId, address indexed by);
@@ -136,10 +138,7 @@ contract AdapterRegistry is ProtocolRoleConstants {
     }
 
     /// @notice Update the metadata hash (new due-diligence docs). Only curator.
-    function setMetadata(bytes32 adapterId, bytes32 metadataHash)
-        external
-        onlyProtocolRole(UNDERWRITING_CURATOR_ROLE)
-    {
+    function setMetadata(bytes32 adapterId, bytes32 metadataHash) external onlyProtocolRole(UNDERWRITING_CURATOR_ROLE) {
         if (metadataHash == bytes32(0)) revert AdapterRegistry__InvalidParams();
         Adapter storage a = _getAdapter(adapterId);
         if (a.status == AdapterStatus.DEPRECATED) revert AdapterRegistry__InvalidStatus(adapterId, a.status);

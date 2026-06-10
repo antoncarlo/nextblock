@@ -42,18 +42,20 @@ contract NavOracleTest is Test {
 
         // One existing portfolio for risk attestations
         vm.prank(cedant);
-        pid = portfolioRegistry.submitPortfolio(PortfolioRegistry.SubmissionParams({
-            name: "EU Property CAT QS 2026",
-            metadataURI: "ipfs://QmDocs",
-            documentHash: keccak256("docs"),
-            lineOfBusiness: "Property CAT",
-            jurisdiction: "EU",
-            structureType: PortfolioRegistry.StructureType.QUOTA_SHARE,
-            coverageLimit: 1_000_000e6,
-            cededPremium: 100_000e6,
-            inceptionTime: uint64(block.timestamp),
-            expiryTime: uint64(block.timestamp + 365 days)
-        }));
+        pid = portfolioRegistry.submitPortfolio(
+            PortfolioRegistry.SubmissionParams({
+                name: "EU Property CAT QS 2026",
+                metadataURI: "ipfs://QmDocs",
+                documentHash: keccak256("docs"),
+                lineOfBusiness: "Property CAT",
+                jurisdiction: "EU",
+                structureType: PortfolioRegistry.StructureType.QUOTA_SHARE,
+                coverageLimit: 1_000_000e6,
+                cededPremium: 100_000e6,
+                inceptionTime: uint64(block.timestamp),
+                expiryTime: uint64(block.timestamp + 365 days)
+            })
+        );
     }
 
     function _publish(uint256 nav) internal {
@@ -66,27 +68,23 @@ contract NavOracleTest is Test {
     function test_publishNav_onlyOracleRole() public {
         bytes32 oracleRole = protocolRoles.ORACLE_ROLE();
         vm.prank(attacker);
-        vm.expectRevert(abi.encodeWithSelector(
-            NavOracle.NavOracle__UnauthorizedRole.selector, attacker, oracleRole
-        ));
+        vm.expectRevert(abi.encodeWithSelector(NavOracle.NavOracle__UnauthorizedRole.selector, attacker, oracleRole));
         navOracle.publishNav(vaultAddr, NAV_100K, CONF_9000, SOURCE_HASH);
     }
 
     function test_publishPortfolioRisk_onlyOracleRole() public {
         bytes32 oracleRole = protocolRoles.ORACLE_ROLE();
         vm.prank(attacker);
-        vm.expectRevert(abi.encodeWithSelector(
-            NavOracle.NavOracle__UnauthorizedRole.selector, attacker, oracleRole
-        ));
+        vm.expectRevert(abi.encodeWithSelector(NavOracle.NavOracle__UnauthorizedRole.selector, attacker, oracleRole));
         navOracle.publishPortfolioRisk(pid, 6_500, CONF_9000, SOURCE_HASH);
     }
 
     function test_pauseUnpause_onlySentinel() public {
         bytes32 sentinelRole = protocolRoles.SENTINEL_ROLE();
         vm.prank(oracleNode); // oracle cannot pause (role separation)
-        vm.expectRevert(abi.encodeWithSelector(
-            NavOracle.NavOracle__UnauthorizedRole.selector, oracleNode, sentinelRole
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(NavOracle.NavOracle__UnauthorizedRole.selector, oracleNode, sentinelRole)
+        );
         navOracle.pauseFeed(vaultAddr);
 
         vm.prank(sentinel);
@@ -101,9 +99,7 @@ contract NavOracleTest is Test {
     function test_setGuards_onlyOwnerRole() public {
         bytes32 ownerRole = protocolRoles.OWNER_ROLE();
         vm.prank(sentinel);
-        vm.expectRevert(abi.encodeWithSelector(
-            NavOracle.NavOracle__UnauthorizedRole.selector, sentinel, ownerRole
-        ));
+        vm.expectRevert(abi.encodeWithSelector(NavOracle.NavOracle__UnauthorizedRole.selector, sentinel, ownerRole));
         navOracle.setGuards(1 days, 2_000, 5_000);
     }
 
@@ -155,9 +151,7 @@ contract NavOracleTest is Test {
     function test_publish_lowConfidence_reverts() public {
         uint16 minConf = navOracle.minConfidenceBps();
         vm.prank(oracleNode);
-        vm.expectRevert(abi.encodeWithSelector(
-            NavOracle.NavOracle__ConfidenceTooLow.selector, minConf - 1, minConf
-        ));
+        vm.expectRevert(abi.encodeWithSelector(NavOracle.NavOracle__ConfidenceTooLow.selector, minConf - 1, minConf));
         navOracle.publishNav(vaultAddr, NAV_100K, minConf - 1, SOURCE_HASH);
     }
 

@@ -149,18 +149,20 @@ contract DemoFlow is Script, ProtocolRoleConstants {
     }
 
     function _step5_portfolio() internal {
-        pid = portfolioRegistry.submitPortfolio(PortfolioRegistry.SubmissionParams({
-            name: "EU Property CAT QS 2026 (demo)",
-            metadataURI: "ipfs://QmDemoDocs",
-            documentHash: keccak256("demo-docs"),
-            lineOfBusiness: "Property CAT",
-            jurisdiction: "EU",
-            structureType: PortfolioRegistry.StructureType.QUOTA_SHARE,
-            coverageLimit: COVERAGE_LIMIT,
-            cededPremium: PREMIUM,
-            inceptionTime: uint64(block.timestamp),
-            expiryTime: uint64(block.timestamp + 365 days)
-        }));
+        pid = portfolioRegistry.submitPortfolio(
+            PortfolioRegistry.SubmissionParams({
+                name: "EU Property CAT QS 2026 (demo)",
+                metadataURI: "ipfs://QmDemoDocs",
+                documentHash: keccak256("demo-docs"),
+                lineOfBusiness: "Property CAT",
+                jurisdiction: "EU",
+                structureType: PortfolioRegistry.StructureType.QUOTA_SHARE,
+                coverageLimit: COVERAGE_LIMIT,
+                cededPremium: PREMIUM,
+                inceptionTime: uint64(block.timestamp),
+                expiryTime: uint64(block.timestamp + 365 days)
+            })
+        );
         portfolioRegistry.startReview(pid);
         portfolioRegistry.approvePortfolio(pid, EXPECTED_LOSS_BPS); // declared mock
         portfolioRegistry.activatePortfolio(pid);
@@ -193,7 +195,12 @@ contract DemoFlow is Script, ProtocolRoleConstants {
             address(vault), pid, CLAIM_AMOUNT, ClaimManager.ClaimType.PARAMETRIC, keccak256("demo-evidence")
         );
         assessor.publishAssessment(
-            claimId, 8_200, 1_200, 9_100, AIAssessor.Recommendation.APPROVE, CLAIM_AMOUNT,
+            claimId,
+            8_200,
+            1_200,
+            9_100,
+            AIAssessor.Recommendation.APPROVE,
+            CLAIM_AMOUNT,
             keccak256("wavenure-claim-demo")
         );
         claimManager.attachAssessment(claimId); // advisory only
@@ -204,8 +211,11 @@ contract DemoFlow is Script, ProtocolRoleConstants {
 
     function _step10_bordereau() internal {
         assertionId = bordereau.proposeAssertion(
-            pid, BordereauOracle.AssertionType.PREMIUM_BORDEREAU,
-            keccak256("demo-premium-bordereau"), "ipfs://QmDemoBordereau", PREMIUM
+            pid,
+            BordereauOracle.AssertionType.PREMIUM_BORDEREAU,
+            keccak256("demo-premium-bordereau"),
+            "ipfs://QmDemoBordereau",
+            PREMIUM
         );
         console2.log("step 10 bordereau PROPOSED, id:", assertionId);
         console2.log("        finalize AFTER liveness (never skipped):");

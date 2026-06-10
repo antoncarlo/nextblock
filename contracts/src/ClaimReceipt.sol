@@ -26,7 +26,9 @@ contract ClaimReceipt is ERC721, Ownable {
     address public registrar; // Can add minters (but not revoke)
 
     // --- Events ---
-    event ReceiptMinted(uint256 indexed receiptId, address indexed insurer, uint256 policyId, uint256 claimAmount, address vault);
+    event ReceiptMinted(
+        uint256 indexed receiptId, address indexed insurer, uint256 policyId, uint256 claimAmount, address vault
+    );
     event ReceiptExercised(uint256 indexed receiptId);
     event MinterUpdated(address indexed minter, bool authorized);
     event RegistrarUpdated(address indexed registrar);
@@ -75,12 +77,10 @@ contract ClaimReceipt is ERC721, Ownable {
     /// @param claimAmount The amount the insurer can draw down (USDC 6 decimals)
     /// @param vault The vault that issued this receipt
     /// @return receiptId The ID of the newly minted receipt
-    function mint(
-        address insurer,
-        uint256 policyId,
-        uint256 claimAmount,
-        address vault
-    ) external returns (uint256 receiptId) {
+    function mint(address insurer, uint256 policyId, uint256 claimAmount, address vault)
+        external
+        returns (uint256 receiptId)
+    {
         if (!authorizedMinters[msg.sender]) {
             revert ClaimReceipt__UnauthorizedMinter(msg.sender);
         }

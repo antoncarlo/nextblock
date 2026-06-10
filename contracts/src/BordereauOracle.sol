@@ -34,27 +34,27 @@ contract BordereauOracle is ProtocolRoleConstants {
     // --- Enums / Structs ---
     enum AssertionType {
         PREMIUM_BORDEREAU, // 0: declared premium totals for a period
-        POLICY_BORDEREAU,  // 1: declared policy schedule
-        CLAIMS_BORDEREAU,  // 2: declared loss/claims data
-        OTHER              // 3: other attested datasets
+        POLICY_BORDEREAU, // 1: declared policy schedule
+        CLAIMS_BORDEREAU, // 2: declared loss/claims data
+        OTHER // 3: other attested datasets
     }
 
     enum AssertionStatus {
-        PROPOSED,  // 0: pending liveness
-        DISPUTED,  // 1: sentinel challenge pending committee resolution
+        PROPOSED, // 0: pending liveness
+        DISPUTED, // 1: sentinel challenge pending committee resolution
         FINALIZED, // 2: survived liveness or committee-verified
-        REJECTED   // 3: terminal rejection
+        REJECTED // 3: terminal rejection
     }
 
     struct Assertion {
         uint256 assertionId;
         uint256 portfolioId;
         AssertionType assertionType;
-        bytes32 dataHash;        // hash of the off-chain bordereau dataset
-        string dataURI;          // pointer (IPFS/document store)
-        uint256 declaredAmount;  // headline figure declared (USDC 6 decimals)
+        bytes32 dataHash; // hash of the off-chain bordereau dataset
+        string dataURI; // pointer (IPFS/document store)
+        uint256 declaredAmount; // headline figure declared (USDC 6 decimals)
         address proposer;
-        address disputer;        // sentinel that disputed (if any)
+        address disputer; // sentinel that disputed (if any)
         uint64 proposedAt;
         uint64 livenessDeadline;
         AssertionStatus status;
@@ -144,8 +144,8 @@ contract BordereauOracle is ProtocolRoleConstants {
         uint256 declaredAmount
     ) external returns (uint256 assertionId) {
         if (
-            !protocolRoles.hasRole(AUTHORIZED_CEDANT_ROLE, msg.sender) &&
-            !protocolRoles.hasRole(ORACLE_ROLE, msg.sender)
+            !protocolRoles.hasRole(AUTHORIZED_CEDANT_ROLE, msg.sender)
+                && !protocolRoles.hasRole(ORACLE_ROLE, msg.sender)
         ) {
             revert BordereauOracle__UnauthorizedProposer(msg.sender);
         }
@@ -171,19 +171,14 @@ contract BordereauOracle is ProtocolRoleConstants {
             status: AssertionStatus.PROPOSED
         });
 
-        emit AssertionProposed(
-            assertionId, portfolioId, assertionType, dataHash, declaredAmount, msg.sender, deadline
-        );
+        emit AssertionProposed(assertionId, portfolioId, assertionType, dataHash, declaredAmount, msg.sender, deadline);
     }
 
     // --- Dispute (Sentinel flags; Committee resolves — separate powers) ---
 
     /// @notice Dispute a proposed assertion within its liveness window.
     ///         Only SENTINEL_ROLE (anomaly/risk flagging power).
-    function disputeAssertion(uint256 assertionId, string calldata reason)
-        external
-        onlyProtocolRole(SENTINEL_ROLE)
-    {
+    function disputeAssertion(uint256 assertionId, string calldata reason) external onlyProtocolRole(SENTINEL_ROLE) {
         Assertion storage a = _getAssertion(assertionId);
         if (a.status != AssertionStatus.PROPOSED) {
             revert BordereauOracle__InvalidStatus(assertionId, a.status);
@@ -200,10 +195,7 @@ contract BordereauOracle is ProtocolRoleConstants {
     /// @notice Resolve a dispute. Only CLAIMS_COMMITTEE_ROLE (resolution is a
     ///         separate power from the Sentinel's flagging).
     /// @param uphold True rejects the assertion; false verifies and finalizes it.
-    function resolveDispute(uint256 assertionId, bool uphold)
-        external
-        onlyProtocolRole(CLAIMS_COMMITTEE_ROLE)
-    {
+    function resolveDispute(uint256 assertionId, bool uphold) external onlyProtocolRole(CLAIMS_COMMITTEE_ROLE) {
         Assertion storage a = _getAssertion(assertionId);
         if (a.status != AssertionStatus.DISPUTED) {
             revert BordereauOracle__InvalidStatus(assertionId, a.status);

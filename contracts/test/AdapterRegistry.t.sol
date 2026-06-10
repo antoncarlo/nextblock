@@ -59,18 +59,16 @@ contract AdapterRegistryTest is Test {
     function test_register_onlyCurator() public {
         bytes32 curatorRole = protocolRoles.UNDERWRITING_CURATOR_ROLE();
         vm.prank(attacker);
-        vm.expectRevert(abi.encodeWithSelector(
-            AdapterRegistry.AdapterRegistry__UnauthorizedRole.selector, attacker, curatorRole
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(AdapterRegistry.AdapterRegistry__UnauthorizedRole.selector, attacker, curatorRole)
+        );
         registry.registerAdapter(ENSURO_ID, ensuroAdapter, "Ensuro", META, CAP_1M);
     }
 
     function test_register_duplicate_reverts() public {
         _register();
         vm.prank(curator);
-        vm.expectRevert(abi.encodeWithSelector(
-            AdapterRegistry.AdapterRegistry__DuplicateAdapter.selector, ENSURO_ID
-        ));
+        vm.expectRevert(abi.encodeWithSelector(AdapterRegistry.AdapterRegistry__DuplicateAdapter.selector, ENSURO_ID));
         registry.registerAdapter(ENSURO_ID, makeAddr("other"), "Ensuro2", META, CAP_1M);
     }
 
@@ -95,16 +93,16 @@ contract AdapterRegistryTest is Test {
         // Curator registered it but CANNOT activate (governance power)
         bytes32 ownerRole = protocolRoles.OWNER_ROLE();
         vm.prank(curator);
-        vm.expectRevert(abi.encodeWithSelector(
-            AdapterRegistry.AdapterRegistry__UnauthorizedRole.selector, curator, ownerRole
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(AdapterRegistry.AdapterRegistry__UnauthorizedRole.selector, curator, ownerRole)
+        );
         registry.activateAdapter(ENSURO_ID);
 
         // Sentinel cannot activate either (it can only reduce risk)
         vm.prank(sentinel);
-        vm.expectRevert(abi.encodeWithSelector(
-            AdapterRegistry.AdapterRegistry__UnauthorizedRole.selector, sentinel, ownerRole
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(AdapterRegistry.AdapterRegistry__UnauthorizedRole.selector, sentinel, ownerRole)
+        );
         registry.activateAdapter(ENSURO_ID);
 
         vm.prank(admin);
@@ -137,21 +135,33 @@ contract AdapterRegistryTest is Test {
 
         // Terminal: no reactivation, no cap/metadata updates, no re-disable
         vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSelector(
-            AdapterRegistry.AdapterRegistry__InvalidStatus.selector, ENSURO_ID, AdapterRegistry.AdapterStatus.DEPRECATED
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                AdapterRegistry.AdapterRegistry__InvalidStatus.selector,
+                ENSURO_ID,
+                AdapterRegistry.AdapterStatus.DEPRECATED
+            )
+        );
         registry.activateAdapter(ENSURO_ID);
 
         vm.prank(curator);
-        vm.expectRevert(abi.encodeWithSelector(
-            AdapterRegistry.AdapterRegistry__InvalidStatus.selector, ENSURO_ID, AdapterRegistry.AdapterStatus.DEPRECATED
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                AdapterRegistry.AdapterRegistry__InvalidStatus.selector,
+                ENSURO_ID,
+                AdapterRegistry.AdapterStatus.DEPRECATED
+            )
+        );
         registry.setExposureCap(ENSURO_ID, 1);
 
         vm.prank(sentinel);
-        vm.expectRevert(abi.encodeWithSelector(
-            AdapterRegistry.AdapterRegistry__InvalidStatus.selector, ENSURO_ID, AdapterRegistry.AdapterStatus.DEPRECATED
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                AdapterRegistry.AdapterRegistry__InvalidStatus.selector,
+                ENSURO_ID,
+                AdapterRegistry.AdapterStatus.DEPRECATED
+            )
+        );
         registry.disableAdapter(ENSURO_ID);
     }
 
@@ -187,9 +197,9 @@ contract AdapterRegistryTest is Test {
     }
 
     function test_getAdapter_notFound_reverts() public {
-        vm.expectRevert(abi.encodeWithSelector(
-            AdapterRegistry.AdapterRegistry__AdapterNotFound.selector, keccak256("NEXUS")
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(AdapterRegistry.AdapterRegistry__AdapterNotFound.selector, keccak256("NEXUS"))
+        );
         registry.getAdapter(keccak256("NEXUS"));
         assertFalse(registry.isAdapterActive(keccak256("NEXUS")));
     }

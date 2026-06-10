@@ -60,9 +60,7 @@ contract VaultAllocatorTest is Test {
         compliance = new ComplianceRegistry(address(protocolRoles));
         portfolioRegistry = new PortfolioRegistry(address(protocolRoles));
         navOracle = new NavOracle(address(protocolRoles), address(portfolioRegistry));
-        allocator = new VaultAllocator(
-            address(protocolRoles), address(portfolioRegistry), address(navOracle)
-        );
+        allocator = new VaultAllocator(address(protocolRoles), address(portfolioRegistry), address(navOracle));
 
         // Roles
         protocolRoles.grantRole(protocolRoles.UNDERWRITING_CURATOR_ROLE(), managerA);
@@ -121,18 +119,20 @@ contract VaultAllocatorTest is Test {
 
     function _approvedPortfolio(address cedant_, string memory name) internal returns (uint256 pid) {
         vm.prank(cedant_);
-        pid = portfolioRegistry.submitPortfolio(PortfolioRegistry.SubmissionParams({
-            name: name,
-            metadataURI: "ipfs://QmDocs",
-            documentHash: keccak256(bytes(name)),
-            lineOfBusiness: "Mixed",
-            jurisdiction: "EU",
-            structureType: PortfolioRegistry.StructureType.QUOTA_SHARE,
-            coverageLimit: COVERAGE_1M,
-            cededPremium: 50_000e6,
-            inceptionTime: uint64(block.timestamp),
-            expiryTime: uint64(block.timestamp + 365 days)
-        }));
+        pid = portfolioRegistry.submitPortfolio(
+            PortfolioRegistry.SubmissionParams({
+                name: name,
+                metadataURI: "ipfs://QmDocs",
+                documentHash: keccak256(bytes(name)),
+                lineOfBusiness: "Mixed",
+                jurisdiction: "EU",
+                structureType: PortfolioRegistry.StructureType.QUOTA_SHARE,
+                coverageLimit: COVERAGE_1M,
+                cededPremium: 50_000e6,
+                inceptionTime: uint64(block.timestamp),
+                expiryTime: uint64(block.timestamp + 365 days)
+            })
+        );
         vm.startPrank(admin);
         portfolioRegistry.startReview(pid);
         portfolioRegistry.approvePortfolio(pid, 6_500); // expectedLossBps mock
@@ -151,9 +151,9 @@ contract VaultAllocatorTest is Test {
     function test_propose_onlyAllocatorRole() public {
         bytes32 allocRole = protocolRoles.ALLOCATOR_ROLE();
         vm.prank(attacker);
-        vm.expectRevert(abi.encodeWithSelector(
-            VaultAllocator.VaultAllocator__UnauthorizedRole.selector, attacker, allocRole
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(VaultAllocator.VaultAllocator__UnauthorizedRole.selector, attacker, allocRole)
+        );
         allocator.proposeAllocation(address(vault), pidA, 10_000e6);
     }
 
@@ -163,9 +163,9 @@ contract VaultAllocatorTest is Test {
 
         bytes32 allocRole = protocolRoles.ALLOCATOR_ROLE();
         vm.prank(attacker);
-        vm.expectRevert(abi.encodeWithSelector(
-            VaultAllocator.VaultAllocator__UnauthorizedRole.selector, attacker, allocRole
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(VaultAllocator.VaultAllocator__UnauthorizedRole.selector, attacker, allocRole)
+        );
         allocator.executeAllocation(propId);
     }
 
@@ -173,9 +173,7 @@ contract VaultAllocatorTest is Test {
         // Phase 9.5: an EOA holding ALLOCATOR_ROLE can no longer call the vault
         // directly — every allocation must pass through the proposal lifecycle.
         vm.prank(allocatorBot);
-        vm.expectRevert(abi.encodeWithSelector(
-            InsuranceVault.InsuranceVault__NotVaultAllocator.selector, allocatorBot
-        ));
+        vm.expectRevert(abi.encodeWithSelector(InsuranceVault.InsuranceVault__NotVaultAllocator.selector, allocatorBot));
         vault.allocateToPortfolio(pidA, 10_000e6);
     }
 
@@ -193,9 +191,7 @@ contract VaultAllocatorTest is Test {
         uint64 expectedExpiry = uint64(block.timestamp) + allocator.DEFAULT_PROPOSAL_TTL();
         vm.prank(allocatorBot);
         vm.expectEmit(true, true, true, true);
-        emit VaultAllocator.AllocationProposed(
-            0, address(vault), pidA, 50_000e6, false, allocatorBot, expectedExpiry
-        );
+        emit VaultAllocator.AllocationProposed(0, address(vault), pidA, 50_000e6, false, allocatorBot, expectedExpiry);
         uint256 propId = allocator.proposeAllocation(address(vault), pidA, 50_000e6);
 
         vm.prank(allocatorBot);
@@ -211,11 +207,13 @@ contract VaultAllocatorTest is Test {
         uint256 propId = _proposeAndExecute(pidA, 10_000e6);
 
         vm.prank(allocatorBot);
-        vm.expectRevert(abi.encodeWithSelector(
-            VaultAllocator.VaultAllocator__ProposalNotPending.selector,
-            propId,
-            VaultAllocator.ProposalStatus.EXECUTED
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                VaultAllocator.VaultAllocator__ProposalNotPending.selector,
+                propId,
+                VaultAllocator.ProposalStatus.EXECUTED
+            )
+        );
         allocator.executeAllocation(propId);
     }
 
@@ -238,9 +236,7 @@ contract VaultAllocatorTest is Test {
         vm.prank(allocatorBot);
         uint256 p2 = allocator.proposeAllocation(address(vault), pidA, 10_000e6);
         vm.prank(attacker);
-        vm.expectRevert(abi.encodeWithSelector(
-            VaultAllocator.VaultAllocator__UnauthorizedCanceller.selector, attacker
-        ));
+        vm.expectRevert(abi.encodeWithSelector(VaultAllocator.VaultAllocator__UnauthorizedCanceller.selector, attacker));
         allocator.cancelProposal(p2);
     }
 
@@ -250,18 +246,18 @@ contract VaultAllocatorTest is Test {
         uint64 expiresAt = allocator.getProposal(propId).expiresAt;
 
         // Cannot mark expired before TTL
-        vm.expectRevert(abi.encodeWithSelector(
-            VaultAllocator.VaultAllocator__ProposalNotExpired.selector, propId, expiresAt
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(VaultAllocator.VaultAllocator__ProposalNotExpired.selector, propId, expiresAt)
+        );
         allocator.markExpired(propId);
 
         vm.warp(uint256(expiresAt) + 1);
 
         // Cannot execute after TTL
         vm.prank(allocatorBot);
-        vm.expectRevert(abi.encodeWithSelector(
-            VaultAllocator.VaultAllocator__ProposalExpired.selector, propId, expiresAt
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(VaultAllocator.VaultAllocator__ProposalExpired.selector, propId, expiresAt)
+        );
         allocator.executeAllocation(propId);
 
         // Permissionless expiry housekeeping
@@ -274,23 +270,25 @@ contract VaultAllocatorTest is Test {
 
     function test_propose_nonAllocatable_reverts() public {
         vm.prank(cedantA);
-        uint256 pidSubmitted = portfolioRegistry.submitPortfolio(PortfolioRegistry.SubmissionParams({
-            name: "Pending",
-            metadataURI: "ipfs://x",
-            documentHash: keccak256("pending"),
-            lineOfBusiness: "Marine",
-            jurisdiction: "UK",
-            structureType: PortfolioRegistry.StructureType.XOL,
-            coverageLimit: COVERAGE_1M,
-            cededPremium: 10_000e6,
-            inceptionTime: uint64(block.timestamp),
-            expiryTime: uint64(block.timestamp + 365 days)
-        }));
+        uint256 pidSubmitted = portfolioRegistry.submitPortfolio(
+            PortfolioRegistry.SubmissionParams({
+                name: "Pending",
+                metadataURI: "ipfs://x",
+                documentHash: keccak256("pending"),
+                lineOfBusiness: "Marine",
+                jurisdiction: "UK",
+                structureType: PortfolioRegistry.StructureType.XOL,
+                coverageLimit: COVERAGE_1M,
+                cededPremium: 10_000e6,
+                inceptionTime: uint64(block.timestamp),
+                expiryTime: uint64(block.timestamp + 365 days)
+            })
+        );
 
         vm.prank(allocatorBot);
-        vm.expectRevert(abi.encodeWithSelector(
-            VaultAllocator.VaultAllocator__PortfolioNotAllocatable.selector, pidSubmitted
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(VaultAllocator.VaultAllocator__PortfolioNotAllocatable.selector, pidSubmitted)
+        );
         allocator.proposeAllocation(address(vault), pidSubmitted, 10_000e6);
     }
 
@@ -305,9 +303,7 @@ contract VaultAllocatorTest is Test {
         portfolioRegistry.pausePortfolio(pidA);
 
         vm.prank(allocatorBot);
-        vm.expectRevert(abi.encodeWithSelector(
-            VaultAllocator.VaultAllocator__PortfolioNotAllocatable.selector, pidA
-        ));
+        vm.expectRevert(abi.encodeWithSelector(VaultAllocator.VaultAllocator__PortfolioNotAllocatable.selector, pidA));
         allocator.executeAllocation(propId);
     }
 
@@ -320,10 +316,11 @@ contract VaultAllocatorTest is Test {
         uint256 limit = base * allocator.maxPortfolioConcentrationBps() / 10_000;
 
         vm.prank(allocatorBot);
-        vm.expectRevert(abi.encodeWithSelector(
-            VaultAllocator.VaultAllocator__PortfolioConcentrationExceeded.selector,
-            pidA, limit + 1e6, limit
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                VaultAllocator.VaultAllocator__PortfolioConcentrationExceeded.selector, pidA, limit + 1e6, limit
+            )
+        );
         allocator.proposeAllocation(address(vault), pidA, limit + 1e6);
 
         // At the limit: accepted
@@ -346,10 +343,14 @@ contract VaultAllocatorTest is Test {
         uint256 breach = cedantLimitNow - exposureA + 1e6;
 
         vm.prank(allocatorBot);
-        vm.expectRevert(abi.encodeWithSelector(
-            VaultAllocator.VaultAllocator__CedantConcentrationExceeded.selector,
-            cedantA, exposureA + breach, cedantLimitNow
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                VaultAllocator.VaultAllocator__CedantConcentrationExceeded.selector,
+                cedantA,
+                exposureA + breach,
+                cedantLimitNow
+            )
+        );
         allocator.proposeAllocation(address(vault), pidA2, breach);
 
         // Different cedant is unaffected by cedantA's exposure
@@ -395,9 +396,7 @@ contract VaultAllocatorTest is Test {
         vm.warp(block.timestamp + uint256(navOracle.maxStaleness()) + 1);
 
         vm.prank(allocatorBot);
-        vm.expectRevert(abi.encodeWithSelector(
-            VaultAllocator.VaultAllocator__OracleBlocked.selector, address(vault)
-        ));
+        vm.expectRevert(abi.encodeWithSelector(VaultAllocator.VaultAllocator__OracleBlocked.selector, address(vault)));
         allocator.proposeAllocation(address(vault), pidA, 10_000e6);
     }
 
@@ -406,9 +405,7 @@ contract VaultAllocatorTest is Test {
         navOracle.pauseFeed(address(vault));
 
         vm.prank(allocatorBot);
-        vm.expectRevert(abi.encodeWithSelector(
-            VaultAllocator.VaultAllocator__OracleBlocked.selector, address(vault)
-        ));
+        vm.expectRevert(abi.encodeWithSelector(VaultAllocator.VaultAllocator__OracleBlocked.selector, address(vault)));
         allocator.proposeAllocation(address(vault), pidA, 10_000e6);
     }
 
@@ -446,9 +443,9 @@ contract VaultAllocatorTest is Test {
         vm.prank(allocatorBot);
         uint256 propId2 = allocator.proposeAllocation(address(vault), pidB, 1e6);
         vm.prank(allocatorBot);
-        vm.expectRevert(abi.encodeWithSelector(
-            InsuranceVault.InsuranceVault__AllocationExceedsCapacity.selector, 1e6, 0
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(InsuranceVault.InsuranceVault__AllocationExceedsCapacity.selector, 1e6, 0)
+        );
         allocator.executeAllocation(propId2);
     }
 
