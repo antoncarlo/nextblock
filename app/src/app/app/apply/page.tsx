@@ -114,8 +114,26 @@ export default function ApplyPage() {
   }, [address]);
 
   useEffect(() => {
-    if (isConnected && address) void refreshMyApps();
-  }, [isConnected, address, refreshMyApps]);
+    if (!isConnected || !address) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/kyb/applications/status?wallet=${address}`);
+        if (cancelled) return;
+        if (!res.ok) {
+          setMyApps({ kind: 'unavailable' });
+          return;
+        }
+        const data = await res.json();
+        if (!cancelled) setMyApps({ kind: 'ready', apps: data.applications ?? [] });
+      } catch {
+        if (!cancelled) setMyApps({ kind: 'unavailable' });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isConnected, address]);
 
   const submitApplication = async (payload: KybApplicationPayload) => {
     const parsed = kybApplicationPayloadSchema.safeParse(payload);
