@@ -1,15 +1,22 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAccount } from 'wagmi';
 import { useProtocolAccess } from '@/hooks/useProtocolAccess';
 import { DataSourceBadge, UnavailableNotice } from '@/components/shared/DataSourceBadge';
+import {
+  kybApplicationPayloadSchema,
+  KYB_CHAIN_ID,
+  type KybApplicationPayload,
+  type KybStatus,
+} from '@/lib/kyb/schema';
 
 // Phase 9: the hardcoded frontend whitelists were removed. Authorization is
 // resolved ON-CHAIN via ProtocolRoles (AUTHORIZED_CEDANT_ROLE /
-// UNDERWRITING_CURATOR_ROLE) and ComplianceRegistry. This page collects an
-// onboarding request (BACKEND MOCK: not persisted on-chain); roles are granted
-// by the protocol owner after off-chain KYC/due diligence.
+// UNDERWRITING_CURATOR_ROLE) and ComplianceRegistry. This page submits the
+// onboarding request to the KYB backend (instructional record, reviewed by
+// the KYC Operator); on-chain role grants remain a separate authorized act
+// after due diligence.
 
 type Role = 'insurance' | 'syndicate manager' | null;
 type Step = 'choose' | 'form' | 'submitted';
@@ -80,14 +87,114 @@ export default function ApplyPage() {
   const isCuratorApproved = access.status === 'onchain' && access.isCurator;
   const rolesUnavailable = access.status === 'unavailable';
 
+  // Real submit pipeline state. 'unavailable' = backend not configured/down:
+  // shown explicitly, never silently faked as success.
+  type SubmitState = 'idle' | 'submitting' | 'error' | 'unavailable';
+  const [submitState, setSubmitState] = useState<SubmitState>('idle');
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Existing applications for the connected wallet (status only, no PII).
+  type MyApp = { applicantType: string; status: KybStatus; createdAt: string };
+  type MyAppsState = { kind: 'loading' } | { kind: 'unavailable' } | { kind: 'ready'; apps: MyApp[] };
+  const [myApps, setMyApps] = useState<MyAppsState>({ kind: 'loading' });
+
+  const refreshMyApps = useCallback(async () => {
+    if (!address) return;
+    try {
+      const res = await fetch(`/api/kyb/applications/status?wallet=${address}`);
+      if (!res.ok) {
+        setMyApps({ kind: 'unavailable' });
+        return;
+      }
+      const data = await res.json();
+      setMyApps({ kind: 'ready', apps: data.applications ?? [] });
+    } catch {
+      setMyApps({ kind: 'unavailable' });
+    }
+  }, [address]);
+
+  useEffect(() => {
+    if (isConnected && address) void refreshMyApps();
+  }, [isConnected, address, refreshMyApps]);
+
+  const submitApplication = async (payload: KybApplicationPayload) => {
+    const parsed = kybApplicationPayloadSchema.safeParse(payload);
+    if (!parsed.success) {
+      setSubmitState('error');
+      setSubmitError(parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; '));
+      return;
+    }
+    setSubmitState('submitting');
+    setSubmitError(null);
+    try {
+      const res = await fetch('/api/kyb/applications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(parsed.data),
+      });
+      if (res.status === 503) {
+        setSubmitState('unavailable');
+        return;
+      }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setSubmitState('error');
+        setSubmitError(
+          typeof data.error === 'string'
+            ? data.issues
+              ? `${data.error}: ${(data.issues as string[]).join('; ')}`
+              : data.error
+            : `HTTP ${res.status}`,
+        );
+        return;
+      }
+      setSubmitState('idle');
+      setStep('submitted');
+      void refreshMyApps();
+    } catch {
+      setSubmitState('error');
+      setSubmitError('Network error while reaching the KYB backend.');
+    }
+  };
+
   const handleInsSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setStep('submitted');
+    void submitApplication({
+      applicantType: 'cedant',
+      walletAddress: (insForm.walletAddress || address || '') as string,
+      companyName: insForm.companyName,
+      legalEntityType: insForm.legalEntity || insForm.insuranceType,
+      jurisdiction: insForm.jurisdiction,
+      licenseNumber: insForm.licenseNumber,
+      declaredPortfolio: insForm.portfolioSize,
+      contactName: insForm.contactName,
+      contactEmail: insForm.contactEmail,
+      website: insForm.website,
+      description: insForm.insuranceType
+        ? `[Insurance type: ${insForm.insuranceType}] ${insForm.description}`.trim()
+        : insForm.description,
+      chainId: KYB_CHAIN_ID,
+    });
   };
 
   const handleCurSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setStep('submitted');
+    void submitApplication({
+      applicantType: 'curator',
+      walletAddress: (curForm.walletAddress || address || '') as string,
+      companyName: curForm.entityName,
+      legalEntityType: curForm.entityType,
+      jurisdiction: curForm.jurisdiction,
+      licenseNumber: curForm.licenseNumber,
+      declaredPortfolio: curForm.aum,
+      contactName: curForm.contactName,
+      contactEmail: curForm.contactEmail,
+      website: curForm.website,
+      description: curForm.strategy
+        ? `[Strategy: ${curForm.strategy}] ${curForm.description}`.trim()
+        : curForm.description,
+      chainId: KYB_CHAIN_ID,
+    });
   };
 
   const inputStyle: React.CSSProperties = {
@@ -119,6 +226,37 @@ export default function ApplyPage() {
       {rolesUnavailable && isConnected && (
         <div style={{ padding: '16px 32px 0' }}>
           <UnavailableNotice what="On-chain role verification (ProtocolRoles / ComplianceRegistry)" />
+        </div>
+      )}
+      {/* Existing applications for the connected wallet (real backend state) */}
+      {isConnected && (
+        <div style={{ padding: '16px 32px 0' }}>
+          <div style={{ background: '#FFFFFF', border: '1px solid rgba(27,58,107,0.15)', borderRadius: '10px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <span style={{ fontFamily: "'Inter', sans-serif", fontSize: '12px', fontWeight: 600, color: '#1B3A6B' }}>
+              Your applications:
+            </span>
+            {myApps.kind === 'loading' && (
+              <span style={{ fontSize: '12px', color: '#9CA3AF' }}>checking...</span>
+            )}
+            {myApps.kind === 'unavailable' && (
+              <>
+                <span style={{ fontSize: '12px', color: '#9CA3AF' }}>status unavailable (KYB backend not reachable)</span>
+                <DataSourceBadge source="unavailable" />
+              </>
+            )}
+            {myApps.kind === 'ready' && myApps.apps.length === 0 && (
+              <>
+                <span style={{ fontSize: '12px', color: '#6B7280' }}>none on record for this wallet</span>
+                <DataSourceBadge source="backend" />
+              </>
+            )}
+            {myApps.kind === 'ready' && myApps.apps.map((a, i) => (
+              <span key={i} style={{ fontSize: '12px', color: '#374151', background: '#F3F4F6', borderRadius: '9999px', padding: '3px 10px' }}>
+                {a.applicantType === 'cedant' ? 'Cedant' : 'Curator'}: <strong>{a.status.replace('_', ' ')}</strong>
+              </span>
+            ))}
+            {myApps.kind === 'ready' && myApps.apps.length > 0 && <DataSourceBadge source="backend" />}
+          </div>
         </div>
       )}
       {/* Hero */}
@@ -408,8 +546,19 @@ export default function ApplyPage() {
               </label>
             </div>
 
+            {submitState === 'error' && submitError && (
+              <div style={{ marginBottom: '16px', padding: '12px 16px', borderRadius: '8px', background: 'rgba(127,29,29,0.06)', border: '1px solid rgba(127,29,29,0.2)', color: '#7F1D1D', fontSize: '13px', fontFamily: "'Inter', sans-serif" }}>
+                Submission failed: {submitError}
+              </div>
+            )}
+            {submitState === 'unavailable' && (
+              <div style={{ marginBottom: '16px' }}>
+                <UnavailableNotice what="The KYB backend" />
+              </div>
+            )}
             <button
               type="submit"
+              disabled={submitState === 'submitting' || !insForm.agreedTerms}
               style={{
                 background: 'linear-gradient(135deg, #1B3A6B 0%, #2D5A9E 100%)',
                 color: '#FFFFFF',
@@ -419,11 +568,12 @@ export default function ApplyPage() {
                 fontFamily: "'Inter', sans-serif",
                 fontSize: '14px',
                 fontWeight: 600,
-                cursor: 'pointer',
+                cursor: submitState === 'submitting' ? 'wait' : 'pointer',
                 letterSpacing: '0.02em',
+                opacity: submitState === 'submitting' || !insForm.agreedTerms ? 0.6 : 1,
               }}
             >
-              Submit Cedant Application (backend mock)
+              {submitState === 'submitting' ? 'Submitting...' : 'Submit Cedant Application'}
             </button>
           </form>
         )}
@@ -544,6 +694,7 @@ export default function ApplyPage() {
 
             <button
               type="submit"
+              disabled={submitState === 'submitting' || !curForm.agreedTerms}
               style={{
                 background: 'linear-gradient(135deg, #92400E 0%, #C9A84C 100%)',
                 color: '#FFFFFF',
@@ -553,12 +704,23 @@ export default function ApplyPage() {
                 fontFamily: "'Inter', sans-serif",
                 fontSize: '14px',
                 fontWeight: 600,
-                cursor: 'pointer',
+                cursor: submitState === 'submitting' ? 'wait' : 'pointer',
                 letterSpacing: '0.02em',
+                opacity: submitState === 'submitting' || !curForm.agreedTerms ? 0.6 : 1,
               }}
             >
-              Submit Curator Application (backend mock)
+              {submitState === 'submitting' ? 'Submitting...' : 'Submit Curator Application'}
             </button>
+            {submitState === 'error' && submitError && (
+              <div style={{ marginTop: '16px', padding: '12px 16px', borderRadius: '8px', background: 'rgba(127,29,29,0.06)', border: '1px solid rgba(127,29,29,0.2)', color: '#7F1D1D', fontSize: '13px', fontFamily: "'Inter', sans-serif" }}>
+                Submission failed: {submitError}
+              </div>
+            )}
+            {submitState === 'unavailable' && (
+              <div style={{ marginTop: '16px' }}>
+                <UnavailableNotice what="The KYB backend" />
+              </div>
+            )}
           </form>
         )}
 

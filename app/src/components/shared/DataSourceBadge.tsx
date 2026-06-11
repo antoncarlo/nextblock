@@ -5,10 +5,13 @@
  * the institutional dashboards must declare where it comes from. No data may
  * be presented as real when it is mocked or unavailable.
  */
-export type DataSource = 'onchain' | 'mock-oracle' | 'backend-mock' | 'demo-legacy' | 'unavailable';
+export type DataSource = 'onchain' | 'backend' | 'mock-oracle' | 'backend-mock' | 'demo-legacy' | 'unavailable';
 
 const CONFIG: Record<DataSource, { label: string; bg: string; color: string; border: string }> = {
   'onchain':      { label: 'On-chain',      bg: 'rgba(22,101,52,0.08)',  color: '#166534', border: 'rgba(22,101,52,0.25)' },
+  // Real instructional/off-chain records (e.g. KYB pipeline): not mocked,
+  // but explicitly NOT on-chain state either.
+  'backend':      { label: 'Backend',       bg: 'rgba(13,116,144,0.08)', color: '#0E7490', border: 'rgba(13,116,144,0.25)' },
   'mock-oracle':  { label: 'Mock oracle',   bg: 'rgba(146,64,14,0.08)',  color: '#92400E', border: 'rgba(146,64,14,0.25)' },
   'backend-mock': { label: 'Backend mock',  bg: 'rgba(27,58,107,0.08)',  color: '#1B3A6B', border: 'rgba(27,58,107,0.25)' },
   'demo-legacy':  { label: 'Legacy demo',   bg: 'rgba(109,40,217,0.08)', color: '#6D28D9', border: 'rgba(109,40,217,0.25)' },
