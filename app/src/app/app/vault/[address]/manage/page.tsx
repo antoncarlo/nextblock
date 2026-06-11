@@ -11,6 +11,8 @@ import {
 } from '@/config/contracts';
 import { useAddresses } from '@/hooks/useAddresses';
 import { useVaultInfo } from '@/hooks/useVaultData';
+import { useLensVaultDashboard, LensDataStatus } from '@/hooks/useNextBlockLens';
+import { DataSourceBadge } from '@/components/shared/DataSourceBadge';
 import { useAllPolicies, usePolicyCount } from '@/hooks/usePolicyRegistry';
 import { formatUSDC } from '@/lib/formatting';
 
@@ -812,10 +814,17 @@ export default function ManageVaultPage() {
   const { data: vaultInfoRaw } = useVaultInfo(vaultAddress);
   const vaultInfo = vaultInfoRaw as unknown as [string, `0x${string}`, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint] | undefined;
 
-  const vaultName = vaultInfo?.[0] ?? 'Vault';
-  const vaultManager = vaultInfo?.[1];
-  const bufferBps = vaultInfo?.[5] ?? 0n;
-  const feeBps = vaultInfo?.[6] ?? 0n;
+  // Canonical vault accounting from the NextBlockLens read model; the direct
+  // vault read stays as fallback only. Policy count remains a direct read:
+  // the lens exposes no per-vault policy enumeration.
+  const { data: vaultDash, lensDeployed } = useLensVaultDashboard(vaultAddress);
+  const lensVaultAvailable =
+    lensDeployed && vaultDash !== undefined && vaultDash.status === LensDataStatus.AVAILABLE;
+
+  const vaultName = (lensVaultAvailable ? vaultDash.name : vaultInfo?.[0]) ?? 'Vault';
+  const vaultManager = lensVaultAvailable ? vaultDash.manager : vaultInfo?.[1];
+  const bufferBps = (lensVaultAvailable ? BigInt(vaultDash.bufferRatioBps) : vaultInfo?.[5]) ?? 0n;
+  const feeBps = (lensVaultAvailable ? BigInt(vaultDash.managementFeeBps) : vaultInfo?.[6]) ?? 0n;
   const policyCount = vaultInfo?.[9] ?? 0n;
 
   const isManager = isConnected && address && vaultManager
@@ -908,7 +917,13 @@ export default function ManageVaultPage() {
         </p>
       </div>
 
-      {/* Vault summary */}
+      {/* Vault summary — canonical accounting from NextBlockLens */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+        <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 600, fontFamily: "'Inter', sans-serif" }}>
+          Vault summary (NextBlockLens)
+        </span>
+        <DataSourceBadge source={lensVaultAvailable ? 'onchain' : 'unavailable'} />
+      </div>
       <div
         style={{
           display: 'grid',
@@ -921,6 +936,37 @@ export default function ManageVaultPage() {
           border: '1px solid rgba(0,0,0,0.06)',
         }}
       >
+        {lensVaultAvailable && (
+          <>
+            <div>
+              <div style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: "'Inter', sans-serif" }}>Total Assets</div>
+              <div style={{ fontSize: '20px', fontWeight: 700, color: '#1B3A6B', fontFamily: "'Inter', sans-serif", marginTop: '4px' }}>
+                {formatUSDC(vaultDash.totalAssets)} USDC
+              </div>
+              <div style={{ fontSize: '11px', color: '#9CA3AF', fontFamily: "'Inter', sans-serif", marginTop: '2px' }}>
+                Canonical vault accounting
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: "'Inter', sans-serif" }}>Unearned Premiums</div>
+              <div style={{ fontSize: '20px', fontWeight: 700, color: '#1B3A6B', fontFamily: "'Inter', sans-serif", marginTop: '4px' }}>
+                {formatUSDC(vaultDash.unearnedPremiums)} USDC
+              </div>
+              <div style={{ fontSize: '11px', color: '#9CA3AF', fontFamily: "'Inter', sans-serif", marginTop: '2px' }}>
+                UPR not yet recognized
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: "'Inter', sans-serif" }}>Claim Reserves</div>
+              <div style={{ fontSize: '20px', fontWeight: 700, color: '#1B3A6B', fontFamily: "'Inter', sans-serif", marginTop: '4px' }}>
+                {formatUSDC(vaultDash.pendingClaims)} USDC
+              </div>
+              <div style={{ fontSize: '11px', color: '#9CA3AF', fontFamily: "'Inter', sans-serif", marginTop: '2px' }}>
+                Reserved for pending claims
+              </div>
+            </div>
+          </>
+        )}
         <div>
           <div style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: "'Inter', sans-serif" }}>Buffer Ratio</div>
           <div style={{ fontSize: '20px', fontWeight: 700, color: '#1B3A6B', fontFamily: "'Inter', sans-serif", marginTop: '4px' }}>

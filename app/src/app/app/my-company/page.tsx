@@ -204,7 +204,7 @@ export default function MyCompanyPage() {
               ),
               title: 'Register Policy',
               desc: 'Tokenize a new insurance policy on-chain',
-              href: `/app/vault/${vaultAddresses?.[0] ?? '0xF725B7E9176F1F2D0B9b3D0e3E5e1b1C5e2D3A4B'}/manage`,
+              href: vaultAddresses?.[0] ? `/app/vault/${vaultAddresses[0]}/manage` : '/app',
             },
             {
               icon: (
@@ -215,7 +215,7 @@ export default function MyCompanyPage() {
               ),
               title: 'Deposit Premium',
               desc: 'Fund your active policies with USDC',
-              href: `/app/vault/${vaultAddresses?.[0] ?? '0xF725B7E9176F1F2D0B9b3D0e3E5e1b1C5e2D3A4B'}/manage`,
+              href: vaultAddresses?.[0] ? `/app/vault/${vaultAddresses[0]}/manage` : '/app',
             },
             {
               icon: (

@@ -8,6 +8,8 @@ import { useUSDCBalance, useMaxWithdraw } from '@/hooks/useVaultData';
 import { useDepositFlow, type DepositState } from '@/hooks/useDepositFlow';
 import { useWithdrawFlow, type WithdrawState } from '@/hooks/useWithdrawFlow';
 import { useAddresses } from '@/hooks/useAddresses';
+import { useLensLPStatus, LensDataStatus } from '@/hooks/useNextBlockLens';
+import { DataSourceBadge } from '@/components/shared/DataSourceBadge';
 import { MOCK_USDC_ABI } from '@/config/contracts';
 import { parseUSDC, formatUSDC } from '@/lib/formatting';
 
@@ -56,6 +58,18 @@ export function DepositSidebar({
     maxWithdrawOverride !== undefined ? undefined : vaultAddress,
     address
   );
+
+  // Canonical LP position + compliance from NextBlockLens (read model).
+  // Wallet balance and the faucet stay on direct reads/writes: wallet data
+  // and transactions are outside the lens domain.
+  const { data: lpStatus, lensDeployed } = useLensLPStatus(vaultAddress, address);
+  const lpVaultAvailable =
+    lensDeployed && lpStatus !== undefined && lpStatus.vaultStatus === LensDataStatus.AVAILABLE;
+  const lpComplianceAvailable =
+    lensDeployed && lpStatus !== undefined && lpStatus.complianceStatus === LensDataStatus.AVAILABLE;
+  // Prefer the canonical lens maxWithdraw; fall back to the direct vault read.
+  const effectiveMaxWithdraw =
+    maxWithdrawOverride ?? (lpVaultAvailable ? lpStatus.maxWithdraw : maxWithdraw) ?? 0n;
 
   const faucet = useFaucet(address, refetchBalance);
 
@@ -147,6 +161,42 @@ export function DepositSidebar({
               )}
             </div>
 
+            {/* Canonical LP status from the NextBlockLens read model */}
+            <div className="mb-4 rounded-lg border border-gray-100 px-3 py-2">
+              <div className="mb-1 flex items-center justify-between">
+                <p className="text-xs text-gray-500">Your Position (NextBlockLens)</p>
+                <DataSourceBadge source={lpVaultAvailable ? 'onchain' : 'unavailable'} />
+              </div>
+              {lpVaultAvailable ? (
+                <div className="space-y-0.5">
+                  <p className="text-sm font-semibold text-gray-900">
+                    {formatUSDC(lpStatus.assetValue)} USDC
+                    <span className="ml-1 text-xs font-normal text-gray-400">
+                      ({formatUSDC(lpStatus.shareBalance)} nbUSDC shares)
+                    </span>
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Compliance:{' '}
+                    {!lpComplianceAvailable ? (
+                      <span className="text-gray-400">unavailable</span>
+                    ) : lpStatus.blocked ? (
+                      <span className="font-medium text-red-700">blocked</span>
+                    ) : !lpStatus.whitelisted ? (
+                      <span className="font-medium text-amber-700">not whitelisted</span>
+                    ) : lpStatus.kycExpired ? (
+                      <span className="font-medium text-amber-700">KYC expired</span>
+                    ) : (
+                      <span className="font-medium text-emerald-700">whitelisted</span>
+                    )}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-xs text-gray-400">
+                  Lens position unavailable on this chain.
+                </p>
+              )}
+            </div>
+
             {tab === 'deposit' ? (
               <DepositTab
                 inputValue={inputValue}
@@ -163,7 +213,7 @@ export function DepositSidebar({
                 inputValue={inputValue}
                 onInputChange={setInputValue}
                 parsedAmount={parsedAmount}
-                maxWithdraw={maxWithdrawOverride ?? maxWithdraw ?? 0n}
+                maxWithdraw={effectiveMaxWithdraw}
                 totalAssets={totalAssets}
                 totalSupply={totalSupply}
                 flow={withdrawFlow}

@@ -8,6 +8,10 @@ import {
   ArrowUpRight, Edit3, Trash2, Eye, PauseCircle, PlayCircle,
 } from 'lucide-react';
 import { useProtocolAccess } from '@/hooks/useProtocolAccess';
+import { useVaultAddresses } from '@/hooks/useVaultData';
+import { useLensVaultDashboards, LensDataStatus } from '@/hooks/useNextBlockLens';
+import { DataSourceBadge } from '@/components/shared/DataSourceBadge';
+import { formatUSDC } from '@/lib/formatting';
 
 // Strategy templates available to syndicates
 const STRATEGY_TEMPLATES = [
@@ -103,23 +107,6 @@ const STRATEGY_TEMPLATES = [
   },
 ];
 
-// Mock active strategies for the syndicate manager
-const ACTIVE_STRATEGIES = [
-  {
-    id: 'strat-001',
-    name: 'Balanced Core',
-    template: 'Balanced Diversified',
-    status: 'active',
-    tvl: '$29,420',
-    apy: '9.2%',
-    policies: 5,
-    bufferBps: 2000,
-    feeBps: 100,
-    lastUpdated: '2025-01-15',
-    vaultAddress: '0xF725B7E9176F1F2D0B9b3D0e3E5e1b1C5e2D3A4B',
-  },
-];
-
 type TabId = 'overview' | 'strategies' | 'new-strategy' | 'policies' | 'performance';
 
 export default function CuratorDashboardPage() {
@@ -141,6 +128,26 @@ export default function CuratorDashboardPage() {
   const access = useProtocolAccess();
   const isSyndicateManager =
     access.status === 'onchain' && (access.isCurator || access.isCedant || access.isOwner);
+
+  // Canonical curator vaults: factory enumeration + NextBlockLens dashboards,
+  // filtered by the connected manager. No mock strategies: when the lens has
+  // nothing for this address the dashboard says so instead of inventing data.
+  const { data: vaultAddresses } = useVaultAddresses();
+  const { data: dashReads } = useLensVaultDashboards(vaultAddresses);
+  const myVaults = (dashReads ?? [])
+    .map(r => (r.status === 'success' ? r.result : undefined))
+    .filter(
+      (d): d is NonNullable<typeof d> =>
+        d !== undefined &&
+        d.status === LensDataStatus.AVAILABLE &&
+        !!address &&
+        d.manager.toLowerCase() === address.toLowerCase(),
+    );
+  const totalAum = myVaults.reduce((s, d) => s + d.totalAssets, 0n);
+  const totalUpr = myVaults.reduce((s, d) => s + d.unearnedPremiums, 0n);
+  const totalReserves = myVaults.reduce((s, d) => s + d.pendingClaims, 0n);
+  const totalFees = myVaults.reduce((s, d) => s + d.accumulatedFees, 0n);
+  const lensHasData = myVaults.length > 0;
 
   // Not connected
   if (!isConnected) {
@@ -207,17 +214,18 @@ export default function CuratorDashboardPage() {
                 {address?.slice(0, 6)}...{address?.slice(-4)} · Verified Syndicate Manager
               </p>
             </div>
-            <div style={{ display: 'flex', gap: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
               {[
-                { label: 'Total AUM', value: '$29,420' },
-                { label: 'Active Vaults', value: '1' },
-                { label: 'Avg APY', value: '9.2%' },
+                { label: 'Total AUM', value: lensHasData ? `${formatUSDC(totalAum)} USDC` : '--' },
+                { label: 'Active Vaults', value: lensHasData ? myVaults.length.toString() : '--' },
+                { label: 'Unearned Premiums', value: lensHasData ? `${formatUSDC(totalUpr)} USDC` : '--' },
               ].map(stat => (
                 <div key={stat.label} style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: '22px', fontWeight: 700, color: '#FFFFFF', fontFamily: '"Playfair Display", Georgia, serif' }}>{stat.value}</div>
                   <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{stat.label}</div>
                 </div>
               ))}
+              <DataSourceBadge source={lensHasData ? 'onchain' : 'unavailable'} />
             </div>
           </div>
         </div>
@@ -245,12 +253,16 @@ export default function CuratorDashboardPage() {
         {/* OVERVIEW TAB */}
         {activeTab === 'overview' && (
           <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+              <span style={{ fontSize: '12px', color: '#8A8A8A', fontWeight: 600 }}>Curator overview (NextBlockLens)</span>
+              <DataSourceBadge source={lensHasData ? 'onchain' : 'unavailable'} />
+            </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
               {[
-                { label: 'Total AUM', value: '$29,420', delta: '+12.4%', color: '#047857' },
-                { label: 'Active Policies', value: '5', delta: 'in 1 vault', color: '#1B3A6B' },
-                { label: 'Earned Fees (30d)', value: '$294', delta: '1.0% fee', color: '#B45309' },
-                { label: 'Claims Settled', value: '2', delta: 'all time', color: '#1B3A6B' },
+                { label: 'Total AUM', value: lensHasData ? `${formatUSDC(totalAum)}` : '--', delta: 'USDC, canonical accounting', color: '#1B3A6B' },
+                { label: 'Active Vaults', value: lensHasData ? myVaults.length.toString() : '--', delta: 'managed by this address', color: '#1B3A6B' },
+                { label: 'Unearned Premiums', value: lensHasData ? `${formatUSDC(totalUpr)}` : '--', delta: 'UPR not yet recognized', color: '#B45309' },
+                { label: 'Claim Reserves', value: lensHasData ? `${formatUSDC(totalReserves)}` : '--', delta: 'reserved for pending claims', color: '#1B3A6B' },
               ].map(stat => (
                 <div key={stat.label} style={{ backgroundColor: '#FFFFFF', border: '1px solid #E8E4DC', borderRadius: '12px', padding: '20px 24px' }}>
                   <div style={{ fontSize: '11px', color: '#8A8A8A', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '8px' }}>{stat.label}</div>
@@ -268,30 +280,35 @@ export default function CuratorDashboardPage() {
                   <Plus size={13} /> New Strategy
                 </button>
               </div>
-              {ACTIVE_STRATEGIES.map(strat => (
-                <div key={strat.id} style={{ padding: '20px 24px', borderBottom: '1px solid #F5F5F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              {myVaults.length === 0 && (
+                <div style={{ padding: '24px', fontSize: '13px', color: '#8A8A8A' }}>
+                  No on-chain vaults managed by this address on the connected chain.
+                </div>
+              )}
+              {myVaults.map(vault => (
+                <div key={vault.vault} style={{ padding: '20px 24px', borderBottom: '1px solid #F5F5F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'rgba(27,58,107,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <BarChart2 size={18} color="#1B3A6B" />
                     </div>
                     <div>
-                      <div style={{ fontSize: '14px', fontWeight: 600, color: '#1B3A6B', fontFamily: '"Playfair Display", Georgia, serif' }}>{strat.name}</div>
-                      <div style={{ fontSize: '12px', color: '#8A8A8A' }}>{strat.template} · {strat.policies} policies</div>
+                      <div style={{ fontSize: '14px', fontWeight: 600, color: '#1B3A6B', fontFamily: '"Playfair Display", Georgia, serif' }}>{vault.name}</div>
+                      <div style={{ fontSize: '12px', color: '#8A8A8A' }}><code>{vault.vault.slice(0, 6)}...{vault.vault.slice(-4)}</code></div>
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: '32px', alignItems: 'center' }}>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#1B3A6B' }}>{strat.tvl}</div>
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#1B3A6B' }}>{formatUSDC(vault.totalAssets)} USDC</div>
                       <div style={{ fontSize: '11px', color: '#8A8A8A' }}>TVL</div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#047857' }}>{strat.apy}</div>
-                      <div style={{ fontSize: '11px', color: '#8A8A8A' }}>APY</div>
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#B45309' }}>{formatUSDC(vault.unearnedPremiums)} USDC</div>
+                      <div style={{ fontSize: '11px', color: '#8A8A8A' }}>UPR</div>
                     </div>
                     <span style={{ padding: '3px 10px', borderRadius: '50px', fontSize: '11px', fontWeight: 600, backgroundColor: 'rgba(4,120,87,0.08)', color: '#047857', border: '1px solid rgba(4,120,87,0.2)' }}>
                       Active
                     </span>
-                    <Link href={`/app/vault/${strat.vaultAddress}/manage`} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#1B3A6B', textDecoration: 'none', fontWeight: 500 }}>
+                    <Link href={`/app/vault/${vault.vault}/manage`} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#1B3A6B', textDecoration: 'none', fontWeight: 500 }}>
                       Manage <ArrowUpRight size={12} />
                     </Link>
                   </div>
@@ -330,32 +347,38 @@ export default function CuratorDashboardPage() {
                 <Plus size={14} /> New Strategy
               </button>
             </div>
-            {ACTIVE_STRATEGIES.map(strat => (
-              <div key={strat.id} style={{ backgroundColor: '#FFFFFF', border: '1px solid #E8E4DC', borderRadius: '12px', padding: '24px', marginBottom: '16px' }}>
+            {myVaults.length === 0 && (
+              <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E8E4DC', borderRadius: '12px', padding: '24px', fontSize: '13px', color: '#8A8A8A' }}>
+                No on-chain vaults managed by this address on the connected chain.
+              </div>
+            )}
+            {myVaults.map(vault => (
+              <div key={vault.vault} style={{ backgroundColor: '#FFFFFF', border: '1px solid #E8E4DC', borderRadius: '12px', padding: '24px', marginBottom: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
-                      <h3 style={{ fontFamily: '"Playfair Display", Georgia, serif', fontSize: '18px', color: '#1B3A6B', margin: 0 }}>{strat.name}</h3>
+                      <h3 style={{ fontFamily: '"Playfair Display", Georgia, serif', fontSize: '18px', color: '#1B3A6B', margin: 0 }}>{vault.name}</h3>
                       <span style={{ padding: '2px 8px', borderRadius: '50px', fontSize: '10px', fontWeight: 600, backgroundColor: 'rgba(4,120,87,0.08)', color: '#047857', border: '1px solid rgba(4,120,87,0.2)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Active</span>
+                      <DataSourceBadge source="onchain" />
                     </div>
-                    <div style={{ fontSize: '12px', color: '#8A8A8A' }}>Template: {strat.template} · Last updated {strat.lastUpdated}</div>
+                    <div style={{ fontSize: '12px', color: '#8A8A8A' }}>Vault: <code>{vault.vault}</code></div>
                   </div>
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    <Link href={`/app/vault/${strat.vaultAddress}/manage`} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 14px', borderRadius: '8px', border: '1px solid #E8E4DC', backgroundColor: '#FAFAF8', fontSize: '12px', fontWeight: 500, color: '#1B3A6B', textDecoration: 'none' }}>
+                    <Link href={`/app/vault/${vault.vault}/manage`} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 14px', borderRadius: '8px', border: '1px solid #E8E4DC', backgroundColor: '#FAFAF8', fontSize: '12px', fontWeight: 500, color: '#1B3A6B', textDecoration: 'none' }}>
                       <Settings size={13} /> Manage
                     </Link>
-                    <Link href={`/app/vault/${strat.vaultAddress}`} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 14px', borderRadius: '8px', border: '1px solid #E8E4DC', backgroundColor: '#FAFAF8', fontSize: '12px', fontWeight: 500, color: '#1B3A6B', textDecoration: 'none' }}>
+                    <Link href={`/app/vault/${vault.vault}`} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 14px', borderRadius: '8px', border: '1px solid #E8E4DC', backgroundColor: '#FAFAF8', fontSize: '12px', fontWeight: 500, color: '#1B3A6B', textDecoration: 'none' }}>
                       <Eye size={13} /> View
                     </Link>
                   </div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px' }}>
                   {[
-                    { label: 'TVL', value: strat.tvl },
-                    { label: 'APY', value: strat.apy },
-                    { label: 'Policies', value: strat.policies.toString() },
-                    { label: 'Buffer', value: `${strat.bufferBps / 100}%` },
-                    { label: 'Mgmt Fee', value: `${strat.feeBps / 100}%` },
+                    { label: 'TVL', value: `${formatUSDC(vault.totalAssets)}` },
+                    { label: 'UPR', value: `${formatUSDC(vault.unearnedPremiums)}` },
+                    { label: 'Claim Reserves', value: `${formatUSDC(vault.pendingClaims)}` },
+                    { label: 'Buffer', value: `${(Number(vault.bufferRatioBps) / 100).toFixed(1)}%` },
+                    { label: 'Mgmt Fee', value: `${(Number(vault.managementFeeBps) / 100).toFixed(1)}%` },
                   ].map(m => (
                     <div key={m.label} style={{ backgroundColor: '#FAFAF8', borderRadius: '8px', padding: '12px 16px' }}>
                       <div style={{ fontSize: '11px', color: '#8A8A8A', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '4px' }}>{m.label}</div>
@@ -621,9 +644,11 @@ export default function CuratorDashboardPage() {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
               <h2 style={{ fontFamily: '"Playfair Display", Georgia, serif', fontSize: '24px', color: '#1B3A6B', margin: 0 }}>Policy Pool</h2>
-              <Link href="/app/vault/0xF725B7E9176F1F2D0B9b3D0e3E5e1b1C5e2D3A4B/manage" style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#1B3A6B', color: '#FFFFFF', padding: '10px 20px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, textDecoration: 'none' }}>
-                <Plus size={14} /> Register Policy
-              </Link>
+              {myVaults.length > 0 && (
+                <Link href={`/app/vault/${myVaults[0].vault}/manage`} style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#1B3A6B', color: '#FFFFFF', padding: '10px 20px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, textDecoration: 'none' }}>
+                  <Plus size={14} /> Register Policy
+                </Link>
+              )}
             </div>
             <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E8E4DC', borderRadius: '12px', padding: '48px', textAlign: 'center' }}>
               <FileText size={32} color="#E8E4DC" style={{ marginBottom: '16px' }} />
@@ -631,9 +656,13 @@ export default function CuratorDashboardPage() {
               <p style={{ fontSize: '13px', color: '#8A8A8A', lineHeight: '1.6', maxWidth: '400px', margin: '0 auto 24px' }}>
                 Policies are registered and managed through the vault management interface. Navigate to your vault to register new policies, set coverage amounts, and manage premiums.
               </p>
-              <Link href="/app/vault/0xF725B7E9176F1F2D0B9b3D0e3E5e1b1C5e2D3A4B/manage" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#1B3A6B', color: '#FFFFFF', padding: '12px 24px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, textDecoration: 'none' }}>
-                Go to Vault Manager
-              </Link>
+              {myVaults.length > 0 ? (
+                <Link href={`/app/vault/${myVaults[0].vault}/manage`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#1B3A6B', color: '#FFFFFF', padding: '12px 24px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, textDecoration: 'none' }}>
+                  Go to Vault Manager
+                </Link>
+              ) : (
+                <p style={{ fontSize: '12px', color: '#9CA3AF' }}>No on-chain vault managed by this address.</p>
+              )}
             </div>
           </div>
         )}
@@ -641,12 +670,15 @@ export default function CuratorDashboardPage() {
         {/* PERFORMANCE TAB */}
         {activeTab === 'performance' && (
           <div>
-            <h2 style={{ fontFamily: '"Playfair Display", Georgia, serif', fontSize: '24px', color: '#1B3A6B', marginBottom: '24px' }}>Performance Analytics</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+              <h2 style={{ fontFamily: '"Playfair Display", Georgia, serif', fontSize: '24px', color: '#1B3A6B', margin: 0 }}>Performance Analytics</h2>
+              <DataSourceBadge source={lensHasData ? 'onchain' : 'unavailable'} />
+            </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
               {[
-                { label: 'Total Premiums Collected', value: '$2,940', sub: 'All time' },
-                { label: 'Claims Paid', value: '$420', sub: '14.3% loss ratio' },
-                { label: 'Net Underwriting Profit', value: '$2,520', sub: 'All time' },
+                { label: 'Unearned Premiums', value: lensHasData ? `${formatUSDC(totalUpr)} USDC` : '--', sub: 'UPR across managed vaults' },
+                { label: 'Claim Reserves', value: lensHasData ? `${formatUSDC(totalReserves)} USDC` : '--', sub: 'Reserved for pending claims' },
+                { label: 'Accumulated Fees', value: lensHasData ? `${formatUSDC(totalFees)} USDC` : '--', sub: 'Vault accounting, claimable by governance' },
               ].map(stat => (
                 <div key={stat.label} style={{ backgroundColor: '#FFFFFF', border: '1px solid #E8E4DC', borderRadius: '12px', padding: '24px' }}>
                   <div style={{ fontSize: '11px', color: '#8A8A8A', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '8px' }}>{stat.label}</div>
