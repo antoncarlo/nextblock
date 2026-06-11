@@ -8,6 +8,7 @@
     "app"
   ],
   "scripts": {
+    "build": "npm --prefix app run build",
     "codegen:addressbook": "node scripts/generate-addressbook.mjs",
     "check:addressbook": "node scripts/check-addressbook.mjs",
     "ci:frontend:install": "npm --prefix app ci",
