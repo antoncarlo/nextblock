@@ -87,3 +87,17 @@ export function useLensLPStatus(vault?: `0x${string}`, lp?: `0x${string}`) {
   });
   return { lensDeployed, lensAddress: nextBlockLens, ...read };
 }
+
+/** Canonical NAV oracle view for a vault (status, source, staleness guards). */
+export function useLensOracleDashboard(vault?: `0x${string}`) {
+  const { nextBlockLens } = useAddresses();
+  const lensDeployed = isDeployed(nextBlockLens);
+  const read = useReadContract({
+    address: nextBlockLens,
+    abi: NEXTBLOCK_LENS_ABI,
+    functionName: 'getOracleDashboard',
+    args: vault ? [vault] : undefined,
+    query: { ...QUERY, enabled: lensDeployed && !!vault },
+  });
+  return { lensDeployed, lensAddress: nextBlockLens, ...read };
+}
