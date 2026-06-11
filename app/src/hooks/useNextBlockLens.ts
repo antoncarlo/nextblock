@@ -1,6 +1,6 @@
 'use client';
 
-import { useReadContract } from 'wagmi';
+import { useReadContract, useReadContracts } from 'wagmi';
 import { useAddresses } from './useAddresses';
 import { NEXTBLOCK_LENS_ABI, isDeployed } from '@/config/contracts';
 
@@ -84,6 +84,25 @@ export function useLensLPStatus(vault?: `0x${string}`, lp?: `0x${string}`) {
     functionName: 'getLPStatus',
     args: vault && lp ? [vault, lp] : undefined,
     query: { ...QUERY, enabled: lensDeployed && !!vault && !!lp },
+  });
+  return { lensDeployed, lensAddress: nextBlockLens, ...read };
+}
+
+/** Batched canonical dashboards for a list of vaults (factory enumeration). */
+export function useLensVaultDashboards(vaults: readonly `0x${string}`[] | undefined) {
+  const { nextBlockLens } = useAddresses();
+  const lensDeployed = isDeployed(nextBlockLens);
+  const read = useReadContracts({
+    contracts: (vaults ?? []).map(
+      (vault) =>
+        ({
+          address: nextBlockLens,
+          abi: NEXTBLOCK_LENS_ABI,
+          functionName: 'getVaultDashboard',
+          args: [vault],
+        }) as const,
+    ),
+    query: { ...QUERY, enabled: lensDeployed && (vaults?.length ?? 0) > 0 },
   });
   return { lensDeployed, lensAddress: nextBlockLens, ...read };
 }
