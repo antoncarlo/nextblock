@@ -5,6 +5,7 @@ import { useVaultAddresses, useMultiVaultInfo } from '@/hooks/useVaultData';
 import { ADMIN_ADDRESSES } from '@/config/constants';
 import { TimeControls } from '@/components/admin/TimeControls';
 import { LensProtocolStatus } from '@/components/admin/LensProtocolStatus';
+import { KybReviewQueue } from '@/components/admin/KybReviewQueue';
 import { OracleControls } from '@/components/admin/OracleControls';
 import { ClaimTriggers } from '@/components/admin/ClaimTriggers';
 import { ClaimReceipts } from '@/components/admin/ClaimReceipts';
@@ -83,6 +84,7 @@ export default function AdminPage() {
         {/* Left column */}
         <div className="space-y-6">
           <LensProtocolStatus />
+          <KybReviewQueue />
           <TimeControls />
           <OracleControls />
           <DemoControls />
