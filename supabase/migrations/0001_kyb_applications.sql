@@ -9,10 +9,12 @@
 --   * The database is the instructional (off-chain) record of KYB/KYC review.
 --     Approval here NEVER writes the on-chain ComplianceRegistry whitelist:
 --     that remains a separate, explicitly authorized act of the KYC Operator.
---   * RLS is enabled deny-by-default on both tables. The Next.js route
---     handlers use the service-role key (server only), which bypasses RLS by
---     design; the policies below exist so that the anon/authenticated roles
---     can do strictly nothing beyond the single allowed insert path.
+--   * RLS is enabled on both tables with NO policy for anon or authenticated:
+--     client roles can do strictly nothing, in any direction. Every KYB
+--     operation (submit included) flows exclusively through the Next.js
+--     server route handlers, which validate payloads with zod and use the
+--     service-role key. The service-role key is server-only and must never
+--     be exposed to the client (no NEXT_PUBLIC_ prefix, ever).
 --   * kyb_review_events is append-only: no UPDATE/DELETE policy exists for
 --     any non-service role, preserving the audit trail.
 --   * No seed data: real or illustrative rows are both forbidden here.
@@ -106,17 +108,11 @@ create index kyb_review_events_app_idx on public.kyb_review_events (application_
 alter table public.kyb_applications enable row level security;
 alter table public.kyb_review_events enable row level security;
 
--- No SELECT/UPDATE/DELETE policy is defined for anon or authenticated on
--- either table: PII never leaves the server path (service-role handlers).
+-- DENY BY DEFAULT, TOTAL: no policy of any kind (SELECT/INSERT/UPDATE/DELETE)
+-- is defined for anon or authenticated on either table. With RLS enabled and
+-- zero policies, client roles can neither read nor write KYB data.
 --
--- Single allowed direct path: anon INSERT of a fresh application in state
--- 'submitted'. Kept so the public apply form works even if routed without the
--- service client; the API still validates payloads with zod before inserting.
-create policy kyb_applications_insert_submitted
-  on public.kyb_applications
-  for insert
-  to anon
-  with check (status = 'submitted' and chain_id = 84532);
-
--- kyb_review_events: intentionally NO policy at all for anon/authenticated.
--- Only the service role (server) can read or append audit events.
+-- The ONLY ingress is POST /api/kyb/applications (Next.js server route:
+-- zod validation + service-role insert); the ONLY review/read paths are the
+-- operator-authenticated server routes. The service-role key bypasses RLS by
+-- design and lives exclusively in server-side environment configuration.
