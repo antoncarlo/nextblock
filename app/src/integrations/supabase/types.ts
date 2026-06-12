@@ -14,6 +14,101 @@ export type Database = {
   }
   public: {
     Tables: {
+      kyb_applications: {
+        Row: {
+          applicant_type: Database["public"]["Enums"]["kyb_applicant_type"]
+          chain_id: number
+          company_name: string
+          contact_email: string
+          contact_name: string
+          created_at: string
+          declared_portfolio: string | null
+          description: string | null
+          id: string
+          jurisdiction: string
+          legal_entity_type: string
+          license_number: string | null
+          status: Database["public"]["Enums"]["kyb_status"]
+          updated_at: string
+          wallet_address: string
+          website: string | null
+        }
+        Insert: {
+          applicant_type: Database["public"]["Enums"]["kyb_applicant_type"]
+          chain_id?: number
+          company_name: string
+          contact_email: string
+          contact_name: string
+          created_at?: string
+          declared_portfolio?: string | null
+          description?: string | null
+          id?: string
+          jurisdiction: string
+          legal_entity_type: string
+          license_number?: string | null
+          status?: Database["public"]["Enums"]["kyb_status"]
+          updated_at?: string
+          wallet_address: string
+          website?: string | null
+        }
+        Update: {
+          applicant_type?: Database["public"]["Enums"]["kyb_applicant_type"]
+          chain_id?: number
+          company_name?: string
+          contact_email?: string
+          contact_name?: string
+          created_at?: string
+          declared_portfolio?: string | null
+          description?: string | null
+          id?: string
+          jurisdiction?: string
+          legal_entity_type?: string
+          license_number?: string | null
+          status?: Database["public"]["Enums"]["kyb_status"]
+          updated_at?: string
+          wallet_address?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
+      kyb_review_events: {
+        Row: {
+          actor_address: string
+          application_id: string
+          created_at: string
+          from_status: Database["public"]["Enums"]["kyb_status"]
+          id: string
+          note: string | null
+          to_status: Database["public"]["Enums"]["kyb_status"]
+        }
+        Insert: {
+          actor_address: string
+          application_id: string
+          created_at?: string
+          from_status: Database["public"]["Enums"]["kyb_status"]
+          id?: string
+          note?: string | null
+          to_status: Database["public"]["Enums"]["kyb_status"]
+        }
+        Update: {
+          actor_address?: string
+          application_id?: string
+          created_at?: string
+          from_status?: Database["public"]["Enums"]["kyb_status"]
+          id?: string
+          note?: string | null
+          to_status?: Database["public"]["Enums"]["kyb_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kyb_review_events_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "kyb_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -80,6 +175,13 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      kyb_applicant_type: "cedant" | "curator"
+      kyb_status:
+        | "submitted"
+        | "under_review"
+        | "approved"
+        | "rejected"
+        | "needs_info"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -208,6 +310,14 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      kyb_applicant_type: ["cedant", "curator"],
+      kyb_status: [
+        "submitted",
+        "under_review",
+        "approved",
+        "rejected",
+        "needs_info",
+      ],
     },
   },
 } as const
