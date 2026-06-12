@@ -103,6 +103,30 @@ must succeed.
 - Update `deployments/84532-staging.json` role entries + regenerate the
   address book; update `docs/SECURITY_MODEL.md` section 2 and the gap matrix.
 
+## 4. Fork rehearsal test package
+
+Phase 2 is rehearsed in code on two levels (no broadcast is possible from
+`forge test` by construction):
+
+- `test/governance/GovernancePhase2Rehearsal.t.sol` — deterministic local
+  model of the staging posture, always runs in CI: rehearsal op with delay
+  enforcement, Stage A reversibility, Stage B irreversibility, post-handover
+  timelock-only control, sentinel emergency path staying direct, and the
+  guard that blocks renounce when the timelock lacks ownership.
+- `test/fork/GovernancePhase2Fork.t.sol` — same sequence executed against
+  the REAL Base Sepolia contracts inside a fork pinned at block 42,720,000
+  (after the phase 1 broadcast). Skipped automatically when
+  `BASE_SEPOLIA_RPC_URL` is not set, so CI stays network-free.
+
+```bash
+# always-on local rehearsal (CI-safe)
+forge test --match-contract GovernancePhase2RehearsalTest -vvv
+
+# fork rehearsal against live staging state (read-only fork memory)
+BASE_SEPOLIA_RPC_URL=https://sepolia.base.org \
+  forge test --match-path "test/fork/*" -vvv
+```
+
 ### Global abort criteria
 Any unexpected holder in the baseline, failed rehearsal, Safe quorum doubt,
 minDelay below 3600, or mismatch between address book and on-chain state:
