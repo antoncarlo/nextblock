@@ -1,6 +1,8 @@
 import { Header } from '@/components/shared/Header';
 import { AutoDisconnect } from '@/components/shared/AutoDisconnect';
 import { ActiveRoleProvider } from '@/components/shared/WalletRoleIndicator';
+import { NetworkAvailabilityNotice } from '@/components/shared/NetworkAvailabilityNotice';
+import { DeployerWalletWarning } from '@/components/shared/DeployerWalletWarning';
 
 export default function AppLayout({
   children,
@@ -11,6 +13,8 @@ export default function AppLayout({
     <ActiveRoleProvider>
       <AutoDisconnect />
       <Header />
+      <NetworkAvailabilityNotice />
+      <DeployerWalletWarning />
       <main>{children}</main>
 
       {/* Venetian footer frieze */}

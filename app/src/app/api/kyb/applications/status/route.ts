@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
+import { logApiError } from '@/lib/api-log';
 
 /**
  * Minimal public status lookup for the apply page: given a wallet, returns
@@ -24,6 +25,7 @@ export async function GET(request: NextRequest) {
     .order('created_at', { ascending: false })
     .limit(10);
   if (error) {
+    logApiError('kyb/applications/status', 'storage_error', { code: error.code });
     return NextResponse.json({ available: false, applications: [] }, { status: 502 });
   }
 

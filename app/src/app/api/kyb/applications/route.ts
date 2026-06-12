@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { kybApplicationPayloadSchema } from '@/lib/kyb/schema';
 import { verifyOperatorAuth } from '@/lib/kyb/auth';
+import { clientIp, rateLimit } from '@/lib/rate-limit';
+import { logApiError } from '@/lib/api-log';
 
 /**
  * KYB applications collection.
@@ -14,6 +16,15 @@ import { verifyOperatorAuth } from '@/lib/kyb/auth';
  */
 
 export async function POST(request: NextRequest) {
+  // 5 submissions per IP per 10 minutes (fixed window, best effort per instance).
+  const limited = rateLimit('kyb-submit', clientIp(request), 5, 10 * 60 * 1000);
+  if (!limited.allowed) {
+    return NextResponse.json(
+      { error: 'too many requests' },
+      { status: 429, headers: { 'Retry-After': String(limited.retryAfterSeconds) } },
+    );
+  }
+
   const supabase = getSupabaseServerClient();
   if (!supabase) {
     return NextResponse.json({ error: 'unavailable' }, { status: 503 });
@@ -63,6 +74,7 @@ export async function POST(request: NextRequest) {
         { status: 409 },
       );
     }
+    logApiError('kyb/applications', 'submit_storage_error', { code: error.code });
     return NextResponse.json({ error: 'storage error' }, { status: 502 });
   }
 
@@ -97,6 +109,7 @@ export async function GET(request: NextRequest) {
     .order('created_at', { ascending: false })
     .limit(200);
   if (error) {
+    logApiError('kyb/applications', 'list_storage_error', { code: error.code });
     return NextResponse.json({ error: 'storage error' }, { status: 502 });
   }
 

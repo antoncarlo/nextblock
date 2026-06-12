@@ -69,6 +69,23 @@ ref `krycyeiwsplztagajauh`, and is followed by read-only verification
 (tables, RLS, zero anon/authenticated policies, advisors) and TypeScript
 type regeneration.
 
+## PRODUCTION BLOCK (governance)
+
+PRODUCTION USE IS BLOCKED until Governance Phase 2 Stage A (operational key
+separation) is executed and verified. The deployer EOA
+`0xfF6f0d49dD2187351264C4d3bbd5537bE8Ad81d2` still holds OWNER_ROLE,
+DEFAULT_ADMIN_ROLE and every operational role: a single hot key has full
+instant control bypassing the timelock. Until Stage A completes (and Stage B
+finalizes the handover):
+
+- no mainnet deployment may be prepared or executed;
+- no real-value asset may be referenced by any vault;
+- the staging app shows a permanent warning whenever the deployer key
+  connects (`DeployerWalletWarning`), and that warning must not be removed;
+- routine operations must not be performed with the deployer key.
+
+Runbook and authorization gates: `docs/GOVERNANCE_PHASE2.md`.
+
 ## Governance operations (Base Sepolia)
 
 - Phase 1 (done): ProtocolTimelock `0x6e2927627d83A90EDC9cDA3c626B49875f9449CF`

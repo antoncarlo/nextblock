@@ -145,14 +145,28 @@ export function KybReviewQueue() {
       setActionPending(true);
       setActionError(null);
       try {
+        // Single-use nonce: the server consumes it on verification, so this
+        // signature cannot be replayed even inside the auth window.
+        const nonceRes = await fetch('/api/kyb/auth/nonce', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ address }),
+        });
+        const nonceData = await nonceRes.json().catch(() => ({}));
+        if (!nonceRes.ok || typeof nonceData.nonce !== 'string') {
+          setActionError('Could not obtain a review nonce; retry.');
+          return;
+        }
+        const nonce: string = nonceData.nonce;
+
         const timestamp = Math.floor(Date.now() / 1000);
         const signature = await signMessageAsync({
-          message: operatorAuthMessage(`review:${id}:${toStatus}`, timestamp),
+          message: operatorAuthMessage(`review:${id}:${toStatus}`, timestamp, nonce),
         });
         const res = await fetch(`/api/kyb/applications/${id}/review`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ toStatus, note, auth: { address, timestamp, signature } }),
+          body: JSON.stringify({ toStatus, note, auth: { address, timestamp, signature, nonce } }),
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {

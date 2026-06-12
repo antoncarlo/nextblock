@@ -1,8 +1,13 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useChainId, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { INSURANCE_VAULT_ABI } from '@/config/contracts';
+
+/** The institutional stack lives on Base Sepolia only. */
+const REQUIRED_CHAIN_ID = 84532;
+const WRONG_CHAIN_MESSAGE =
+  'Please switch to Base Sepolia (chain 84532) to continue.';
 
 /**
  * Withdraw flow state machine:
@@ -25,6 +30,8 @@ export function useWithdrawFlow({
   owner,
   onSuccess,
 }: UseWithdrawFlowOptions) {
+  const chainId = useChainId();
+  const isWrongChain = chainId !== REQUIRED_CHAIN_ID;
   const [state, setState] = useState<WithdrawState>('IDLE');
   const [error, setError] = useState<string | null>(null);
 
@@ -55,6 +62,13 @@ export function useWithdrawFlow({
 
   const startWithdraw = useCallback(() => {
     if (amount <= 0n) return;
+    // Guard before any wallet interaction: transactions signed on the wrong
+    // network would target addresses that do not exist there.
+    if (chainId !== REQUIRED_CHAIN_ID) {
+      setState('ERROR');
+      setError(WRONG_CHAIN_MESSAGE);
+      return;
+    }
     setError(null);
     setState('WITHDRAWING');
 
@@ -64,7 +78,7 @@ export function useWithdrawFlow({
       functionName: 'withdraw',
       args: [amount, receiver, owner],
     });
-  }, [amount, vaultAddress, receiver, owner, writeContract]);
+  }, [amount, chainId, vaultAddress, receiver, owner, writeContract]);
 
   const reset = useCallback(() => {
     setState('IDLE');
@@ -76,6 +90,7 @@ export function useWithdrawFlow({
     error,
     startWithdraw,
     reset,
+    isWrongChain,
     isPending,
     txHash,
   };

@@ -1,9 +1,14 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useChainId, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { MOCK_USDC_ABI, INSURANCE_VAULT_ABI } from '@/config/contracts';
 import { useAddresses } from './useAddresses';
+
+/** The institutional stack lives on Base Sepolia only. */
+const REQUIRED_CHAIN_ID = 84532;
+const WRONG_CHAIN_MESSAGE =
+  'Please switch to Base Sepolia (chain 84532) to continue.';
 
 /**
  * Deposit flow state machine:
@@ -31,6 +36,8 @@ export function useDepositFlow({
   onSuccess,
 }: UseDepositFlowOptions) {
   const addresses = useAddresses();
+  const chainId = useChainId();
+  const isWrongChain = chainId !== REQUIRED_CHAIN_ID;
   const [state, setState] = useState<DepositState>('IDLE');
   const [error, setError] = useState<string | null>(null);
 
@@ -98,6 +105,13 @@ export function useDepositFlow({
 
   const startDeposit = useCallback(() => {
     if (amount <= 0n) return;
+    // Guard before any wallet interaction: transactions signed on the wrong
+    // network would target addresses that do not exist there.
+    if (chainId !== REQUIRED_CHAIN_ID) {
+      setState('ERROR');
+      setError(WRONG_CHAIN_MESSAGE);
+      return;
+    }
     setError(null);
     setState('APPROVING');
 
@@ -107,7 +121,7 @@ export function useDepositFlow({
       functionName: 'approve',
       args: [vaultAddress, amount],
     });
-  }, [amount, vaultAddress, writeApprove, addresses.mockUSDC]);
+  }, [amount, chainId, vaultAddress, writeApprove, addresses.mockUSDC]);
 
   const reset = useCallback(() => {
     setState('IDLE');
@@ -119,6 +133,7 @@ export function useDepositFlow({
     error,
     startDeposit,
     reset,
+    isWrongChain,
     isApprovePending,
     isDepositPending,
     approveHash,

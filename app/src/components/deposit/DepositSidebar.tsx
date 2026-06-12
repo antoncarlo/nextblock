@@ -290,6 +290,12 @@ function DepositTab({
         totalSupply={totalSupply}
       />
 
+      {flow.isWrongChain && (
+        <div className="rounded-lg bg-amber-50 p-3 text-xs font-medium text-amber-800">
+          Please switch to Base Sepolia (chain 84532) to deposit.
+        </div>
+      )}
+
       {flow.error && (
         <div className="rounded-lg bg-red-50 p-3 text-xs text-red-700">
           {flow.error}
@@ -394,6 +400,12 @@ function WithdrawTab({
         <div className="rounded-lg bg-amber-50 p-3 text-xs text-amber-700">
           No buffer available for withdrawal. Capital is deployed to back
           policies.
+        </div>
+      )}
+
+      {flow.isWrongChain && (
+        <div className="rounded-lg bg-amber-50 p-3 text-xs font-medium text-amber-800">
+          Please switch to Base Sepolia (chain 84532) to withdraw.
         </div>
       )}
 

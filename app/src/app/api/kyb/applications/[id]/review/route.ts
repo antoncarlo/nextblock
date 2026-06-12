@@ -6,6 +6,9 @@ import {
   type KybStatus,
 } from '@/lib/kyb/schema';
 import { verifyOperatorAuth } from '@/lib/kyb/auth';
+import { consumeNonce } from '@/lib/kyb/nonces';
+import { clientIp, rateLimit } from '@/lib/rate-limit';
+import { logApiError } from '@/lib/api-log';
 
 /**
  * Operator review transition. The signed message binds application id AND
@@ -20,6 +23,16 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  // 30 review actions per IP per 10 minutes: roomier than the public submit
+  // limit because one operator legitimately processes a whole queue.
+  const limited = rateLimit('kyb-review', clientIp(request), 30, 10 * 60 * 1000);
+  if (!limited.allowed) {
+    return NextResponse.json(
+      { error: 'too many requests' },
+      { status: 429, headers: { 'Retry-After': String(limited.retryAfterSeconds) } },
+    );
+  }
+
   const supabase = getSupabaseServerClient();
   if (!supabase) {
     return NextResponse.json({ error: 'unavailable' }, { status: 503 });
@@ -47,9 +60,20 @@ export async function POST(
     address: auth.address as `0x${string}`,
     timestamp: auth.timestamp,
     signature: auth.signature as `0x${string}`,
+    nonce: auth.nonce,
   });
   if (!verified.ok) {
     return NextResponse.json({ error: verified.error }, { status: verified.status });
+  }
+
+  // Single use: consuming the nonce here makes the verified signature
+  // unreplayable. Concurrent duplicates race this consume and exactly one
+  // wins; expired/unknown nonces fail closed with a fresh-nonce retry path.
+  if (!consumeNonce(verified.address, auth.nonce)) {
+    return NextResponse.json(
+      { error: 'nonce invalid, expired or already used; request a new one' },
+      { status: 401 },
+    );
   }
 
   const { data: application, error: fetchError } = await supabase
@@ -75,6 +99,7 @@ export async function POST(
     .eq('id', id)
     .eq('status', fromStatus); // optimistic guard against concurrent reviews
   if (updateError) {
+    logApiError('kyb/review', 'transition_storage_error', { code: updateError.code });
     return NextResponse.json({ error: 'storage error' }, { status: 502 });
   }
 
@@ -87,6 +112,7 @@ export async function POST(
   });
   if (eventError) {
     // The transition applied but the audit append failed: surface loudly.
+    logApiError('kyb/review', 'audit_append_failed', { code: eventError.code });
     return NextResponse.json(
       { error: 'transition applied but audit event failed; investigate before further reviews' },
       { status: 500 },
