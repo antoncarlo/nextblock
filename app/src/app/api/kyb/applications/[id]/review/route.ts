@@ -6,6 +6,7 @@ import {
   type KybStatus,
 } from '@/lib/kyb/schema';
 import { verifyOperatorAuth } from '@/lib/kyb/auth';
+import { consumeNonce } from '@/lib/kyb/nonces';
 import { clientIp, rateLimit } from '@/lib/rate-limit';
 
 /**
@@ -58,9 +59,20 @@ export async function POST(
     address: auth.address as `0x${string}`,
     timestamp: auth.timestamp,
     signature: auth.signature as `0x${string}`,
+    nonce: auth.nonce,
   });
   if (!verified.ok) {
     return NextResponse.json({ error: verified.error }, { status: verified.status });
+  }
+
+  // Single use: consuming the nonce here makes the verified signature
+  // unreplayable. Concurrent duplicates race this consume and exactly one
+  // wins; expired/unknown nonces fail closed with a fresh-nonce retry path.
+  if (!consumeNonce(verified.address, auth.nonce)) {
+    return NextResponse.json(
+      { error: 'nonce invalid, expired or already used; request a new one' },
+      { status: 401 },
+    );
   }
 
   const { data: application, error: fetchError } = await supabase

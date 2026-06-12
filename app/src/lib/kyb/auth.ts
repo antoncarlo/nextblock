@@ -15,9 +15,10 @@ import {
  * OWNER_ROLE on ProtocolRoles (canonical RBAC). No client-supplied header is
  * trusted without a valid signature.
  *
- * Known limit (documented): signatures are valid for a short window and could
- * be replayed within it. Acceptable for the staging instructional pipeline;
- * to be replaced with nonce-based sessions before production.
+ * Replay protection: review transitions bind a server-issued single-use
+ * nonce inside the signed message (consumed by the route after this
+ * verification succeeds). The read-only list flow still uses the timestamp
+ * window alone; its exposure is bounded to repeated reads.
  *
  * All chain access here is READ-ONLY (eth_call). This module never signs nor
  * sends transactions.
@@ -47,6 +48,9 @@ export interface OperatorAuthInput {
   address: `0x${string}`;
   timestamp: number;
   signature: `0x${string}`;
+  /** Server-issued single-use nonce; when present it must be part of the
+   *  signed message and the caller consumes it after verification. */
+  nonce?: string;
 }
 
 export type OperatorAuthResult =
@@ -62,7 +66,7 @@ export async function verifyOperatorAuth(
     return { ok: false, status: 401, error: 'signature expired' };
   }
 
-  const message = operatorAuthMessage(action, auth.timestamp);
+  const message = operatorAuthMessage(action, auth.timestamp, auth.nonce);
   let signatureValid = false;
   try {
     signatureValid = await verifyMessage({

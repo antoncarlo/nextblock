@@ -73,22 +73,27 @@ export const kybReviewRequestSchema = z.object({
     address: z.string().regex(EVM_ADDRESS_RE),
     /** Unix seconds the message was signed at. */
     timestamp: z.number().int().positive(),
-    /** EIP-191 personal_sign signature of operatorAuthMessage(action, timestamp). */
+    /** Server-issued single-use nonce (consumed on verification). */
+    nonce: z.string().regex(/^[0-9a-f]{16,64}$/),
+    /** EIP-191 personal_sign signature of operatorAuthMessage(action, timestamp, nonce). */
     signature: z.string().regex(/^0x[0-9a-fA-F]+$/),
   }),
 });
 
 export type KybReviewRequest = z.infer<typeof kybReviewRequestSchema>;
 
-/** Seconds an operator signature stays valid. Known limit: within this window
- *  the same signature could be replayed; acceptable for the staging
- *  instructional pipeline, to be replaced by nonce-based sessions before
- *  production. */
+/** Seconds an operator signature stays valid. Review transitions additionally
+ *  require a server-issued single-use nonce, so a captured review request
+ *  cannot be replayed even inside this window. The read-only list flow still
+ *  relies on the window alone. */
 export const OPERATOR_AUTH_WINDOW_SECONDS = 300;
 
-/** Canonical message signed by the operator wallet (EIP-191 personal_sign). */
-export function operatorAuthMessage(action: string, timestamp: number): string {
-  return `NextBlock KYB operator authentication\naction: ${action}\ntimestamp: ${timestamp}`;
+/** Canonical message signed by the operator wallet (EIP-191 personal_sign).
+ *  When a nonce is provided (review transitions) it is bound inside the
+ *  signed message, making the signature single-use server-side. */
+export function operatorAuthMessage(action: string, timestamp: number, nonce?: string): string {
+  const base = `NextBlock KYB operator authentication\naction: ${action}\ntimestamp: ${timestamp}`;
+  return nonce ? `${base}\nnonce: ${nonce}` : base;
 }
 
 /** Accepts timestamps up to `window` seconds old, with 60s of clock skew. */
