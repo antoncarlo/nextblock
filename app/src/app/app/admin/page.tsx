@@ -2,7 +2,8 @@
 
 import { useAccount } from 'wagmi';
 import { useVaultAddresses, useMultiVaultInfo } from '@/hooks/useVaultData';
-import { ADMIN_ADDRESSES } from '@/config/constants';
+import { LEGACY_ADMIN_UI_HINT } from '@/config/constants';
+import { useProtocolAccess } from '@/hooks/useProtocolAccess';
 import { TimeControls } from '@/components/admin/TimeControls';
 import { LensProtocolStatus } from '@/components/admin/LensProtocolStatus';
 import { KybReviewQueue } from '@/components/admin/KybReviewQueue';
@@ -14,10 +15,20 @@ import { DemoControls } from '@/components/admin/DemoControls';
 
 export default function AdminPage() {
   const { address, isConnected } = useAccount();
-  const isAdmin =
+
+  // PRIMARY gate: on-chain protocol roles read from ProtocolRoles (canonical
+  // RBAC). The legacy hint list is a UI-only fallback for demo wallets and is
+  // explicitly NOT a security boundary: every privileged action behind this
+  // page is enforced on-chain (role-gated contracts) or server-side (signed
+  // KYB APIs), never by this client-side check.
+  const access = useProtocolAccess();
+  const hasOnchainAdminRole =
+    access.status === 'onchain' && (access.isOwner || access.isSentinel || access.isCommittee);
+  const isLegacyHintWallet =
     isConnected &&
     !!address &&
-    ADMIN_ADDRESSES.map((a) => a.toLowerCase()).includes(address.toLowerCase());
+    LEGACY_ADMIN_UI_HINT.map((a) => a.toLowerCase()).includes(address.toLowerCase());
+  const isAdmin = hasOnchainAdminRole || isLegacyHintWallet;
 
   const { data: vaultAddresses } = useVaultAddresses();
   const { data: vaultInfos } = useMultiVaultInfo(vaultAddresses);
@@ -54,13 +65,15 @@ export default function AdminPage() {
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900">Access Denied</h1>
           <p className="mt-2 text-sm text-gray-500">
-            This page is only accessible to the admin wallet.
+            This dashboard renders only for wallets holding an on-chain protocol
+            role (Owner, Sentinel or Claims Committee on ProtocolRoles).
           </p>
           <p className="mt-1 text-xs text-gray-400">
             Connected: {address}
           </p>
           <p className="mt-1 text-xs text-gray-400">
-            Required: one of the authorised admin wallets
+            Note: this is a UI gate only. Real authorization is enforced
+            on-chain and by the server-side signed APIs.
           </p>
         </div>
       </div>
@@ -77,6 +90,11 @@ export default function AdminPage() {
         <p className="mt-1 text-sm text-gray-500">
           Control time, oracles, and claim triggers for the demo. All changes
           affect both vaults.
+        </p>
+        <p className="mt-1 text-xs text-gray-400">
+          This page is a UI surface, not a security boundary: every privileged
+          action is authorized on-chain (ProtocolRoles) or server-side (signed
+          KYB APIs).
         </p>
       </div>
 

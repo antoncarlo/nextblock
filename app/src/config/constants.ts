@@ -39,30 +39,33 @@ export const SECONDS_PER_YEAR = 31_536_000;
 export const BASIS_POINTS = 10_000;
 
 /**
- * Admin wallet addresses (multi-admin support).
- * All addresses in this list have full admin privileges.
+ * LEGACY ADMIN UI HINT — NOT A SECURITY BOUNDARY.
+ *
+ * These addresses only decide whether the admin dashboard UI renders for a
+ * connected wallet, as a fallback for legacy demo wallets that hold no
+ * on-chain role yet. Real authorization lives exclusively:
+ *   - on-chain, in ProtocolRoles (OWNER/SENTINEL/COMMITTEE checks), and
+ *   - server-side, in the KYB APIs (wallet signature + on-chain role check).
+ * Anyone can bypass this client-side gate by editing the bundle: nothing
+ * privileged is reachable through it. The primary admin gate is the on-chain
+ * role check in the admin page (useProtocolAccess).
  */
-export const ADMIN_ADDRESSES: string[] = [
-  '0x3630082d96065B756E84B8b79e030a525B9583ed', // NextBlock Primary Admin
-  '0x810fa6726eeB6014c2F77Bb4802A5734C28b0F3e', // NextBlock Co-Admin
+export const LEGACY_ADMIN_UI_HINT: string[] = [
+  '0x3630082d96065B756E84B8b79e030a525B9583ed', // legacy demo admin
+  '0x810fa6726eeB6014c2F77Bb4802A5734C28b0F3e', // legacy demo co-admin
 ];
 
 /**
- * Admin wallet address per chain (primary admin, kept for backward compatibility).
+ * LEGACY per-chain admin hint — NOT A SECURITY BOUNDARY (see above).
+ * Consumed only by the legacy demo WalletRoleIndicator. Base-only MVP plus
+ * the legacy demo chains still present in chains.ts; no mainnet entries.
  */
 export const CHAIN_ADMIN_ADDRESS: Record<number, `0x${string}`> = {
-  84532: '0x3630082d96065B756E84B8b79e030a525B9583ed', // Base Sepolia — Primary Admin
-  11155111: '0x3630082d96065B756E84B8b79e030a525B9583ed', // Ethereum Sepolia — Primary Admin
-  5042002: '0x3630082d96065B756E84B8b79e030a525B9583ed', // Arc Testnet — Primary Admin
-  1: '0x3630082d96065B756E84B8b79e030a525B9583ed', // Ethereum Mainnet — Primary Admin
-  8453: '0x3630082d96065B756E84B8b79e030a525B9583ed', // Base Mainnet — Primary Admin
-  31337: '0x3630082d96065B756E84B8b79e030a525B9583ed', // Anvil local — Primary Admin
+  84532: '0x3630082d96065B756E84B8b79e030a525B9583ed', // Base Sepolia staging
+  11155111: '0x3630082d96065B756E84B8b79e030a525B9583ed', // Ethereum Sepolia (legacy demo)
+  5042002: '0x3630082d96065B756E84B8b79e030a525B9583ed', // Arc Testnet (legacy demo)
+  31337: '0x3630082d96065B756E84B8b79e030a525B9583ed', // Anvil local
 };
-
-/**
- * Default admin address (Anvil).
- */
-export const ADMIN_ADDRESS = CHAIN_ADMIN_ADDRESS[31337]!;
 
 /**
  * Verification type enum (matches Solidity PolicyRegistry.VerificationType).

@@ -19,6 +19,9 @@
     "ci:contracts:fmt": "cd contracts && forge fmt --check",
     "ci:contracts:build": "cd contracts && forge build --sizes",
     "ci:contracts:test": "cd contracts && forge test -vvv",
+    "audit:contracts:snapshot": "cd contracts && forge snapshot --check --tolerance 1 --no-match-test \"(testFuzz|invariant)\"",
+    "audit:contracts:snapshot:update": "cd contracts && forge snapshot --no-match-test \"(testFuzz|invariant)\"",
+    "audit:contracts:coverage": "cd contracts && forge coverage --report summary",
     "ci:contracts": "npm run ci:contracts:fmt && npm run ci:contracts:build && npm run ci:contracts:test",
     "ci": "npm run ci:frontend && npm run ci:contracts"
   }
