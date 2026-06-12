@@ -6,6 +6,7 @@ import {
   type KybStatus,
 } from '@/lib/kyb/schema';
 import { verifyOperatorAuth } from '@/lib/kyb/auth';
+import { clientIp, rateLimit } from '@/lib/rate-limit';
 
 /**
  * Operator review transition. The signed message binds application id AND
@@ -20,6 +21,16 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  // 30 review actions per IP per 10 minutes: roomier than the public submit
+  // limit because one operator legitimately processes a whole queue.
+  const limited = rateLimit('kyb-review', clientIp(request), 30, 10 * 60 * 1000);
+  if (!limited.allowed) {
+    return NextResponse.json(
+      { error: 'too many requests' },
+      { status: 429, headers: { 'Retry-After': String(limited.retryAfterSeconds) } },
+    );
+  }
+
   const supabase = getSupabaseServerClient();
   if (!supabase) {
     return NextResponse.json({ error: 'unavailable' }, { status: 503 });

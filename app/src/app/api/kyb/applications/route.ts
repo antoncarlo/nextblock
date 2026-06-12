@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { kybApplicationPayloadSchema } from '@/lib/kyb/schema';
 import { verifyOperatorAuth } from '@/lib/kyb/auth';
+import { clientIp, rateLimit } from '@/lib/rate-limit';
 
 /**
  * KYB applications collection.
@@ -14,6 +15,15 @@ import { verifyOperatorAuth } from '@/lib/kyb/auth';
  */
 
 export async function POST(request: NextRequest) {
+  // 5 submissions per IP per 10 minutes (fixed window, best effort per instance).
+  const limited = rateLimit('kyb-submit', clientIp(request), 5, 10 * 60 * 1000);
+  if (!limited.allowed) {
+    return NextResponse.json(
+      { error: 'too many requests' },
+      { status: 429, headers: { 'Retry-After': String(limited.retryAfterSeconds) } },
+    );
+  }
+
   const supabase = getSupabaseServerClient();
   if (!supabase) {
     return NextResponse.json({ error: 'unavailable' }, { status: 503 });
