@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 
 import {ProtocolRoles, ProtocolRoleConstants} from "../../src/ProtocolRoles.sol";
 import {ProtocolTimelock} from "../../src/ProtocolTimelock.sol";
@@ -67,10 +68,11 @@ contract GovernancePhase2ForkTest is Test, ProtocolRoleConstants {
         assertGe(timelock.getMinDelay(), timelock.MIN_ENFORCED_DELAY(), "floor respected");
     }
 
-    /// Full Phase 2 rehearsed inside the fork: timelocked grant (Step 1),
+    /// Phase 2 handover rehearsed inside the fork: timelocked grant (Step 1),
     /// deployer renounce (Stage B) and post-handover control, against the
-    /// real deployed bytecode and storage.
-    function test_Fork_FullPhase2Rehearsal() public onlyForked {
+    /// real deployed bytecode and storage. Stage A (operational key
+    /// separation) is covered by the local rehearsal test only.
+    function test_Fork_Phase2HandoverRehearsal() public onlyForked {
         address newOperator = makeAddr("forkOperator");
         // Hoisted: an external call inside the argument list would consume
         // the prank and make schedule run as the default sender.
@@ -95,10 +97,22 @@ contract GovernancePhase2ForkTest is Test, ProtocolRoleConstants {
         assertFalse(roles.hasRole(OWNER_ROLE, deployer), "deployer owner removed");
         assertFalse(roles.hasRole(roles.DEFAULT_ADMIN_ROLE(), deployer), "deployer admin removed");
 
-        // Irreversibility for the EOA on the real contract.
+        // Irreversibility for the EOA on the real contract. Hoisted: an
+        // external call in the argument list would consume the prank.
+        bytes32 defaultAdmin = roles.DEFAULT_ADMIN_ROLE();
         vm.prank(deployer);
-        vm.expectRevert();
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, deployer, defaultAdmin)
+        );
         roles.grantRole(OWNER_ROLE, deployer);
+
+        // The direct path stays closed on the real contract too: the Safe
+        // holds no role on ProtocolRoles outside the timelock.
+        vm.prank(safe);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, safe, OWNER_ROLE)
+        );
+        roles.grantRole(KYC_OPERATOR_ROLE, newOperator);
 
         // Post-handover: the timelock still governs (revoke the rehearsal grant).
         bytes memory revokeData = abi.encodeCall(IAccessControl.revokeRole, (KYC_OPERATOR_ROLE, newOperator));
