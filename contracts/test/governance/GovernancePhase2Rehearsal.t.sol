@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {TimelockController} from "@openzeppelin/contracts/governance/TimelockController.sol";
 
 import {ProtocolRoles, ProtocolRoleConstants} from "../../src/ProtocolRoles.sol";
 import {ProtocolTimelock} from "../../src/ProtocolTimelock.sol";
@@ -104,13 +105,21 @@ contract GovernancePhase2RehearsalTest is Test, ProtocolRoleConstants {
 
     function test_Step1_RehearsalTimelockedGrant() public {
         bytes memory data = abi.encodeCall(IAccessControl.grantRole, (KYC_OPERATOR_ROLE, opsKycOperator));
+        bytes32 id = timelock.hashOperation(address(roles), 0, data, NO_PRED, SALT);
         vm.prank(safe);
         timelock.schedule(address(roles), 0, data, NO_PRED, SALT, MIN_DELAY);
 
-        // Delay is enforced: execution before maturity reverts.
+        // Delay is enforced: execution before maturity reverts because the
+        // operation is not yet in the Ready state.
         vm.warp(block.timestamp + MIN_DELAY - 1);
         vm.prank(safe);
-        vm.expectRevert();
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                TimelockController.TimelockUnexpectedOperationState.selector,
+                id,
+                bytes32(uint256(1) << uint8(TimelockController.OperationState.Ready))
+            )
+        );
         timelock.execute(address(roles), 0, data, NO_PRED, SALT);
 
         vm.warp(block.timestamp + 1);
@@ -170,11 +179,17 @@ contract GovernancePhase2RehearsalTest is Test, ProtocolRoleConstants {
         }
 
         // Irreversible for the EOA: any direct admin action now reverts.
+        // Hoisted: an external call in the argument list would consume the prank.
+        bytes32 defaultAdmin = roles.DEFAULT_ADMIN_ROLE();
         vm.prank(deployer);
-        vm.expectRevert();
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, deployer, defaultAdmin)
+        );
         roles.grantRole(OWNER_ROLE, deployer);
         vm.prank(deployer);
-        vm.expectRevert();
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, deployer, OWNER_ROLE)
+        );
         roles.grantRole(KYC_OPERATOR_ROLE, deployer);
     }
 
@@ -190,6 +205,14 @@ contract GovernancePhase2RehearsalTest is Test, ProtocolRoleConstants {
         // And it can also revoke, proving two-way control.
         _timelocked(address(roles), abi.encodeCall(IAccessControl.revokeRole, (KYC_OPERATOR_ROLE, newOperator)));
         assertFalse(roles.hasRole(KYC_OPERATOR_ROLE, newOperator), "timelock revoke works");
+
+        // The direct path stays closed: the Safe holds no role on
+        // ProtocolRoles, so granting without the timelock must revert.
+        vm.prank(safe);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, safe, OWNER_ROLE)
+        );
+        roles.grantRole(KYC_OPERATOR_ROLE, newOperator);
     }
 
     function test_PostHandover_SentinelEmergencyStaysDirect() public {

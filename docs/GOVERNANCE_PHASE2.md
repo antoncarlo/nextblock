@@ -113,10 +113,12 @@ Phase 2 is rehearsed in code on two levels (no broadcast is possible from
   enforcement, Stage A reversibility, Stage B irreversibility, post-handover
   timelock-only control, sentinel emergency path staying direct, and the
   guard that blocks renounce when the timelock lacks ownership.
-- `test/fork/GovernancePhase2Fork.t.sol` — same sequence executed against
-  the REAL Base Sepolia contracts inside a fork pinned at block 42,720,000
-  (after the phase 1 broadcast). Skipped automatically when
-  `BASE_SEPOLIA_RPC_URL` is not set, so CI stays network-free.
+- `test/fork/GovernancePhase2Fork.t.sol` — Step 1 rehearsal, Stage B
+  renounce and post-handover control executed against the REAL Base Sepolia
+  contracts inside a fork pinned at block 42,720,000 (after the phase 1
+  broadcast); Stage A key separation is covered by the local rehearsal test
+  only. Skipped automatically when `BASE_SEPOLIA_RPC_URL` is not set, so CI
+  stays network-free.
 
 ```bash
 # always-on local rehearsal (CI-safe)
@@ -126,6 +128,11 @@ forge test --match-contract GovernancePhase2RehearsalTest -vvv
 BASE_SEPOLIA_RPC_URL=https://sepolia.base.org \
   forge test --match-path "test/fork/*" -vvv
 ```
+
+The fork command requires an RPC provider that serves historical state for
+the pinned block (archive access). If the provider has pruned that block,
+the fork setup fails loudly at `createSelectFork`; nothing silently falls
+back to latest state.
 
 ### Global abort criteria
 Any unexpected holder in the baseline, failed rehearsal, Safe quorum doubt,
