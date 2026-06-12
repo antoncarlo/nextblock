@@ -15,7 +15,7 @@ const XIcon = ({ size = 20 }: { size?: number }) => (
 const Footer = () => {
   const protocolLinks = [
     { label: "Protocol Overview", href: "#" },
-    { label: "GitHub", href: "https://github.com/alessandromaci/nextblock" },
+    { label: "GitHub", href: "https://github.com/antoncarlo/nextblock" },
   ];
 
   const resourceLinks = [
@@ -23,8 +23,8 @@ const Footer = () => {
   ];
 
   const legalLinks = [
-    { label: "Terms of Service", href: "#" },
-    { label: "Privacy Policy", href: "#" },
+    { label: "Terms of Service", href: "https://github.com/antoncarlo/nextblock/blob/main/docs/TERMS.md" },
+    { label: "Privacy Policy", href: "https://github.com/antoncarlo/nextblock/blob/main/docs/PRIVACY.md" },
     { label: "Cookie Policy", href: "#" },
     { label: "Risk Disclaimer", href: "#" },
   ];
