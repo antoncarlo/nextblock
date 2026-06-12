@@ -1,7 +1,7 @@
 'use client';
 
 import { useAccount } from 'wagmi';
-import { NEXTBLOCK_ADDRESSES } from '@/config/generated/addressBook';
+import { NEXTBLOCK_ROLES } from '@/config/generated/addressBook';
 
 /**
  * Prominent warning rendered whenever the connected wallet IS the staging
@@ -13,7 +13,7 @@ import { NEXTBLOCK_ADDRESSES } from '@/config/generated/addressBook';
  */
 export function DeployerWalletWarning() {
   const { address, isConnected } = useAccount();
-  const deployer = NEXTBLOCK_ADDRESSES.deployer;
+  const deployer = NEXTBLOCK_ROLES.deployer;
 
   if (!isConnected || !address || !deployer) return null;
   if (address.toLowerCase() !== deployer.toLowerCase()) return null;
