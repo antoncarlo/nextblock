@@ -27,3 +27,9 @@ runs = 256
 
 [profile.ci.fuzz]
 runs = 1000
+seed = "0x4e455854424c4f434b"
+
+[profile.ci.invariant]
+runs = 256
+depth = 100
+fail_on_revert = false
