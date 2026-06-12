@@ -3,6 +3,7 @@ import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { kybApplicationPayloadSchema } from '@/lib/kyb/schema';
 import { verifyOperatorAuth } from '@/lib/kyb/auth';
 import { clientIp, rateLimit } from '@/lib/rate-limit';
+import { logApiError } from '@/lib/api-log';
 
 /**
  * KYB applications collection.
@@ -73,6 +74,7 @@ export async function POST(request: NextRequest) {
         { status: 409 },
       );
     }
+    logApiError('kyb/applications', 'submit_storage_error', { code: error.code });
     return NextResponse.json({ error: 'storage error' }, { status: 502 });
   }
 
@@ -107,6 +109,7 @@ export async function GET(request: NextRequest) {
     .order('created_at', { ascending: false })
     .limit(200);
   if (error) {
+    logApiError('kyb/applications', 'list_storage_error', { code: error.code });
     return NextResponse.json({ error: 'storage error' }, { status: 502 });
   }
 

@@ -8,6 +8,7 @@ import {
 import { verifyOperatorAuth } from '@/lib/kyb/auth';
 import { consumeNonce } from '@/lib/kyb/nonces';
 import { clientIp, rateLimit } from '@/lib/rate-limit';
+import { logApiError } from '@/lib/api-log';
 
 /**
  * Operator review transition. The signed message binds application id AND
@@ -98,6 +99,7 @@ export async function POST(
     .eq('id', id)
     .eq('status', fromStatus); // optimistic guard against concurrent reviews
   if (updateError) {
+    logApiError('kyb/review', 'transition_storage_error', { code: updateError.code });
     return NextResponse.json({ error: 'storage error' }, { status: 502 });
   }
 
@@ -110,6 +112,7 @@ export async function POST(
   });
   if (eventError) {
     // The transition applied but the audit append failed: surface loudly.
+    logApiError('kyb/review', 'audit_append_failed', { code: eventError.code });
     return NextResponse.json(
       { error: 'transition applied but audit event failed; investigate before further reviews' },
       { status: 500 },
