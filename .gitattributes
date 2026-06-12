@@ -1,0 +1,6 @@
+# Force LF for files whose tooling is end-of-line sensitive, so Windows
+# checkouts behave exactly like CI (forge fmt --check, forge snapshot --check,
+# SQL migrations applied byte-for-byte).
+*.sol text eol=lf
+*.sql text eol=lf
+.gas-snapshot text eol=lf
