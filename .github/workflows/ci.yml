@@ -51,6 +51,24 @@ jobs:
       - name: Build
         run: npm run ci:frontend:build
 
+  security:
+    name: security
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Fails on high/critical advisories anywhere in the dependency graph.
+      # Moderate advisories (wallet-stack transitive churn) are tracked in
+      # docs/PRODUCTION_READINESS_AUDIT.md but do not block the build.
+      - name: Dependency audit (high and above)
+        run: npm audit --prefix app --audit-level=high
+
   contracts:
     name: contracts
     runs-on: ubuntu-latest
