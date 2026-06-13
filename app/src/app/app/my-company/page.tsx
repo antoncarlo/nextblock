@@ -4,6 +4,7 @@ import { useAccount } from 'wagmi';
 import { useWalletRole, useActiveRole } from '@/components/shared/WalletRoleIndicator';
 import { getWalletName } from '@/config/knownWallets';
 import { useVaultAddresses, useVaultInfo } from '@/hooks/useVaultData';
+import { ClaimLifecyclePanel } from '@/components/claims/ClaimLifecyclePanel';
 // ─── Vault card per la compagnia ──────────────────────────────────────────────────
 function CompanyVaultCard({ address }: { address: string }) {
   const { data } = useVaultInfo(address as `0x${string}`);
@@ -294,6 +295,11 @@ export default function MyCompanyPage() {
             </Link>
           </div>
         )}
+
+        {/* Claim lifecycle (cedant submit and tracking; role-aware) */}
+        <div style={{ paddingBottom: '32px' }}>
+          <ClaimLifecyclePanel />
+        </div>
 
         {/* Risk disclosures */}
         <div style={{ borderTop: '1px solid #E8E4DC', paddingTop: '32px', paddingBottom: '48px' }}>
