@@ -18,6 +18,16 @@
   "navOracle": "0x53a3e4f21460de7CeC34Ac2318342E5e42Ec1701",
   "oracleNode": "0xfF6f0d49dD2187351264C4d3bbd5537bE8Ad81d2",
   "owner": "0xfF6f0d49dD2187351264C4d3bbd5537bE8Ad81d2",
+  "pendingStageA": {
+    "note": "Governance Phase 2 Stage A intended grants (docs/GOVERNANCE_PREFLIGHT.md). NOT YET EXECUTED on-chain: current role fields above still point to the deployer and stay authoritative until the timelocked grants execute and this record is updated.",
+    "curator": "0xB5F9A30253f6a5CB5247FEdbd0D84D963699B506",
+    "allocatorBot": "0x57A7Eae0592D061EBB88db547fe54eE3de970463",
+    "sentinel": "0xc38297E456680d97E20d0D8e73166E40a3925238",
+    "committee": "0x5b39851625dF1ACCe299c751BC08735ad6DE04f7",
+    "kycOperator": "0x6E4C79C1D4FA40188b70349f7590cC5bB3Bfcab2",
+    "cedant": "0x2B1DaFD7f25B109cBbBaC3F01a674A89Af788f55",
+    "oracleNode": "0xd5D8705d4852b871af70Ee3fAAD9d938fb9cD489"
+  },
   "policyRegistry": "0x2Bf155ac5e09E045803f56A35f6E9f562788f1a2",
   "portfolioRegistry": "0x91Eb412f16bFd44bE2DBBB20C07B967B6E8AaB2E",
   "premiumDistributor": "0xa65F60Bbcf0286fc0a8D9B1560EA3e1B3e0830C9",
