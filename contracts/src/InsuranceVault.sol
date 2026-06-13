@@ -48,6 +48,16 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
     /// @notice depositCap value meaning "no cap configured".
     uint256 public constant UNCAPPED = 0;
 
+    /// @notice Morpho-style queue caps on the number of CONCURRENTLY ACTIVE
+    ///         positions a vault iterates, so UPR accounting and the expiry
+    ///         sweep can never hit the block gas limit as the protocol scales.
+    ///         These are ACTIVE caps, NOT lifetime caps: matured positions are
+    ///         pruned (swap-and-pop) on the next state-changing call, freeing a
+    ///         slot, so a long-lived vault can roll over far more than 64
+    ///         policies/portfolios over its lifetime.
+    uint256 public constant MAX_ACTIVE_POLICIES = 64;
+    uint256 public constant MAX_PREMIUM_PORTFOLIOS = 64;
+
     // --- Structs ---
     struct VaultPolicy {
         uint256 policyId;
@@ -107,6 +117,26 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
     uint256[] private _premiumPortfolioIds;
     mapping(uint256 => bool) private _premiumPortfolioTracked;
 
+    /// @notice Policies CURRENTLY active in the vault (added, not yet expired).
+    ///         MAX_ACTIVE_POLICIES caps the size of THIS set, not the lifetime
+    ///         count: expired policies are pruned (swap-and-pop) on the next
+    ///         state-changing call, freeing capacity for new ones. The expiry
+    ///         sweep iterates this set, so it is strictly bounded regardless of
+    ///         how many policies the vault has handled over its lifetime.
+    ///         `policyIds` remains the append-only historical/public record.
+    uint256[] private _activePolicyIds;
+    mapping(uint256 => bool) private _activePolicyTracked;
+
+    /// @notice Premium-bearing subset of the active policies, still accruing
+    ///         UPR. The UPR calculation iterates THIS set (a subset of
+    ///         _activePolicyIds, hence also bounded), pruned on expiry.
+    uint256[] private _premiumPolicyIds;
+    mapping(uint256 => bool) private _premiumPolicyTracked;
+
+    /// @notice Monotonic accumulator of all premium ever received (policy +
+    ///         portfolio). Incremental O(1) ceiling: UPR can never exceed it.
+    uint256 public totalPremiumReceived;
+
     /// @notice The only contract allowed to reserve, release and pay portfolio
     ///         claims (Phase 7 ClaimManager). Set by OWNER_ROLE.
     address public claimManager;
@@ -152,6 +182,7 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
     error InsuranceVault__NotVaultAllocator(address caller);
     error InsuranceVault__ClaimReserveInsufficientFunds(uint256 requested, uint256 freeFunds);
     error InsuranceVault__ClaimReserveUnderflow(uint256 requested, uint256 reserved);
+    error InsuranceVault__PremiumQueueFull(uint256 maxItems);
 
     // --- Modifiers ---
     /// @dev Reverts unless msg.sender holds `role` in the central ProtocolRoles manager.
@@ -357,6 +388,11 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
     function addPolicy(uint256 policyId, uint256 weightBps) external onlyVaultManager checkExpiredPolicies {
         if (weightBps == 0) revert InsuranceVault__InvalidParams();
         if (policyAdded[policyId]) revert InsuranceVault__PolicyAlreadyAdded(policyId);
+        // ACTIVE cap (the modifier already pruned expired policies above), not a
+        // lifetime cap: capacity frees as policies expire.
+        if (_activePolicyIds.length >= MAX_ACTIVE_POLICIES) {
+            revert InsuranceVault__PremiumQueueFull(MAX_ACTIVE_POLICIES);
+        }
 
         // Verify policy exists and is active
         PolicyRegistry.Policy memory policy = registry.getPolicy(policyId);
@@ -365,7 +401,9 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
         }
 
         policyAdded[policyId] = true;
-        policyIds.push(policyId);
+        policyIds.push(policyId); // append-only historical/public record
+        _activePolicyTracked[policyId] = true;
+        _activePolicyIds.push(policyId); // bounded, reusable active set
         totalAllocationWeight += weightBps;
 
         vaultPolicies[policyId] = VaultPolicy({
@@ -397,6 +435,17 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
         _accrueFeesInternal();
 
         vaultPolicies[policyId].premiumDeposited += amount;
+
+        // Register into the bounded premium-bearing set on first funding so the
+        // UPR loop only ever spans active, funded policies.
+        if (!_premiumPolicyTracked[policyId]) {
+            if (_premiumPolicyIds.length >= MAX_ACTIVE_POLICIES) {
+                revert InsuranceVault__PremiumQueueFull(MAX_ACTIVE_POLICIES);
+            }
+            _premiumPolicyTracked[policyId] = true;
+            _premiumPolicyIds.push(policyId);
+        }
+        totalPremiumReceived += amount;
 
         // Transfer USDC from caller to vault
         IERC20(asset()).safeTransferFrom(msg.sender, address(this), amount);
@@ -499,9 +548,13 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
 
         portfolioPremium[portfolioId] += amount;
         if (!_premiumPortfolioTracked[portfolioId]) {
+            if (_premiumPortfolioIds.length >= MAX_PREMIUM_PORTFOLIOS) {
+                revert InsuranceVault__PremiumQueueFull(MAX_PREMIUM_PORTFOLIOS);
+            }
             _premiumPortfolioTracked[portfolioId] = true;
             _premiumPortfolioIds.push(portfolioId);
         }
+        totalPremiumReceived += amount;
 
         IERC20(asset()).safeTransferFrom(msg.sender, address(this), amount);
 
@@ -762,8 +815,10 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
         uint256 total = 0;
         uint256 now_ = registry.currentTime();
 
-        for (uint256 i = 0; i < policyIds.length; i++) {
-            uint256 pid = policyIds[i];
+        // Bounded by MAX_ACTIVE_POLICIES: only premium-bearing, active policies
+        // are in this set (expired ones are pruned on the next state change).
+        for (uint256 i = 0; i < _premiumPolicyIds.length; i++) {
+            uint256 pid = _premiumPolicyIds[i];
             VaultPolicy memory vp = vaultPolicies[pid];
 
             // Claimed policies: premium accrual stops, unearned = 0
@@ -849,24 +904,67 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
     /// @dev Lazily check and mark expired policies.
     ///      Called via modifier on state-changing functions ONLY (not view functions).
     function _checkExpiredPolicies() internal {
-        for (uint256 i = 0; i < policyIds.length; i++) {
-            uint256 pid = policyIds[i];
-            VaultPolicy memory vp = vaultPolicies[pid];
-
-            // Skip already claimed policies
-            if (vp.claimed) continue;
-
-            // Check if expired
+        // Iterate the bounded ACTIVE set (<= MAX_ACTIVE_POLICIES), not the
+        // append-only history. Expired policies are removed (swap-and-pop) so
+        // each is processed exactly once and its slot is freed for a new one.
+        uint256 i = 0;
+        while (i < _activePolicyIds.length) {
+            uint256 pid = _activePolicyIds[i];
             if (registry.isPolicyExpired(pid)) {
                 // Return deployed capital to buffer (accounting-only)
-                uint256 policyDeployed = vp.coverageAmount;
+                uint256 policyDeployed = vaultPolicies[pid].coverageAmount;
                 if (policyDeployed > totalDeployedCapital) {
                     totalDeployedCapital = 0;
                 } else {
                     totalDeployedCapital -= policyDeployed;
                 }
 
+                _activePolicyTracked[pid] = false;
+                uint256 last = _activePolicyIds.length - 1;
+                _activePolicyIds[i] = _activePolicyIds[last];
+                _activePolicyIds.pop();
+                _removePremiumPolicy(pid); // fully earned: drop from the UPR set
                 emit PolicyExpired(pid);
+                // do not advance i: the swapped-in element must be checked
+            } else {
+                i++;
+            }
+        }
+
+        // Prune portfolios past their coverage window from the premium-bearing
+        // set: their UPR is already zero, so removing them only bounds growth.
+        _prunePremiumPortfolios();
+    }
+
+    /// @dev Swap-and-pop a policy out of the bounded premium-bearing set.
+    function _removePremiumPolicy(uint256 policyId) internal {
+        if (!_premiumPolicyTracked[policyId]) return;
+        _premiumPolicyTracked[policyId] = false;
+        uint256 len = _premiumPolicyIds.length;
+        for (uint256 i = 0; i < len; i++) {
+            if (_premiumPolicyIds[i] == policyId) {
+                _premiumPolicyIds[i] = _premiumPolicyIds[len - 1];
+                _premiumPolicyIds.pop();
+                return;
+            }
+        }
+    }
+
+    /// @dev Drop portfolios whose coverage window has fully elapsed (UPR == 0)
+    ///      from the bounded premium-bearing set. Swap-and-pop, iterate by index.
+    function _prunePremiumPortfolios() internal {
+        uint256 i = 0;
+        while (i < _premiumPortfolioIds.length) {
+            uint256 portfolioId = _premiumPortfolioIds[i];
+            PortfolioRegistry.Portfolio memory pf = portfolioRegistry.getPortfolio(portfolioId);
+            if (uint64(block.timestamp) >= pf.expiryTime) {
+                _premiumPortfolioTracked[portfolioId] = false;
+                uint256 last = _premiumPortfolioIds.length - 1;
+                _premiumPortfolioIds[i] = _premiumPortfolioIds[last];
+                _premiumPortfolioIds.pop();
+                // do not advance i: the swapped-in element must be checked
+            } else {
+                i++;
             }
         }
     }
