@@ -10,6 +10,7 @@ import { KybReviewQueue } from '@/components/admin/KybReviewQueue';
 import { OracleControls } from '@/components/admin/OracleControls';
 import { ClaimTriggers } from '@/components/admin/ClaimTriggers';
 import { ClaimReceipts } from '@/components/admin/ClaimReceipts';
+import { ClaimLifecyclePanel } from '@/components/claims/ClaimLifecyclePanel';
 import { PolicyPool } from '@/components/admin/PolicyPool';
 import { DemoControls } from '@/components/admin/DemoControls';
 
@@ -110,6 +111,7 @@ export default function AdminPage() {
 
         {/* Right column */}
         <div className="space-y-6">
+          <ClaimLifecyclePanel />
           <ClaimTriggers
             vaultAddresses={vaultAddresses ?? []}
             vaultNames={vaultNames}
