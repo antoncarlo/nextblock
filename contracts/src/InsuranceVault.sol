@@ -48,12 +48,13 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
     /// @notice depositCap value meaning "no cap configured".
     uint256 public constant UNCAPPED = 0;
 
-    /// @notice Morpho-style queue caps: the number of CONCURRENTLY ACTIVE
-    ///         premium-bearing positions a vault iterates is strictly bounded,
-    ///         so UPR accounting and the expiry sweep can never hit the block
-    ///         gas limit as the protocol scales. Matured positions are pruned
-    ///         (swap-and-pop) on the next state-changing call, freeing slots.
-    ///         A vault that needs more capacity is created via the factory.
+    /// @notice Morpho-style queue caps on the number of CONCURRENTLY ACTIVE
+    ///         positions a vault iterates, so UPR accounting and the expiry
+    ///         sweep can never hit the block gas limit as the protocol scales.
+    ///         These are ACTIVE caps, NOT lifetime caps: matured positions are
+    ///         pruned (swap-and-pop) on the next state-changing call, freeing a
+    ///         slot, so a long-lived vault can roll over far more than 64
+    ///         policies/portfolios over its lifetime.
     uint256 public constant MAX_ACTIVE_POLICIES = 64;
     uint256 public constant MAX_PREMIUM_PORTFOLIOS = 64;
 
@@ -116,16 +117,21 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
     uint256[] private _premiumPortfolioIds;
     mapping(uint256 => bool) private _premiumPortfolioTracked;
 
-    /// @notice Premium-bearing policies still accruing UPR. Bounded by
-    ///         MAX_ACTIVE_POLICIES and pruned (swap-and-pop) on expiry. The UPR
-    ///         calculation iterates THIS set, not the full policy history, so
-    ///         the loop is strictly bounded regardless of protocol age.
+    /// @notice Policies CURRENTLY active in the vault (added, not yet expired).
+    ///         MAX_ACTIVE_POLICIES caps the size of THIS set, not the lifetime
+    ///         count: expired policies are pruned (swap-and-pop) on the next
+    ///         state-changing call, freeing capacity for new ones. The expiry
+    ///         sweep iterates this set, so it is strictly bounded regardless of
+    ///         how many policies the vault has handled over its lifetime.
+    ///         `policyIds` remains the append-only historical/public record.
+    uint256[] private _activePolicyIds;
+    mapping(uint256 => bool) private _activePolicyTracked;
+
+    /// @notice Premium-bearing subset of the active policies, still accruing
+    ///         UPR. The UPR calculation iterates THIS set (a subset of
+    ///         _activePolicyIds, hence also bounded), pruned on expiry.
     uint256[] private _premiumPolicyIds;
     mapping(uint256 => bool) private _premiumPolicyTracked;
-
-    /// @notice Once-only latch so an expired policy's deployed-capital release
-    ///         and pruning run a single time, not on every state-changing call.
-    mapping(uint256 => bool) private _policyExpiryProcessed;
 
     /// @notice Monotonic accumulator of all premium ever received (policy +
     ///         portfolio). Incremental O(1) ceiling: UPR can never exceed it.
@@ -382,7 +388,11 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
     function addPolicy(uint256 policyId, uint256 weightBps) external onlyVaultManager checkExpiredPolicies {
         if (weightBps == 0) revert InsuranceVault__InvalidParams();
         if (policyAdded[policyId]) revert InsuranceVault__PolicyAlreadyAdded(policyId);
-        if (policyIds.length >= MAX_ACTIVE_POLICIES) revert InsuranceVault__PremiumQueueFull(MAX_ACTIVE_POLICIES);
+        // ACTIVE cap (the modifier already pruned expired policies above), not a
+        // lifetime cap: capacity frees as policies expire.
+        if (_activePolicyIds.length >= MAX_ACTIVE_POLICIES) {
+            revert InsuranceVault__PremiumQueueFull(MAX_ACTIVE_POLICIES);
+        }
 
         // Verify policy exists and is active
         PolicyRegistry.Policy memory policy = registry.getPolicy(policyId);
@@ -391,7 +401,9 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
         }
 
         policyAdded[policyId] = true;
-        policyIds.push(policyId);
+        policyIds.push(policyId); // append-only historical/public record
+        _activePolicyTracked[policyId] = true;
+        _activePolicyIds.push(policyId); // bounded, reusable active set
         totalAllocationWeight += weightBps;
 
         vaultPolicies[policyId] = VaultPolicy({
@@ -892,14 +904,12 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
     /// @dev Lazily check and mark expired policies.
     ///      Called via modifier on state-changing functions ONLY (not view functions).
     function _checkExpiredPolicies() internal {
-        // policyIds is bounded by MAX_ACTIVE_POLICIES (addPolicy caps it), so
-        // this loop is strictly bounded. The once-only latch prevents an
-        // expired policy from being re-processed on every state change.
-        for (uint256 i = 0; i < policyIds.length; i++) {
-            uint256 pid = policyIds[i];
-            if (_policyExpiryProcessed[pid]) continue;
-            if (vaultPolicies[pid].claimed) continue;
-
+        // Iterate the bounded ACTIVE set (<= MAX_ACTIVE_POLICIES), not the
+        // append-only history. Expired policies are removed (swap-and-pop) so
+        // each is processed exactly once and its slot is freed for a new one.
+        uint256 i = 0;
+        while (i < _activePolicyIds.length) {
+            uint256 pid = _activePolicyIds[i];
             if (registry.isPolicyExpired(pid)) {
                 // Return deployed capital to buffer (accounting-only)
                 uint256 policyDeployed = vaultPolicies[pid].coverageAmount;
@@ -909,9 +919,15 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
                     totalDeployedCapital -= policyDeployed;
                 }
 
-                _policyExpiryProcessed[pid] = true;
+                _activePolicyTracked[pid] = false;
+                uint256 last = _activePolicyIds.length - 1;
+                _activePolicyIds[i] = _activePolicyIds[last];
+                _activePolicyIds.pop();
                 _removePremiumPolicy(pid); // fully earned: drop from the UPR set
                 emit PolicyExpired(pid);
+                // do not advance i: the swapped-in element must be checked
+            } else {
+                i++;
             }
         }
 

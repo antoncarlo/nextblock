@@ -117,6 +117,40 @@ contract InsuranceVaultUprBoundsTest is Test {
         vault.addPolicy(overflow, 1_000);
     }
 
+    /// @notice The cap is on CONCURRENTLY ACTIVE policies, not lifetime count:
+    ///         64 active -> let them expire -> the expiry sweep frees the slots
+    ///         -> a 65th (and beyond) policy is added successfully, while the
+    ///         historical policyIds record keeps growing past the cap.
+    function test_activeCap_rolloverBeyond64Lifetime() public {
+        uint256 max = vault.MAX_ACTIVE_POLICIES();
+        for (uint256 i = 0; i < max; i++) {
+            _newActivePolicy();
+        }
+        // At capacity: a further add in the same window reverts (active cap).
+        vm.prank(cedant);
+        uint256 blocked = policyRegistry.registerPolicy(
+            "blocked", PolicyRegistry.VerificationType.OFF_CHAIN, COVERAGE, PREMIUM, NINETY_DAYS, cedant, 0
+        );
+        vm.prank(admin);
+        policyRegistry.activatePolicy(blocked);
+        vm.prank(managerA);
+        vm.expectRevert(abi.encodeWithSelector(InsuranceVault.InsuranceVault__PremiumQueueFull.selector, max));
+        vault.addPolicy(blocked, 1_000);
+
+        // Let the 64 active policies expire; the next add triggers the sweep,
+        // which prunes them and frees all the slots.
+        vm.prank(admin);
+        policyRegistry.advanceTime(NINETY_DAYS + 1);
+
+        // Rolling over: add a full fresh batch beyond the lifetime count.
+        for (uint256 i = 0; i < max; i++) {
+            _newActivePolicy();
+        }
+
+        // Lifetime/historical record exceeded the cap; the active set did not.
+        assertEq(vault.getPolicyIds().length, 2 * max, "historical record keeps all lifetime policies");
+    }
+
     // --- Accumulator ---
 
     function test_totalPremiumReceived_accumulates() public {
