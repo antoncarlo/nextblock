@@ -1,0 +1,7 @@
+-- Remote migration: applied directly to remote, pulled to sync local history.
+-- Version 20260206000817 (no name recorded) predates this repository's KYB
+-- work: it belongs to the original February 2026 hackathon schema of project
+-- krycyeiwsplztagajauh. Intentionally empty: the schema it created already
+-- exists on the remote, and this file only aligns the local migration
+-- history so the Supabase Preview check stops reporting
+-- "Remote migration versions not found in local migrations directory".

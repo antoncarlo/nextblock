@@ -1,0 +1,4 @@
+-- Remote migration: applied directly to remote, pulled to sync local history.
+-- Version 20260208143743 (no name recorded) predates this repository's KYB
+-- work: it belongs to the original February 2026 hackathon schema of project
+-- krycyeiwsplztagajauh. Intentionally empty: see 20260206000817 note.

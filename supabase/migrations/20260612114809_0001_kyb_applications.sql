@@ -1,0 +1,7 @@
+-- Remote migration: applied directly to remote, pulled to sync local history.
+-- Version 20260612114809 is the KYB schema (kyb_applications and
+-- kyb_review_events with deny-by-default RLS) applied to the remote on
+-- 2026-06-12 via the authorized apply step. The full reviewed DDL lives in
+-- this directory as 0001_kyb_applications.sql (kept untouched as the
+-- canonical reviewed source); this placeholder only records the version
+-- under which the remote registered it, so local and remote histories match.
