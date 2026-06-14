@@ -94,7 +94,10 @@ const Carousel = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivEl
         return;
       }
 
-      onSelect(api);
+      // Defer the initial sync out of the synchronous effect body so it does
+      // not trigger a cascading render (react-hooks/set-state-in-effect); the
+      // reInit/select subscriptions keep the scroll state in sync afterwards.
+      queueMicrotask(() => onSelect(api));
       api.on("reInit", onSelect);
       api.on("select", onSelect);
 
