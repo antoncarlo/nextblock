@@ -7,6 +7,7 @@ import { useProtocolAccess } from '@/hooks/useProtocolAccess';
 import { TimeControls } from '@/components/admin/TimeControls';
 import { LensProtocolStatus } from '@/components/admin/LensProtocolStatus';
 import { KybReviewQueue } from '@/components/admin/KybReviewQueue';
+import { RoleHandoffPanel } from '@/components/admin/RoleHandoffPanel';
 import { OracleControls } from '@/components/admin/OracleControls';
 import { ClaimTriggers } from '@/components/admin/ClaimTriggers';
 import { ClaimReceipts } from '@/components/admin/ClaimReceipts';
@@ -104,6 +105,7 @@ export default function AdminPage() {
         <div className="space-y-6">
           <LensProtocolStatus />
           <KybReviewQueue />
+          <RoleHandoffPanel />
           <TimeControls />
           <OracleControls />
           <DemoControls />
