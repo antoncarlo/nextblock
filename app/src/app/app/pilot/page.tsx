@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   useAccount,
@@ -48,38 +48,71 @@ export default function PilotHubPage() {
   const { data: ethBal } = useBalance({ address, query: { enabled: isConnected } });
   const { data: usdcBal, refetch: refetchUsdc } = useUSDCBalance(address);
 
-  // KYB status (public, no PII) for the connected wallet. Fetched async only;
-  // when disconnected we derive 'loading' below without a synchronous setState.
+  // --- KYB status (public, no PII): manual refresh, in-flight dedupe, last-checked,
+  // and transport-error distinction (offline vs temporary error vs non-OK HTTP).
+  // All setState happens after an await or in an event handler, never synchronously
+  // in an effect body (avoids the set-state-in-effect cascading-render rule).
   const [kybFetched, setKybFetched] = useState<KybState>('loading');
+  const [kybCheckedAt, setKybCheckedAt] = useState<number | null>(null);
+  const kybInFlight = useRef(false);
+
+  const runKybFetch = useCallback(async () => {
+    if (!isConnected || !address) return;
+    if (kybInFlight.current) return; // dedupe concurrent calls
+    kybInFlight.current = true;
+    try {
+      const res = await fetch(`/api/kyb/applications/status?wallet=${address}`);
+      if (res.status === 503) {
+        setKybFetched('unavailable'); // backend not configured / offline
+      } else if (!res.ok) {
+        setKybFetched('error'); // non-OK HTTP response (retryable)
+      } else {
+        const data = await res.json().catch(() => null);
+        if (!data || !data.available) {
+          setKybFetched('unavailable');
+        } else {
+          const apps = data.applications ?? [];
+          setKybFetched(apps.length === 0 ? 'none' : ((apps[0].status as KybState) ?? 'none'));
+        }
+      }
+    } catch {
+      setKybFetched('error'); // network / temporary error
+    } finally {
+      setKybCheckedAt(Date.now());
+      kybInFlight.current = false;
+    }
+  }, [isConnected, address]);
+
+  // Manual refresh (event handler): showing 'loading' here is safe (not in an effect).
+  const onRefreshKyb = useCallback(() => {
+    if (kybInFlight.current) return;
+    setKybFetched('loading');
+    void runKybFetch();
+  }, [runKybFetch]);
+
   useEffect(() => {
     if (!isConnected || !address) return;
+    void runKybFetch();
+  }, [isConnected, address, runKybFetch]);
+
+  const kyb: KybState = isConnected ? kybFetched : 'loading';
+
+  // --- Service health (non-blocking; degrades safely; never blocks render). ---
+  const [health, setHealth] = useState<'unknown' | 'ok' | 'down'>('unknown');
+  useEffect(() => {
     let cancelled = false;
     (async () => {
-      setKybFetched('loading');
       try {
-        const res = await fetch(`/api/kyb/applications/status?wallet=${address}`);
-        if (res.status === 503) {
-          if (!cancelled) setKybFetched('unavailable');
-          return;
-        }
-        const data = await res.json().catch(() => ({}));
-        if (cancelled) return;
-        if (!data.available) {
-          setKybFetched('unavailable');
-          return;
-        }
-        const apps = data.applications ?? [];
-        setKybFetched(apps.length === 0 ? 'none' : ((apps[0].status as KybState) ?? 'none'));
+        const res = await fetch('/api/health');
+        if (!cancelled) setHealth(res.ok ? 'ok' : 'down');
       } catch {
-        if (!cancelled) setKybFetched('unavailable');
+        if (!cancelled) setHealth('down');
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [isConnected, address]);
-
-  const kyb: KybState = isConnected ? kybFetched : 'loading';
+  }, []);
 
   const roles: RoleFlags = isConnected
     ? {
@@ -121,12 +154,39 @@ export default function PilotHubPage() {
         send mainnet assets to any address shown here.
       </div>
 
+      {/* Service health banner (degrades safely; never blocks render) */}
+      {health === 'down' && (
+        <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-700">
+          Service status unavailable — the app is up, but a health check did not succeed. Some
+          features (e.g. KYB) may be temporarily degraded.
+        </div>
+      )}
+
       {/* Next action */}
       <NextActionCard action={action} mockUSDC={mockUSDC} chainId={chainId} onFaucet={refetchUsdc} />
 
       {/* Checklist */}
       <section className="mt-6 rounded-xl border border-gray-200 bg-white p-6">
-        <h2 className="mb-3 text-sm font-semibold text-gray-900">Readiness checklist</h2>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-gray-900">Readiness checklist</h2>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-400">
+              {!isConnected
+                ? 'KYB: connect wallet to check'
+                : kybCheckedAt
+                ? `KYB last checked: ${new Date(kybCheckedAt).toLocaleTimeString()}`
+                : 'KYB: never checked'}
+            </span>
+            <button
+              type="button"
+              onClick={onRefreshKyb}
+              disabled={!isConnected || kyb === 'loading'}
+              className="rounded-lg border border-gray-300 px-2.5 py-1 text-xs font-semibold text-gray-800 transition-colors hover:bg-gray-50 disabled:opacity-50"
+            >
+              {kyb === 'loading' ? 'Refreshing…' : 'Refresh KYB status'}
+            </button>
+          </div>
+        </div>
         <ul className="space-y-2">
           {checklist.map(item => (
             <li key={item.key} className="flex items-start gap-3">
@@ -206,9 +266,40 @@ export default function PilotHubPage() {
           pilot.
         </p>
       </section>
+
+      {/* Need help? — pilot guides (Markdown is not served by the app; these open on GitHub) */}
+      <section className="mt-6 rounded-xl border border-gray-200 bg-white p-6">
+        <h2 className="mb-1 text-sm font-semibold text-gray-900">Need help?</h2>
+        <p className="mb-3 text-xs text-gray-500">
+          Step-by-step pilot guides (open on GitHub). Base Sepolia testnet only.
+        </p>
+        <ul className="grid grid-cols-1 gap-1 text-xs sm:grid-cols-2">
+          {DOC_LINKS.map(d => (
+            <li key={d.url}>
+              <a href={d.url} target="_blank" rel="noopener noreferrer" className="text-blue-700 hover:text-blue-900">
+                {d.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
     </div>
   );
 }
+
+/**
+ * Pilot guides live in the repo under docs/pilot/. The app does not serve static
+ * Markdown, so these open the rendered files on GitHub (main). They resolve once
+ * the docs land on main via the pilot PR chain.
+ */
+const DOC_GH_BASE = 'https://github.com/antoncarlo/nextblock/blob/main/docs/pilot';
+const DOC_LINKS: readonly { label: string; url: string }[] = [
+  { label: 'Cedant guide', url: `${DOC_GH_BASE}/cedant-guide.md` },
+  { label: 'Investor guide', url: `${DOC_GH_BASE}/investor-guide.md` },
+  { label: 'Operator runbook', url: `${DOC_GH_BASE}/operator-runbook.md` },
+  { label: 'Manual test checklist', url: `${DOC_GH_BASE}/manual-test-checklist.md` },
+  { label: 'Testnet disclaimer', url: `${DOC_GH_BASE}/testnet-disclaimer.md` },
+];
 
 const SEVERITY_STYLE: Record<NextActionSeverity, { bg: string; border: string; color: string }> = {
   blocked: { bg: '#FEF2F2', border: '#FECACA', color: '#B91C1C' },

@@ -27,10 +27,17 @@ export const ETH_FAUCET_LINKS: readonly { label: string; url: string }[] = [
   { label: 'Alchemy Base Sepolia faucet', url: 'https://www.alchemy.com/faucets/base-sepolia' },
 ];
 
-/** KYB lifecycle state as seen by the hub (incl. transport states). */
+/**
+ * KYB lifecycle state as seen by the hub, including transport states.
+ * Transport states (not real KYB outcomes):
+ * - 'loading'      reads in flight
+ * - 'unavailable'  KYB backend not configured / offline (e.g. HTTP 503)
+ * - 'error'        temporary/network error or non-OK HTTP response (retryable)
+ */
 export type KybState =
   | 'loading'
   | 'unavailable'
+  | 'error'
   | 'none'
   | 'submitted'
   | 'under_review'
@@ -41,6 +48,7 @@ export type KybState =
 export const KYB_STATE_LABEL: Record<KybState, string> = {
   loading: 'Checking…',
   unavailable: 'Backend offline',
+  error: 'Temporary error',
   none: 'Not submitted',
   submitted: 'Submitted',
   under_review: 'Under review',
@@ -178,6 +186,9 @@ export function nextAction(input: PilotInput): NextAction {
   if (input.kyb === 'unavailable') {
     return { severity: 'info', message: 'KYB backend is offline. Ask the protocol operator to enable it before applying.' };
   }
+  if (input.kyb === 'error') {
+    return { severity: 'info', message: 'Could not check KYB status (temporary error). Use Refresh to retry.' };
+  }
   if (input.kyb === 'none') {
     return { severity: 'action', message: 'Submit your KYB application to start onboarding.', ctaLabel: 'Apply (KYB)', ctaRoute: '/app/apply' };
   }
@@ -280,7 +291,7 @@ export function computeChecklist(input: PilotInput): ChecklistItem[] {
       ? 'ok'
       : input.kyb === 'rejected'
       ? 'todo'
-      : input.kyb === 'unavailable'
+      : input.kyb === 'unavailable' || input.kyb === 'error'
       ? 'na'
       : input.kyb === 'none'
       ? 'todo'
