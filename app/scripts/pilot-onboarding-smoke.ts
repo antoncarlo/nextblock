@@ -88,6 +88,7 @@ check('kyb none -> action apply', (() => { const a = nextAction({ ...base, kyb: 
 check('kyb under_review -> info', nextAction({ ...base, kyb: 'under_review' }).severity === 'info');
 check('kyb rejected -> blocked', nextAction({ ...base, kyb: 'rejected' }).severity === 'blocked');
 check('kyb unavailable -> info', nextAction({ ...base, kyb: 'unavailable' }).severity === 'info');
+check('kyb error -> info retry', (() => { const a = nextAction({ ...base, kyb: 'error' }); return a.severity === 'info' && a.message.toLowerCase().includes('retry'); })());
 check('approved + roles not resolved -> info', nextAction({ ...base, roles: NO_ROLES, rolesResolved: false }).severity === 'info');
 check('approved + no role -> action grant', (() => { const a = nextAction({ ...base, roles: NO_ROLES, rolesResolved: true }); return a.severity === 'action' && a.message.includes('grant'); })());
 check('cedant role + no usdc -> action mint', (() => { const a = nextAction({ ...base, usdc6: 0n }); return a.severity === 'action' && a.ctaLabel === 'Mint test USDC'; })());
@@ -102,6 +103,24 @@ check('checklist role ok for cedant', cl.find(i => i.key === 'role')?.state === 
 check('checklist disconnected -> chain na', computeChecklist({ ...base, walletConnected: false }).find(i => i.key === 'chain')?.state === 'na');
 check('checklist eth loading state', computeChecklist({ ...base, ethWei: undefined }).find(i => i.key === 'eth')?.state === 'loading');
 check('checklist kyb pending for submitted', computeChecklist({ ...base, kyb: 'submitted' }).find(i => i.key === 'kyb')?.state === 'pending');
+check('checklist kyb na for unavailable', computeChecklist({ ...base, kyb: 'unavailable' }).find(i => i.key === 'kyb')?.state === 'na');
+check('checklist kyb na for error', computeChecklist({ ...base, kyb: 'error' }).find(i => i.key === 'kyb')?.state === 'na');
+check('error label', kybStatusLabel('error') === 'Temporary error');
+
+// --- safe fallback with partial/missing data (undefined balances + unresolved roles) ---
+const partial: PilotInput = {
+  walletConnected: true,
+  chainId: PILOT_CHAIN_ID,
+  ethWei: undefined,
+  usdc6: undefined,
+  kyb: 'loading',
+  roles: NO_ROLES,
+  rolesResolved: false,
+};
+check('partial data -> no throw, defined action', typeof nextAction(partial).message === 'string');
+check('partial data -> eth loading checklist', computeChecklist(partial).find(i => i.key === 'eth')?.state === 'loading');
+check('partial data -> role loading checklist', computeChecklist(partial).find(i => i.key === 'role')?.state === 'loading');
+check('partial data -> tracks viewer only', deriveActiveTracks(partial.roles).length === 1);
 
 if (failures > 0) {
   console.error(`\n${failures} check(s) failed`);
