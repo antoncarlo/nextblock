@@ -11,6 +11,7 @@ import { useProtocolAccess } from '@/hooks/useProtocolAccess';
 import { useVaultAddresses } from '@/hooks/useVaultData';
 import { useLensVaultDashboards, LensDataStatus } from '@/hooks/useNextBlockLens';
 import { DataSourceBadge } from '@/components/shared/DataSourceBadge';
+import { PortfolioPanel } from '@/components/portfolio/PortfolioPanel';
 import { formatUSDC } from '@/lib/formatting';
 
 // Strategy templates available to syndicates
@@ -693,6 +694,11 @@ export default function CuratorDashboardPage() {
             </div>
           </div>
         )}
+
+        {/* Portfolio onboarding review queue (Underwriting Curator) */}
+        <div style={{ maxWidth: '1200px', margin: '24px auto 0', padding: '0 40px 48px' }}>
+          <PortfolioPanel mode="curator" />
+        </div>
 
       </div>
     </div>
