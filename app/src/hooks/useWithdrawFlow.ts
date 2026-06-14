@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useReducer } from 'react';
 import { useChainId, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { INSURANCE_VAULT_ABI } from '@/config/contracts';
 
@@ -12,8 +12,44 @@ const WRONG_CHAIN_MESSAGE =
 /**
  * Withdraw flow state machine:
  * IDLE -> WITHDRAWING -> SUCCESS | ERROR
+ *
+ * Modelled with useReducer so the transaction-receipt effects dispatch actions
+ * instead of calling a useState setter synchronously inside the effect (which
+ * the React Compiler set-state-in-effect rule flags as a cascading render).
+ * Behaviour and the public API are unchanged.
  */
 export type WithdrawState = 'IDLE' | 'WITHDRAWING' | 'SUCCESS' | 'ERROR';
+
+interface FlowState {
+  status: WithdrawState;
+  error: string | null;
+}
+
+type FlowAction =
+  | { type: 'START' }
+  | { type: 'WRONG_CHAIN' }
+  | { type: 'CONFIRMED' }
+  | { type: 'FAILED'; message: string }
+  | { type: 'RESET' };
+
+const INITIAL_FLOW: FlowState = { status: 'IDLE', error: null };
+
+function withdrawReducer(state: FlowState, action: FlowAction): FlowState {
+  switch (action.type) {
+    case 'START':
+      return { status: 'WITHDRAWING', error: null };
+    case 'WRONG_CHAIN':
+      return { status: 'ERROR', error: WRONG_CHAIN_MESSAGE };
+    case 'CONFIRMED':
+      return state.status === 'WITHDRAWING' ? { status: 'SUCCESS', error: null } : state;
+    case 'FAILED':
+      return state.status === 'WITHDRAWING' ? { status: 'ERROR', error: action.message } : state;
+    case 'RESET':
+      return INITIAL_FLOW;
+    default:
+      return state;
+  }
+}
 
 interface UseWithdrawFlowOptions {
   vaultAddress: `0x${string}`;
@@ -32,8 +68,7 @@ export function useWithdrawFlow({
 }: UseWithdrawFlowOptions) {
   const chainId = useChainId();
   const isWrongChain = chainId !== REQUIRED_CHAIN_ID;
-  const [state, setState] = useState<WithdrawState>('IDLE');
-  const [error, setError] = useState<string | null>(null);
+  const [flow, dispatch] = useReducer(withdrawReducer, INITIAL_FLOW);
 
   const {
     writeContract,
@@ -47,30 +82,27 @@ export function useWithdrawFlow({
   });
 
   useEffect(() => {
-    if (txConfirmed && state === 'WITHDRAWING') {
-      setState('SUCCESS');
+    if (txConfirmed && flow.status === 'WITHDRAWING') {
+      dispatch({ type: 'CONFIRMED' });
       onSuccess?.();
     }
-  }, [txConfirmed, state, onSuccess]);
+  }, [txConfirmed, flow.status, onSuccess]);
 
   useEffect(() => {
-    if (writeError && state === 'WITHDRAWING') {
-      setState('ERROR');
-      setError(writeError.message.split('\n')[0]);
+    if (writeError && flow.status === 'WITHDRAWING') {
+      dispatch({ type: 'FAILED', message: writeError.message.split('\n')[0] });
     }
-  }, [writeError, state]);
+  }, [writeError, flow.status]);
 
   const startWithdraw = useCallback(() => {
     if (amount <= 0n) return;
     // Guard before any wallet interaction: transactions signed on the wrong
     // network would target addresses that do not exist there.
     if (chainId !== REQUIRED_CHAIN_ID) {
-      setState('ERROR');
-      setError(WRONG_CHAIN_MESSAGE);
+      dispatch({ type: 'WRONG_CHAIN' });
       return;
     }
-    setError(null);
-    setState('WITHDRAWING');
+    dispatch({ type: 'START' });
 
     writeContract({
       address: vaultAddress,
@@ -81,13 +113,12 @@ export function useWithdrawFlow({
   }, [amount, chainId, vaultAddress, receiver, owner, writeContract]);
 
   const reset = useCallback(() => {
-    setState('IDLE');
-    setError(null);
+    dispatch({ type: 'RESET' });
   }, []);
 
   return {
-    state,
-    error,
+    state: flow.status,
+    error: flow.error,
     startWithdraw,
     reset,
     isWrongChain,

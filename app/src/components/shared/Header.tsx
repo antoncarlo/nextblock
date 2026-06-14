@@ -45,6 +45,7 @@ export function Header() {
   const isMyCompanyActive = pathname?.startsWith('/app/my-company') ?? false;
   const isApplyActive = pathname?.startsWith('/app/apply') ?? false;
   const isAdminActive = pathname?.startsWith('/app/admin') ?? false;
+  const isPilotActive = pathname?.startsWith('/app/pilot') ?? false;
 
   return (
     <header
@@ -88,6 +89,15 @@ export function Header() {
             className="hover:bg-black/5"
           >
             Vaults
+          </Link>
+
+          {/* Pilot onboarding hub — sempre visibile (self-service testnet) */}
+          <Link
+            href="/app/pilot"
+            style={navLinkStyle(isPilotActive)}
+            className="hover:bg-black/5"
+          >
+            Pilot
           </Link>
 
           {/* Syndicates — solo per Syndicate Manager e Admin */}
