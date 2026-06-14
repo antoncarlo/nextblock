@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useReducer } from 'react';
 import { useChainId, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { MOCK_USDC_ABI, INSURANCE_VAULT_ABI } from '@/config/contracts';
 import { useAddresses } from './useAddresses';
@@ -12,7 +12,15 @@ const WRONG_CHAIN_MESSAGE =
 
 /**
  * Deposit flow state machine:
- * IDLE -> APPROVING -> APPROVED -> DEPOSITING -> SUCCESS | ERROR
+ * IDLE -> APPROVING -> DEPOSITING -> SUCCESS | ERROR
+ *
+ * Modelled with useReducer so the transaction-receipt effects dispatch actions
+ * instead of calling a useState setter synchronously inside the effect (which
+ * the React Compiler set-state-in-effect rule flags as a cascading render).
+ * The chained deposit write stays in the approve-confirmation effect; behaviour
+ * and the public API are unchanged. ('APPROVED' is kept in the type for
+ * compatibility; the approve->deposit transition was never observable in a
+ * render because both updates were batched.)
  */
 export type DepositState =
   | 'IDLE'
@@ -21,6 +29,42 @@ export type DepositState =
   | 'DEPOSITING'
   | 'SUCCESS'
   | 'ERROR';
+
+interface FlowState {
+  status: DepositState;
+  error: string | null;
+}
+
+type FlowAction =
+  | { type: 'START' }
+  | { type: 'WRONG_CHAIN' }
+  | { type: 'APPROVE_CONFIRMED' }
+  | { type: 'DEPOSIT_CONFIRMED' }
+  | { type: 'FAILED'; message: string }
+  | { type: 'RESET' };
+
+const INITIAL_FLOW: FlowState = { status: 'IDLE', error: null };
+
+function depositReducer(state: FlowState, action: FlowAction): FlowState {
+  switch (action.type) {
+    case 'START':
+      return { status: 'APPROVING', error: null };
+    case 'WRONG_CHAIN':
+      return { status: 'ERROR', error: WRONG_CHAIN_MESSAGE };
+    case 'APPROVE_CONFIRMED':
+      return state.status === 'APPROVING' ? { status: 'DEPOSITING', error: null } : state;
+    case 'DEPOSIT_CONFIRMED':
+      return state.status === 'DEPOSITING' ? { status: 'SUCCESS', error: null } : state;
+    case 'FAILED':
+      return state.status === 'APPROVING' || state.status === 'DEPOSITING'
+        ? { status: 'ERROR', error: action.message }
+        : state;
+    case 'RESET':
+      return INITIAL_FLOW;
+    default:
+      return state;
+  }
+}
 
 interface UseDepositFlowOptions {
   vaultAddress: `0x${string}`;
@@ -38,8 +82,7 @@ export function useDepositFlow({
   const addresses = useAddresses();
   const chainId = useChainId();
   const isWrongChain = chainId !== REQUIRED_CHAIN_ID;
-  const [state, setState] = useState<DepositState>('IDLE');
-  const [error, setError] = useState<string | null>(null);
+  const [flow, dispatch] = useReducer(depositReducer, INITIAL_FLOW);
 
   // Approve step
   const {
@@ -67,8 +110,7 @@ export function useDepositFlow({
 
   // Handle approve confirmation -> auto-proceed to deposit
   useEffect(() => {
-    if (approveConfirmed && state === 'APPROVING') {
-      setState('APPROVED');
+    if (approveConfirmed && flow.status === 'APPROVING') {
       // Auto-proceed to deposit
       writeDeposit({
         address: vaultAddress,
@@ -76,44 +118,40 @@ export function useDepositFlow({
         functionName: 'deposit',
         args: [amount, receiver],
       });
-      setState('DEPOSITING');
+      dispatch({ type: 'APPROVE_CONFIRMED' });
     }
-  }, [approveConfirmed, state, writeDeposit, vaultAddress, amount, receiver]);
+  }, [approveConfirmed, flow.status, writeDeposit, vaultAddress, amount, receiver]);
 
   // Handle deposit confirmation
   useEffect(() => {
-    if (depositConfirmed && state === 'DEPOSITING') {
-      setState('SUCCESS');
+    if (depositConfirmed && flow.status === 'DEPOSITING') {
+      dispatch({ type: 'DEPOSIT_CONFIRMED' });
       onSuccess?.();
     }
-  }, [depositConfirmed, state, onSuccess]);
+  }, [depositConfirmed, flow.status, onSuccess]);
 
   // Handle errors
   useEffect(() => {
-    if (approveError && state === 'APPROVING') {
-      setState('ERROR');
-      setError(approveError.message.split('\n')[0]);
+    if (approveError && flow.status === 'APPROVING') {
+      dispatch({ type: 'FAILED', message: approveError.message.split('\n')[0] });
     }
-  }, [approveError, state]);
+  }, [approveError, flow.status]);
 
   useEffect(() => {
-    if (depositError && state === 'DEPOSITING') {
-      setState('ERROR');
-      setError(depositError.message.split('\n')[0]);
+    if (depositError && flow.status === 'DEPOSITING') {
+      dispatch({ type: 'FAILED', message: depositError.message.split('\n')[0] });
     }
-  }, [depositError, state]);
+  }, [depositError, flow.status]);
 
   const startDeposit = useCallback(() => {
     if (amount <= 0n) return;
     // Guard before any wallet interaction: transactions signed on the wrong
     // network would target addresses that do not exist there.
     if (chainId !== REQUIRED_CHAIN_ID) {
-      setState('ERROR');
-      setError(WRONG_CHAIN_MESSAGE);
+      dispatch({ type: 'WRONG_CHAIN' });
       return;
     }
-    setError(null);
-    setState('APPROVING');
+    dispatch({ type: 'START' });
 
     writeApprove({
       address: addresses.mockUSDC,
@@ -124,13 +162,12 @@ export function useDepositFlow({
   }, [amount, chainId, vaultAddress, writeApprove, addresses.mockUSDC]);
 
   const reset = useCallback(() => {
-    setState('IDLE');
-    setError(null);
+    dispatch({ type: 'RESET' });
   }, []);
 
   return {
-    state,
-    error,
+    state: flow.status,
+    error: flow.error,
     startDeposit,
     reset,
     isWrongChain,
