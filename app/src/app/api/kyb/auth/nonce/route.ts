@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { issueNonce } from '@/lib/kyb/nonces';
-import { clientIp, rateLimit } from '@/lib/rate-limit';
+import { createSupabaseNonceStore, issueNonce } from '@/lib/kyb/nonces';
+import { clientIp, createSupabaseRateLimitStore, rateLimit } from '@/lib/rate-limit';
+import { getSupabaseServerClient } from '@/lib/supabase-server';
+import { logApiError } from '@/lib/api-log';
 
 /**
  * Issues a single-use nonce for KYB operator actions.
@@ -16,12 +18,21 @@ const nonceRequestSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const limited = rateLimit('kyb-nonce', clientIp(request), 30, 10 * 60 * 1000);
-  if (!limited.allowed) {
-    return NextResponse.json(
-      { error: 'too many requests' },
-      { status: 429, headers: { 'Retry-After': String(limited.retryAfterSeconds) } },
-    );
+  const supabase = getSupabaseServerClient();
+  const rateLimitStore = supabase ? createSupabaseRateLimitStore(supabase) : undefined;
+  const nonceStore = supabase ? createSupabaseNonceStore(supabase) : undefined;
+
+  try {
+    const limited = await rateLimit('kyb-nonce', clientIp(request), 30, 10 * 60 * 1000, rateLimitStore);
+    if (!limited.allowed) {
+      return NextResponse.json(
+        { error: 'too many requests' },
+        { status: 429, headers: { 'Retry-After': String(limited.retryAfterSeconds) } },
+      );
+    }
+  } catch (error) {
+    logApiError('kyb/nonce', 'rate_limit_storage_error', { code: error instanceof Error ? error.name : 'unknown' });
+    return NextResponse.json({ error: 'storage error' }, { status: 502 });
   }
 
   let body: unknown;
@@ -36,6 +47,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'validation failed' }, { status: 400 });
   }
 
-  const { nonce, expiresInSeconds } = issueNonce(parsed.data.address);
-  return NextResponse.json({ nonce, expiresInSeconds });
+  try {
+    const { nonce, expiresInSeconds } = await issueNonce(parsed.data.address, nonceStore);
+    return NextResponse.json({ nonce, expiresInSeconds });
+  } catch (error) {
+    logApiError('kyb/nonce', 'nonce_storage_error', { code: error instanceof Error ? error.name : 'unknown' });
+    return NextResponse.json({ error: 'storage error' }, { status: 502 });
+  }
 }

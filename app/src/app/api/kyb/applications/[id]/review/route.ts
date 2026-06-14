@@ -6,8 +6,8 @@ import {
   type KybStatus,
 } from '@/lib/kyb/schema';
 import { verifyOperatorAuth } from '@/lib/kyb/auth';
-import { consumeNonce } from '@/lib/kyb/nonces';
-import { clientIp, rateLimit } from '@/lib/rate-limit';
+import { consumeNonce, createSupabaseNonceStore } from '@/lib/kyb/nonces';
+import { clientIp, createSupabaseRateLimitStore, rateLimit } from '@/lib/rate-limit';
 import { logApiError } from '@/lib/api-log';
 
 /**
@@ -23,19 +23,30 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  // 30 review actions per IP per 10 minutes: roomier than the public submit
-  // limit because one operator legitimately processes a whole queue.
-  const limited = rateLimit('kyb-review', clientIp(request), 30, 10 * 60 * 1000);
-  if (!limited.allowed) {
-    return NextResponse.json(
-      { error: 'too many requests' },
-      { status: 429, headers: { 'Retry-After': String(limited.retryAfterSeconds) } },
-    );
-  }
-
   const supabase = getSupabaseServerClient();
   if (!supabase) {
     return NextResponse.json({ error: 'unavailable' }, { status: 503 });
+  }
+
+  // 30 review actions per IP per 10 minutes: roomier than the public submit
+  // limit because one operator legitimately processes a whole queue.
+  try {
+    const limited = await rateLimit(
+      'kyb-review',
+      clientIp(request),
+      30,
+      10 * 60 * 1000,
+      createSupabaseRateLimitStore(supabase),
+    );
+    if (!limited.allowed) {
+      return NextResponse.json(
+        { error: 'too many requests' },
+        { status: 429, headers: { 'Retry-After': String(limited.retryAfterSeconds) } },
+      );
+    }
+  } catch (error) {
+    logApiError('kyb/review', 'rate_limit_storage_error', { code: error instanceof Error ? error.name : 'unknown' });
+    return NextResponse.json({ error: 'storage error' }, { status: 502 });
   }
 
   const { id } = await params;
@@ -69,11 +80,17 @@ export async function POST(
   // Single use: consuming the nonce here makes the verified signature
   // unreplayable. Concurrent duplicates race this consume and exactly one
   // wins; expired/unknown nonces fail closed with a fresh-nonce retry path.
-  if (!consumeNonce(verified.address, auth.nonce)) {
-    return NextResponse.json(
-      { error: 'nonce invalid, expired or already used; request a new one' },
-      { status: 401 },
-    );
+  try {
+    const nonceAccepted = await consumeNonce(verified.address, auth.nonce, createSupabaseNonceStore(supabase));
+    if (!nonceAccepted) {
+      return NextResponse.json(
+        { error: 'nonce invalid, expired or already used; request a new one' },
+        { status: 401 },
+      );
+    }
+  } catch (error) {
+    logApiError('kyb/review', 'nonce_storage_error', { code: error instanceof Error ? error.name : 'unknown' });
+    return NextResponse.json({ error: 'storage error' }, { status: 502 });
   }
 
   const { data: application, error: fetchError } = await supabase
