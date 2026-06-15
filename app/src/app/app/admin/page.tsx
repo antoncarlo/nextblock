@@ -8,6 +8,7 @@ import { TimeControls } from '@/components/admin/TimeControls';
 import { LensProtocolStatus } from '@/components/admin/LensProtocolStatus';
 import { KybReviewQueue } from '@/components/admin/KybReviewQueue';
 import { RoleHandoffPanel } from '@/components/admin/RoleHandoffPanel';
+import { WhitelistPanel } from '@/components/admin/WhitelistPanel';
 import { OracleControls } from '@/components/admin/OracleControls';
 import { ClaimTriggers } from '@/components/admin/ClaimTriggers';
 import { ClaimReceipts } from '@/components/admin/ClaimReceipts';
@@ -106,6 +107,7 @@ export default function AdminPage() {
           <LensProtocolStatus />
           <KybReviewQueue />
           <RoleHandoffPanel />
+          <WhitelistPanel />
           <TimeControls />
           <OracleControls />
           <DemoControls />
