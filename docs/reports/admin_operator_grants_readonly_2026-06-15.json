@@ -1,0 +1,126 @@
+{
+  "checkedAt": "2026-06-15T11:27:27.965Z",
+  "rpcUrl": "https://sepolia.base.org",
+  "chainId": 84532,
+  "blockNumber": "42877276",
+  "contracts": {
+    "protocolRoles": "0xEE93166a2cf213243eF330a664682290b195c976"
+  },
+  "roleHashes": {
+    "OWNER_ROLE": "0xb19546dff01e856fb3f010c267a7b1c60363cf8a4664e21cc89c26224620214e",
+    "KYC_OPERATOR_ROLE": "0xdf54a8fce50b9de7187b8b9daaa3b95e6ef1bf1df5fe0a03ddea8faa73de2a10",
+    "SENTINEL_ROLE": "0x0e58f09080507613e45c927895fdc351ce79a3743ce0a3e127396951be78d0a9",
+    "UNDERWRITING_CURATOR_ROLE": "0xf4a721a10c6fe5f01e074333800161457a6667839d48f8575d798c05ad6e74f3",
+    "ALLOCATOR_ROLE": "0x68bf109b95a5c15fb2bb99041323c27d15f8675e11bf7420a1cd6ad64c394f46",
+    "CLAIMS_COMMITTEE_ROLE": "0x983b448801a2d04d897dd6baa2900de596214fe2ead88f3a76851191d645135b",
+    "PREMIUM_DEPOSITOR_ROLE": "0xeb2530a687c2b7cabf5e729aaefaeec1620f47e56af2a4e3d6f0bdc2906c0888",
+    "AUTHORIZED_CEDANT_ROLE": "0xdded2152fd4de9b4e504520e18716b01155da2db03dde62a88648c2263475df0",
+    "ORACLE_ROLE": "0x68e79a7bf1e0bc45d0a330c573bc367f9cf464fd326078812f301165fbda4ef1"
+  },
+  "wallets": [
+    {
+      "label": "deployerOwner",
+      "address": "0xfF6f0d49dD2187351264C4d3bbd5537bE8Ad81d2",
+      "balanceEth": "0.194755873179288659",
+      "roles": {
+        "OWNER_ROLE": true,
+        "KYC_OPERATOR_ROLE": true,
+        "SENTINEL_ROLE": true,
+        "UNDERWRITING_CURATOR_ROLE": true,
+        "ALLOCATOR_ROLE": true,
+        "CLAIMS_COMMITTEE_ROLE": true,
+        "PREMIUM_DEPOSITOR_ROLE": false,
+        "AUTHORIZED_CEDANT_ROLE": true,
+        "ORACLE_ROLE": true
+      }
+    },
+    {
+      "label": "pendingAdminOperator",
+      "address": "0x6495280c365b372230A275C8Fec6724e3FC228dB",
+      "balanceEth": "0",
+      "roles": {
+        "OWNER_ROLE": false,
+        "KYC_OPERATOR_ROLE": false,
+        "SENTINEL_ROLE": false,
+        "UNDERWRITING_CURATOR_ROLE": false,
+        "ALLOCATOR_ROLE": false,
+        "CLAIMS_COMMITTEE_ROLE": false,
+        "PREMIUM_DEPOSITOR_ROLE": false,
+        "AUTHORIZED_CEDANT_ROLE": false,
+        "ORACLE_ROLE": false
+      }
+    },
+    {
+      "label": "newAdminOperator",
+      "address": "0x810fa6726eeB6014c2F77Bb4802A5734C28b0F3e",
+      "balanceEth": "0.113352230325590139",
+      "roles": {
+        "OWNER_ROLE": false,
+        "KYC_OPERATOR_ROLE": false,
+        "SENTINEL_ROLE": false,
+        "UNDERWRITING_CURATOR_ROLE": false,
+        "ALLOCATOR_ROLE": false,
+        "CLAIMS_COMMITTEE_ROLE": false,
+        "PREMIUM_DEPOSITOR_ROLE": false,
+        "AUTHORIZED_CEDANT_ROLE": false,
+        "ORACLE_ROLE": false
+      }
+    }
+  ],
+  "deployerCanGrant": {
+    "address": "0xfF6f0d49dD2187351264C4d3bbd5537bE8Ad81d2",
+    "hasOwnerRole": true,
+    "balanceEth": "0.194755873179288659"
+  },
+  "grantPlan": {
+    "pendingAdminOperator": {
+      "address": "0x6495280c365b372230A275C8Fec6724e3FC228dB",
+      "recommendedRoles": [
+        "OWNER_ROLE",
+        "KYC_OPERATOR_ROLE"
+      ],
+      "missingRoles": [
+        "OWNER_ROLE",
+        "KYC_OPERATOR_ROLE"
+      ],
+      "alreadyPresentRoles": [],
+      "commands": [
+        {
+          "role": "OWNER_ROLE",
+          "command": "cast send 0xEE93166a2cf213243eF330a664682290b195c976 \\\n  \"grantRole(bytes32,address)\" \\\n  $(cast keccak \"OWNER_ROLE\") \\\n  0x6495280c365b372230A275C8Fec6724e3FC228dB \\\n  --rpc-url https://sepolia.base.org \\\n  --private-key <CHIAVE_DEPLOYER_NEL_TUO_TERMINALE>"
+        },
+        {
+          "role": "KYC_OPERATOR_ROLE",
+          "command": "cast send 0xEE93166a2cf213243eF330a664682290b195c976 \\\n  \"grantRole(bytes32,address)\" \\\n  $(cast keccak \"KYC_OPERATOR_ROLE\") \\\n  0x6495280c365b372230A275C8Fec6724e3FC228dB \\\n  --rpc-url https://sepolia.base.org \\\n  --private-key <CHIAVE_DEPLOYER_NEL_TUO_TERMINALE>"
+        }
+      ]
+    },
+    "newAdminOperator": {
+      "address": "0x810fa6726eeB6014c2F77Bb4802A5734C28b0F3e",
+      "recommendedRoles": [
+        "OWNER_ROLE",
+        "KYC_OPERATOR_ROLE"
+      ],
+      "missingRoles": [
+        "OWNER_ROLE",
+        "KYC_OPERATOR_ROLE"
+      ],
+      "alreadyPresentRoles": [],
+      "commands": [
+        {
+          "role": "OWNER_ROLE",
+          "command": "cast send 0xEE93166a2cf213243eF330a664682290b195c976 \\\n  \"grantRole(bytes32,address)\" \\\n  $(cast keccak \"OWNER_ROLE\") \\\n  0x810fa6726eeB6014c2F77Bb4802A5734C28b0F3e \\\n  --rpc-url https://sepolia.base.org \\\n  --private-key <CHIAVE_DEPLOYER_NEL_TUO_TERMINALE>"
+        },
+        {
+          "role": "KYC_OPERATOR_ROLE",
+          "command": "cast send 0xEE93166a2cf213243eF330a664682290b195c976 \\\n  \"grantRole(bytes32,address)\" \\\n  $(cast keccak \"KYC_OPERATOR_ROLE\") \\\n  0x810fa6726eeB6014c2F77Bb4802A5734C28b0F3e \\\n  --rpc-url https://sepolia.base.org \\\n  --private-key <CHIAVE_DEPLOYER_NEL_TUO_TERMINALE>"
+        }
+      ]
+    }
+  },
+  "safetyNotes": [
+    "Script read-only: non firma transazioni e non legge private key.",
+    "Eseguire i comandi grantRole solo nel terminale controllato dal proprietario/deployer.",
+    "Finanziare con ETH Base Sepolia i wallet che dovranno firmare dal browser o da CLI."
+  ]
+}

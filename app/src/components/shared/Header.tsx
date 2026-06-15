@@ -5,6 +5,8 @@ import { useState } from 'react';
 import { useAccount } from 'wagmi';
 import { WalletButton } from './WalletButton';
 import { WalletRoleIndicator, useWalletRole, useActiveRole } from './WalletRoleIndicator';
+import { EmailAuthControls } from './EmailAuthControls';
+import { useEmailSession } from '@/hooks/useEmailSession';
 
 const navLinkStyle = (active: boolean): React.CSSProperties => ({
   padding: '6px 18px',
@@ -25,6 +27,7 @@ export function Header() {
   const pathname = usePathname();
   const [showSyndicateInfo, setShowSyndicateInfo] = useState(false);
   const { activeRole } = useActiveRole();
+  const { isAppAdmin, canOperateKyb } = useEmailSession();
 
   // On-chain role resolution (ProtocolRoles/ComplianceRegistry)
   const { role: baseRole } = useWalletRole();
@@ -32,11 +35,11 @@ export function Header() {
   const role = activeRole ?? baseRole;
 
   // ─── Visibilità voci di menu ────────────────────────────────────────────────
-  const showSyndicates        = role === 'syndicate' || role === 'admin';
-  const showSyndicateDashboard = role === 'syndicate' || role === 'admin';
-  const showMyCompany         = role === 'insurance' || role === 'admin';
-  const showApply             = !isConnected || role === 'investor';
-  const showAdmin             = role === 'admin';
+  const showSyndicates        = role === 'syndicate' || role === 'admin' || isAppAdmin;
+  const showSyndicateDashboard = role === 'syndicate' || role === 'admin' || isAppAdmin;
+  const showMyCompany         = role === 'insurance' || role === 'admin' || isAppAdmin;
+  const showApply             = (!isConnected && !isAppAdmin) || role === 'investor';
+  const showAdmin             = role === 'admin' || isAppAdmin || canOperateKyb;
 
   // ─── Active link helpers ────────────────────────────────────────────────────
   const isVaultsActive = pathname === '/app';
@@ -241,6 +244,7 @@ export function Header() {
 
         {/* Wallet */}
         <div className="flex items-center gap-3">
+          <EmailAuthControls />
           <WalletRoleIndicator />
           <WalletButton />
         </div>
