@@ -69,6 +69,11 @@ export function isValidTransition(from: KybStatus, to: KybStatus): boolean {
 export const kybReviewRequestSchema = z.object({
   toStatus: z.enum(KYB_STATUSES),
   note: z.string().trim().max(2000).optional().or(z.literal('')),
+  /**
+   * Wallet review path: required only when the request is not authorized by a
+   * server-validated Supabase email session. Email review requests omit auth and
+   * rely on the Authorization: Bearer <access_token> header instead.
+   */
   auth: z.object({
     address: z.string().regex(EVM_ADDRESS_RE),
     /** Unix seconds the message was signed at. */
@@ -77,7 +82,7 @@ export const kybReviewRequestSchema = z.object({
     nonce: z.string().regex(/^[0-9a-f]{16,64}$/),
     /** EIP-191 personal_sign signature of operatorAuthMessage(action, timestamp, nonce). */
     signature: z.string().regex(/^0x[0-9a-fA-F]+$/),
-  }),
+  }).optional(),
 });
 
 export type KybReviewRequest = z.infer<typeof kybReviewRequestSchema>;

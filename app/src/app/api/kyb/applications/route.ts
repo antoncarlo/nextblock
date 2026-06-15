@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { kybApplicationPayloadSchema } from '@/lib/kyb/schema';
 import { verifyOperatorAuth } from '@/lib/kyb/auth';
+import { getEmailActorFromRequest } from '@/lib/app-auth/session';
 import { clientIp, createSupabaseRateLimitStore, rateLimit } from '@/lib/rate-limit';
 import { logApiError } from '@/lib/api-log';
 
@@ -9,7 +10,8 @@ import { logApiError } from '@/lib/api-log';
  * KYB applications collection.
  *
  *   POST  public submit (zod-validated, lands in status 'submitted')
- *   GET   operator-only listing (wallet signature + on-chain role check)
+ *   GET   operator-only listing (wallet signature + on-chain role check,
+ *         or authorized email session with app-level RBAC)
  *
  * Fail-closed: without the server Supabase configuration every method returns
  * 503 "unavailable" instead of pretending state exists.
@@ -101,17 +103,21 @@ export async function GET(request: NextRequest) {
   const address = request.headers.get('x-kyb-address');
   const timestamp = Number(request.headers.get('x-kyb-timestamp'));
   const signature = request.headers.get('x-kyb-signature');
-  if (!address || !signature || !Number.isInteger(timestamp)) {
-    return NextResponse.json({ error: 'missing operator auth headers' }, { status: 401 });
-  }
 
-  const auth = await verifyOperatorAuth('list', {
-    address: address as `0x${string}`,
-    timestamp,
-    signature: signature as `0x${string}`,
-  });
-  if (!auth.ok) {
-    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  if (address && signature && Number.isInteger(timestamp)) {
+    const auth = await verifyOperatorAuth('list', {
+      address: address as `0x${string}`,
+      timestamp,
+      signature: signature as `0x${string}`,
+    });
+    if (!auth.ok) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+  } else {
+    const emailAuth = await getEmailActorFromRequest(request, ['admin', 'kyb_operator', 'reviewer']);
+    if (!emailAuth.ok) {
+      return NextResponse.json({ error: emailAuth.error }, { status: emailAuth.status });
+    }
   }
 
   const { data: applications, error } = await supabase

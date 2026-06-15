@@ -6,14 +6,16 @@ import {
   type KybStatus,
 } from '@/lib/kyb/schema';
 import { verifyOperatorAuth } from '@/lib/kyb/auth';
+import { getEmailActorFromRequest } from '@/lib/app-auth/session';
 import { consumeNonce, createSupabaseNonceStore } from '@/lib/kyb/nonces';
 import { clientIp, createSupabaseRateLimitStore, rateLimit } from '@/lib/rate-limit';
 import { logApiError } from '@/lib/api-log';
 
 /**
- * Operator review transition. The signed message binds application id AND
- * target status (action "review:<id>:<toStatus>") so one signature cannot be
- * repurposed for a different application or outcome.
+ * Operator review transition. Wallet reviews bind application id AND target
+ * status in the signed message (action "review:<id>:<toStatus>") so one
+ * signature cannot be repurposed. Email reviews require a server-validated
+ * Supabase session with app-level KYB/admin RBAC.
  *
  * DB approval is INSTRUCTIONAL ONLY: nothing here touches the on-chain
  * ComplianceRegistry. The whitelist write remains a separate, explicitly
@@ -67,30 +69,50 @@ export async function POST(
   }
   const { toStatus, note, auth } = parsed.data;
 
-  const verified = await verifyOperatorAuth(`review:${id}:${toStatus}`, {
-    address: auth.address as `0x${string}`,
-    timestamp: auth.timestamp,
-    signature: auth.signature as `0x${string}`,
-    nonce: auth.nonce,
-  });
-  if (!verified.ok) {
-    return NextResponse.json({ error: verified.error }, { status: verified.status });
-  }
+  const zeroAddress = '0x0000000000000000000000000000000000000000' as `0x${string}`;
+  let actor:
+    | { method: 'wallet'; address: `0x${string}`; userId?: never; email?: never }
+    | { method: 'email'; address: `0x${string}`; userId: string; email: string };
 
-  // Single use: consuming the nonce here makes the verified signature
-  // unreplayable. Concurrent duplicates race this consume and exactly one
-  // wins; expired/unknown nonces fail closed with a fresh-nonce retry path.
-  try {
-    const nonceAccepted = await consumeNonce(verified.address, auth.nonce, createSupabaseNonceStore(supabase));
-    if (!nonceAccepted) {
-      return NextResponse.json(
-        { error: 'nonce invalid, expired or already used; request a new one' },
-        { status: 401 },
-      );
+  if (auth) {
+    const verified = await verifyOperatorAuth(`review:${id}:${toStatus}`, {
+      address: auth.address as `0x${string}`,
+      timestamp: auth.timestamp,
+      signature: auth.signature as `0x${string}`,
+      nonce: auth.nonce,
+    });
+    if (!verified.ok) {
+      return NextResponse.json({ error: verified.error }, { status: verified.status });
     }
-  } catch (error) {
-    logApiError('kyb/review', 'nonce_storage_error', { code: error instanceof Error ? error.name : 'unknown' });
-    return NextResponse.json({ error: 'storage error' }, { status: 502 });
+
+    // Single use: consuming the nonce here makes the verified signature
+    // unreplayable. Concurrent duplicates race this consume and exactly one
+    // wins; expired/unknown nonces fail closed with a fresh-nonce retry path.
+    try {
+      const nonceAccepted = await consumeNonce(verified.address, auth.nonce, createSupabaseNonceStore(supabase));
+      if (!nonceAccepted) {
+        return NextResponse.json(
+          { error: 'nonce invalid, expired or already used; request a new one' },
+          { status: 401 },
+        );
+      }
+    } catch (error) {
+      logApiError('kyb/review', 'nonce_storage_error', { code: error instanceof Error ? error.name : 'unknown' });
+      return NextResponse.json({ error: 'storage error' }, { status: 502 });
+    }
+
+    actor = { method: 'wallet', address: verified.address };
+  } else {
+    const emailAuth = await getEmailActorFromRequest(request, ['admin', 'kyb_operator', 'reviewer']);
+    if (!emailAuth.ok) {
+      return NextResponse.json({ error: emailAuth.error }, { status: emailAuth.status });
+    }
+    actor = {
+      method: 'email',
+      address: emailAuth.actor.wallets.find(wallet => wallet.isPrimary)?.address ?? emailAuth.actor.wallets[0]?.address ?? zeroAddress,
+      userId: emailAuth.actor.userId,
+      email: emailAuth.actor.email,
+    };
   }
 
   const { data: application, error: fetchError } = await supabase
@@ -122,7 +144,10 @@ export async function POST(
 
   const { error: eventError } = await supabase.from('kyb_review_events').insert({
     application_id: id,
-    actor_address: verified.address,
+    actor_address: actor.address,
+    actor_user_id: actor.method === 'email' ? actor.userId : null,
+    actor_email: actor.method === 'email' ? actor.email : null,
+    actor_method: actor.method,
     from_status: fromStatus,
     to_status: toStatus,
     note: note || null,

@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RainbowKitProvider, lightTheme } from '@rainbow-me/rainbowkit';
 import '@rainbow-me/rainbowkit/styles.css';
 import { wagmiConfig } from '@/config/wagmi';
+import { EmailSessionProvider } from '@/hooks/useEmailSession';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -29,7 +30,7 @@ export function Providers({ children }: { children: ReactNode }) {
             fontStack: 'system',
           })}
         >
-          {children}
+          <EmailSessionProvider>{children}</EmailSessionProvider>
         </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
