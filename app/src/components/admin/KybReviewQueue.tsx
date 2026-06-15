@@ -11,6 +11,7 @@ import {
   type KybStatus,
 } from '@/lib/kyb/schema';
 import { DataSourceBadge } from '@/components/shared/DataSourceBadge';
+import { useEmailSession } from '@/hooks/useEmailSession';
 
 /**
  * KYB review queue for the KYC Operator.
@@ -84,6 +85,7 @@ const STATUS_COLORS: Record<KybStatus, { bg: string; color: string }> = {
 export function KybReviewQueue() {
   const { address, isConnected } = useAccount();
   const { signMessageAsync } = useSignMessage();
+  const emailSession = useEmailSession();
 
   const [queue, setQueue] = useState<QueueState>({ kind: 'idle' });
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -95,14 +97,17 @@ export function KybReviewQueue() {
   const [listAuth, setListAuth] = useState<{ timestamp: number; signature: string } | null>(null);
 
   const fetchList = useCallback(
-    async (auth: { timestamp: number; signature: string }) => {
-      const res = await fetch('/api/kyb/applications', {
-        headers: {
-          'x-kyb-address': address ?? '',
-          'x-kyb-timestamp': String(auth.timestamp),
-          'x-kyb-signature': auth.signature,
-        },
-      });
+    async (auth: { timestamp: number; signature: string } | null) => {
+      const headers: Record<string, string> = {};
+      if (auth && address) {
+        headers['x-kyb-address'] = address;
+        headers['x-kyb-timestamp'] = String(auth.timestamp);
+        headers['x-kyb-signature'] = auth.signature;
+      } else if (emailSession.accessToken) {
+        headers.Authorization = `Bearer ${emailSession.accessToken}`;
+      }
+
+      const res = await fetch('/api/kyb/applications', { headers });
       if (res.status === 503) {
         setQueue({ kind: 'unavailable' });
         return;
@@ -114,60 +119,79 @@ export function KybReviewQueue() {
       }
       setQueue({ kind: 'ready', apps: data.applications ?? [], events: data.events ?? [] });
     },
-    [address],
+    [address, emailSession.accessToken],
   );
 
   const loadQueue = useCallback(async () => {
-    if (!address) return;
+    if (!address && !(emailSession.canOperateKyb && emailSession.accessToken)) return;
     setQueue({ kind: 'loading' });
     try {
-      const timestamp = Math.floor(Date.now() / 1000);
-      const signature = await signMessageAsync({ message: operatorAuthMessage('list', timestamp) });
-      setListAuth({ timestamp, signature });
-      await fetchList({ timestamp, signature });
+      if (address) {
+        const timestamp = Math.floor(Date.now() / 1000);
+        const signature = await signMessageAsync({ message: operatorAuthMessage('list', timestamp) });
+        setListAuth({ timestamp, signature });
+        await fetchList({ timestamp, signature });
+      } else {
+        setListAuth(null);
+        await fetchList(null);
+      }
     } catch {
       setQueue({ kind: 'idle' });
     }
-  }, [address, signMessageAsync, fetchList]);
+  }, [address, emailSession.accessToken, emailSession.canOperateKyb, signMessageAsync, fetchList]);
 
   const refreshList = useCallback(async () => {
     const now = Math.floor(Date.now() / 1000);
     if (listAuth && now - listAuth.timestamp < 240) {
       await fetchList(listAuth);
+    } else if (!address && emailSession.canOperateKyb && emailSession.accessToken) {
+      await fetchList(null);
     } else {
       await loadQueue();
     }
-  }, [listAuth, fetchList, loadQueue]);
+  }, [address, emailSession.accessToken, emailSession.canOperateKyb, listAuth, fetchList, loadQueue]);
 
   const review = useCallback(
     async (id: string, toStatus: KybStatus) => {
-      if (!address) return;
+      if (!address && !(emailSession.canOperateKyb && emailSession.accessToken)) return;
       setActionPending(true);
       setActionError(null);
       try {
-        // Single-use nonce: the server consumes it on verification, so this
-        // signature cannot be replayed even inside the auth window.
-        const nonceRes = await fetch('/api/kyb/auth/nonce', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ address }),
-        });
-        const nonceData = await nonceRes.json().catch(() => ({}));
-        if (!nonceRes.ok || typeof nonceData.nonce !== 'string') {
-          setActionError('Could not obtain a review nonce; retry.');
-          return;
-        }
-        const nonce: string = nonceData.nonce;
+        let res: Response;
+        if (address) {
+          // Single-use nonce: the server consumes it on verification, so this
+          // signature cannot be replayed even inside the auth window.
+          const nonceRes = await fetch('/api/kyb/auth/nonce', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ address }),
+          });
+          const nonceData = await nonceRes.json().catch(() => ({}));
+          if (!nonceRes.ok || typeof nonceData.nonce !== 'string') {
+            setActionError('Could not obtain a review nonce; retry.');
+            return;
+          }
+          const nonce: string = nonceData.nonce;
 
-        const timestamp = Math.floor(Date.now() / 1000);
-        const signature = await signMessageAsync({
-          message: operatorAuthMessage(`review:${id}:${toStatus}`, timestamp, nonce),
-        });
-        const res = await fetch(`/api/kyb/applications/${id}/review`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ toStatus, note, auth: { address, timestamp, signature, nonce } }),
-        });
+          const timestamp = Math.floor(Date.now() / 1000);
+          const signature = await signMessageAsync({
+            message: operatorAuthMessage(`review:${id}:${toStatus}`, timestamp, nonce),
+          });
+          res = await fetch(`/api/kyb/applications/${id}/review`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ toStatus, note, auth: { address, timestamp, signature, nonce } }),
+          });
+        } else {
+          res = await fetch(`/api/kyb/applications/${id}/review`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${emailSession.accessToken}`,
+            },
+            body: JSON.stringify({ toStatus, note }),
+          });
+        }
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
           setActionError(typeof data.error === 'string' ? data.error : `HTTP ${res.status}`);
@@ -181,7 +205,7 @@ export function KybReviewQueue() {
         setActionPending(false);
       }
     },
-    [address, note, signMessageAsync, refreshList],
+    [address, emailSession.accessToken, emailSession.canOperateKyb, note, signMessageAsync, refreshList],
   );
 
   return (
@@ -191,21 +215,26 @@ export function KybReviewQueue() {
         <DataSourceBadge source={queue.kind === 'ready' ? 'backend' : queue.kind === 'unavailable' ? 'unavailable' : 'backend'} />
       </div>
       <p className="mb-4 text-xs text-gray-500">
-        Instructional review pipeline. Access requires a wallet signature verified
-        server-side against the on-chain KYC Operator / Owner role. Approval here
-        never writes the on-chain whitelist.
+        Instructional review pipeline. Access requires either a wallet signature
+        verified server-side against the on-chain KYC Operator / Owner role, or a
+        verified email session with app-level KYB/admin RBAC. Approval here never
+        writes the on-chain whitelist.
       </p>
 
-      {!isConnected && <p className="text-xs text-gray-400">Connect a wallet to load the queue.</p>}
+      {!isConnected && !emailSession.canOperateKyb && <p className="text-xs text-gray-400">Connect a wallet or sign in with an authorized email to load the queue.</p>}
 
-      {isConnected && queue.kind !== 'ready' && (
+      {(isConnected || emailSession.canOperateKyb) && queue.kind !== 'ready' && (
         <button
           type="button"
           onClick={loadQueue}
           disabled={queue.kind === 'loading'}
           className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-400"
         >
-          {queue.kind === 'loading' ? 'Sign & loading...' : 'Sign to load applications'}
+          {queue.kind === 'loading'
+            ? 'Loading...'
+            : isConnected
+              ? 'Sign to load applications'
+              : 'Load applications with email'}
         </button>
       )}
 

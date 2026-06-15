@@ -25,3 +25,19 @@ export function getSupabaseServerClient(): SupabaseClient | null {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
+
+/**
+ * SERVER-SIDE anon Supabase client for validating user bearer tokens through
+ * Supabase Auth. It never bypasses RLS and does not expose service-role power.
+ * Accepts both the newer PUBLISHABLE_KEY name and the legacy ANON_KEY name used
+ * by the browser client in this repository.
+ */
+export function getSupabaseAnonServerClient(): SupabaseClient | null {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !anonKey) return null;
+
+  return createClient(url, anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}

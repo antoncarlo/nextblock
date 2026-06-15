@@ -14,9 +14,11 @@ import { ClaimReceipts } from '@/components/admin/ClaimReceipts';
 import { ClaimLifecyclePanel } from '@/components/claims/ClaimLifecyclePanel';
 import { PolicyPool } from '@/components/admin/PolicyPool';
 import { DemoControls } from '@/components/admin/DemoControls';
+import { useEmailSession } from '@/hooks/useEmailSession';
 
 export default function AdminPage() {
   const { address, isConnected } = useAccount();
+  const emailSession = useEmailSession();
 
   // PRIMARY gate: on-chain protocol roles read from ProtocolRoles (canonical
   // RBAC). The legacy hint list is a UI-only fallback for demo wallets and is
@@ -30,7 +32,8 @@ export default function AdminPage() {
     isConnected &&
     !!address &&
     LEGACY_ADMIN_UI_HINT.map((a) => a.toLowerCase()).includes(address.toLowerCase());
-  const isAdmin = hasOnchainAdminRole || isLegacyHintWallet;
+  const isEmailAdmin = emailSession.isEmailAuthenticated && emailSession.isAppAdmin;
+  const isAdmin = hasOnchainAdminRole || isLegacyHintWallet || isEmailAdmin;
 
   const { data: vaultAddresses } = useVaultAddresses();
   const { data: vaultInfos } = useMultiVaultInfo(vaultAddresses);
@@ -48,14 +51,17 @@ export default function AdminPage() {
     }
   }
 
-  if (!isConnected) {
+  if (!isConnected && !isEmailAdmin) {
     return (
       <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900">Admin Panel</h1>
           <p className="mt-2 text-sm text-gray-500">
-            Connect your wallet to access admin controls.
+            Connect an authorized wallet or sign in with an authorized admin email to access admin controls.
           </p>
+          {emailSession.error && (
+            <p className="mt-2 text-xs text-red-600">Email session: {emailSession.error}</p>
+          )}
         </div>
       </div>
     );
@@ -68,10 +74,11 @@ export default function AdminPage() {
           <h1 className="text-2xl font-bold text-gray-900">Access Denied</h1>
           <p className="mt-2 text-sm text-gray-500">
             This dashboard renders only for wallets holding an on-chain protocol
-            role (Owner, Sentinel or Claims Committee on ProtocolRoles).
+            role (Owner, Sentinel or Claims Committee on ProtocolRoles) or for
+            email sessions with the application admin role.
           </p>
           <p className="mt-1 text-xs text-gray-400">
-            Connected: {address}
+            Connected wallet: {address ?? 'none'} · Email admin: {isEmailAdmin ? emailSession.profile?.user.email : 'none'}
           </p>
           <p className="mt-1 text-xs text-gray-400">
             Note: this is a UI gate only. Real authorization is enforced
@@ -96,7 +103,8 @@ export default function AdminPage() {
         <p className="mt-1 text-xs text-gray-400">
           This page is a UI surface, not a security boundary: every privileged
           action is authorized on-chain (ProtocolRoles) or server-side (signed
-          KYB APIs).
+          wallet APIs or verified email RBAC). Email access can operate off-chain
+          admin/KYB workflows, while on-chain writes still require a wallet signature.
         </p>
       </div>
 
@@ -156,7 +164,7 @@ export default function AdminPage() {
                 const info = vaultInfos[idx];
                 if (info.status !== 'success' || !info.result) return null;
                 const result = info.result as unknown as [string, `0x${string}`, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint];
-                const [vaultName, , assets, totalShares, sharePrice, bufferBps, feeBps, availableBuffer, deployedCapital, policyCount] = result;
+                const [vaultName, , assets, , sharePrice, , feeBps, availableBuffer, deployedCapital, policyCount] = result;
 
                 const sharePriceNum = Number(sharePrice) / 1e6;
 
