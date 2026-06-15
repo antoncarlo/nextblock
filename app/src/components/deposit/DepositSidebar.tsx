@@ -71,6 +71,11 @@ export function DepositSidebar({
   const effectiveMaxWithdraw =
     maxWithdrawOverride ?? (lpVaultAvailable ? lpStatus.maxWithdraw : maxWithdraw) ?? 0n;
 
+  // Pre-gate deposits on compliance: when the lens confirms the wallet is not
+  // whitelisted, surface it in the UI instead of letting the on-chain deposit
+  // revert. The on-chain ComplianceRegistry check remains the primary barrier.
+  const lpNotWhitelisted = lpComplianceAvailable && lpStatus !== undefined && !lpStatus.whitelisted;
+
   const faucet = useFaucet(address, refetchBalance);
 
   const parsedAmount = parseUSDC(inputValue);
@@ -207,6 +212,7 @@ export function DepositSidebar({
                 totalSupply={totalSupply}
                 policyCount={policyCount}
                 flow={depositFlow}
+                notWhitelisted={lpNotWhitelisted}
               />
             ) : (
               <WithdrawTab
@@ -237,6 +243,7 @@ interface DepositTabProps {
   totalSupply: bigint;
   policyCount: number;
   flow: ReturnType<typeof useDepositFlow>;
+  notWhitelisted: boolean;
 }
 
 function DepositTab({
@@ -248,6 +255,7 @@ function DepositTab({
   totalSupply,
   policyCount,
   flow,
+  notWhitelisted,
 }: DepositTabProps) {
   if (flow.state === 'SUCCESS') {
     return (
@@ -296,6 +304,13 @@ function DepositTab({
         </div>
       )}
 
+      {notWhitelisted && (
+        <div className="rounded-lg bg-amber-50 p-3 text-xs font-medium text-amber-800">
+          This wallet is not whitelisted as an Institutional LP yet. Ask the KYC operator to
+          whitelist it in the ComplianceRegistry before depositing.
+        </div>
+      )}
+
       {flow.error && (
         <div className="rounded-lg bg-red-50 p-3 text-xs text-red-700">
           {flow.error}
@@ -306,6 +321,7 @@ function DepositTab({
         type="button"
         onClick={flow.startDeposit}
         disabled={
+          notWhitelisted ||
           parsedAmount <= 0n ||
           parsedAmount > usdcBalance ||
           (flow.state !== 'IDLE' && flow.state !== 'ERROR')
