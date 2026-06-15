@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { kybApplicationPayloadSchema } from '@/lib/kyb/schema';
 import { verifyOperatorAuth } from '@/lib/kyb/auth';
-import { clientIp, rateLimit } from '@/lib/rate-limit';
+import { clientIp, createSupabaseRateLimitStore, rateLimit } from '@/lib/rate-limit';
 import { logApiError } from '@/lib/api-log';
 
 /**
@@ -16,18 +16,29 @@ import { logApiError } from '@/lib/api-log';
  */
 
 export async function POST(request: NextRequest) {
-  // 5 submissions per IP per 10 minutes (fixed window, best effort per instance).
-  const limited = rateLimit('kyb-submit', clientIp(request), 5, 10 * 60 * 1000);
-  if (!limited.allowed) {
-    return NextResponse.json(
-      { error: 'too many requests' },
-      { status: 429, headers: { 'Retry-After': String(limited.retryAfterSeconds) } },
-    );
-  }
-
   const supabase = getSupabaseServerClient();
   if (!supabase) {
     return NextResponse.json({ error: 'unavailable' }, { status: 503 });
+  }
+
+  // 5 submissions per IP per 10 minutes, shared across serverless instances.
+  try {
+    const limited = await rateLimit(
+      'kyb-submit',
+      clientIp(request),
+      5,
+      10 * 60 * 1000,
+      createSupabaseRateLimitStore(supabase),
+    );
+    if (!limited.allowed) {
+      return NextResponse.json(
+        { error: 'too many requests' },
+        { status: 429, headers: { 'Retry-After': String(limited.retryAfterSeconds) } },
+      );
+    }
+  } catch (error) {
+    logApiError('kyb/applications', 'rate_limit_storage_error', { code: error instanceof Error ? error.name : 'unknown' });
+    return NextResponse.json({ error: 'storage error' }, { status: 502 });
   }
 
   let body: unknown;

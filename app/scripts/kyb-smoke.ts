@@ -14,6 +14,7 @@
 
 import {
   kybApplicationPayloadSchema,
+  kybReviewRequestSchema,
   isValidTransition,
   KYB_STATUSES,
   operatorAuthMessage,
@@ -83,6 +84,29 @@ check('transizione identica NON valida', !isValidTransition('submitted', 'submit
 
 const msg = operatorAuthMessage('list', 1781200000);
 check('messaggio auth contiene azione e timestamp', msg.includes('list') && msg.includes('1781200000'));
+const reviewMsg = operatorAuthMessage('review:123:approved', 1781200000, 'abcdef1234567890');
+check('messaggio review lega il nonce alla firma', reviewMsg.includes('nonce: abcdef1234567890'));
+check('messaggio list senza nonce resta compatibile', !msg.includes('nonce:'));
+
+const validReview = {
+  toStatus: 'approved',
+  note: 'Review completed.',
+  auth: {
+    address: '0x8Fd8b45Ba2612E7535bbeB21615554701CfaF870',
+    timestamp: 1781200000,
+    nonce: 'abcdef1234567890',
+    signature: '0x' + 'a'.repeat(130),
+  },
+};
+check('review request valido accettato', kybReviewRequestSchema.safeParse(validReview).success);
+check(
+  'review request senza nonce rifiutato',
+  !kybReviewRequestSchema.safeParse({ ...validReview, auth: { ...validReview.auth, nonce: undefined } }).success,
+);
+check(
+  'review request con nonce non esadecimale rifiutato',
+  !kybReviewRequestSchema.safeParse({ ...validReview, auth: { ...validReview.auth, nonce: 'not-a-nonce' } }).success,
+);
 check('timestamp dentro finestra accettato', isTimestampWithinWindow(1000, 1100, 300));
 check('timestamp scaduto rifiutato', !isTimestampWithinWindow(1000, 1500, 300));
 check('timestamp futuro oltre skew rifiutato', !isTimestampWithinWindow(1500, 1000, 300));
