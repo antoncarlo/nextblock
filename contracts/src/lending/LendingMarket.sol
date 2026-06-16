@@ -71,12 +71,19 @@ contract LendingMarket {
     uint256 public totalSupplyShares;
     mapping(address => uint256) public supplyShares;
 
+    // --- Collateral book ---
+    /// @notice nbUSDC collateral shares posted per borrower.
+    mapping(address => uint256) public collateralOf;
+    uint256 public totalCollateral;
+
     // --- Accrual ---
     uint64 public lastAccrued;
 
     // --- Events ---
     event Supply(address indexed lender, uint256 assets, uint256 shares);
     event Withdraw(address indexed lender, address indexed to, uint256 assets, uint256 shares);
+    event CollateralDeposited(address indexed borrower, uint256 shares);
+    event CollateralWithdrawn(address indexed borrower, address indexed to, uint256 shares);
 
     // --- Errors ---
     error LendingMarket__InvalidParams();
@@ -84,6 +91,7 @@ contract LendingMarket {
     error LendingMarket__NotWhitelisted(address account);
     error LendingMarket__SupplyCapExceeded(uint256 cap);
     error LendingMarket__InsufficientShares();
+    error LendingMarket__InsufficientCollateral();
 
     constructor(MarketParams memory p) {
         if (
@@ -158,5 +166,31 @@ contract LendingMarket {
 
         loanToken.safeTransfer(to, assets);
         emit Withdraw(msg.sender, to, assets, shares);
+    }
+
+    // --- Collateral side ---
+
+    /// @notice Post nbUSDC as collateral. The market must be an `approvedVenue` in
+    ///         the ComplianceRegistry, otherwise the vault transfer hook reverts.
+    function depositCollateral(uint256 shares) external {
+        if (shares == 0) revert LendingMarket__ZeroAmount();
+        if (!compliance.canReceive(msg.sender)) revert LendingMarket__NotWhitelisted(msg.sender);
+        collateralOf[msg.sender] += shares;
+        totalCollateral += shares;
+        collateralToken.safeTransferFrom(msg.sender, address(this), shares);
+        emit CollateralDeposited(msg.sender, shares);
+    }
+
+    /// @notice Withdraw posted collateral to `to`. The vault transfer hook enforces
+    ///         that `to` is a compliant receiver. Borrow-health checks are added in
+    ///         the borrow slice (no debt can exist yet).
+    function withdrawCollateral(uint256 shares, address to) external {
+        if (shares == 0) revert LendingMarket__ZeroAmount();
+        if (to == address(0)) revert LendingMarket__InvalidParams();
+        if (shares > collateralOf[msg.sender]) revert LendingMarket__InsufficientCollateral();
+        collateralOf[msg.sender] -= shares;
+        totalCollateral -= shares;
+        collateralToken.safeTransfer(to, shares);
+        emit CollateralWithdrawn(msg.sender, to, shares);
     }
 }

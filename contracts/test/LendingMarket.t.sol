@@ -33,9 +33,11 @@ contract LendingMarketTest is Test {
 
     address lender = makeAddr("usdcLender");
     address lender2 = makeAddr("usdcLender2");
+    address borrower = makeAddr("borrower");
     address feeRecipient = makeAddr("feeRecipient");
 
     uint256 constant SUPPLY_100K = 100_000e6;
+    uint256 constant COLLATERAL_USDC = 100_000e6;
 
     function setUp() public {
         vm.setEnv("PRIVATE_KEY", vm.toString(ANVIL_PK));
@@ -86,6 +88,29 @@ contract LendingMarketTest is Test {
         vm.startPrank(who);
         usdc.approve(address(m), amt);
         shares = m.supply(amt);
+        vm.stopPrank();
+    }
+
+    /// @dev Approve the market as a venue allowed to custody nbUSDC.
+    function _approveVenue() internal {
+        vm.prank(deployer); // KYC_OPERATOR
+        compliance.setApprovedVenue(address(market), true);
+    }
+
+    /// @dev Mint nbUSDC collateral to `who` by depositing USDC into the vault.
+    function _giveCollateral(address who, uint256 usdcAmt) internal returns (uint256 shares) {
+        _whitelist(who);
+        deal(address(usdc), who, usdcAmt);
+        vm.startPrank(who);
+        usdc.approve(address(vault), usdcAmt);
+        shares = vault.deposit(usdcAmt, who);
+        vm.stopPrank();
+    }
+
+    function _postCollateral(address who, uint256 shares) internal {
+        vm.startPrank(who);
+        vault.approve(address(market), shares);
+        market.depositCollateral(shares);
         vm.stopPrank();
     }
 
@@ -219,5 +244,113 @@ contract LendingMarketTest is Test {
         // Lender recovers exactly what was supplied (no interest, sole lender).
         assertEq(usdc.balanceOf(lender), balBefore + amt);
         assertEq(market.totalSupplyAssets(), 0);
+    }
+
+    // --- Collateral (slice 2) ---
+
+    function test_depositCollateral_happyPath() public {
+        uint256 shares = _giveCollateral(borrower, COLLATERAL_USDC);
+        _approveVenue();
+        _postCollateral(borrower, shares);
+
+        assertEq(market.collateralOf(borrower), shares);
+        assertEq(market.totalCollateral(), shares);
+        assertEq(vault.balanceOf(address(market)), shares);
+        assertEq(vault.balanceOf(borrower), 0);
+    }
+
+    function test_depositCollateral_emitsEvent() public {
+        uint256 shares = _giveCollateral(borrower, COLLATERAL_USDC);
+        _approveVenue();
+        vm.startPrank(borrower);
+        vault.approve(address(market), shares);
+        vm.expectEmit(true, false, false, true);
+        emit LendingMarket.CollateralDeposited(borrower, shares);
+        market.depositCollateral(shares);
+        vm.stopPrank();
+    }
+
+    function test_depositCollateral_zero_reverts() public {
+        _giveCollateral(borrower, COLLATERAL_USDC);
+        _approveVenue();
+        vm.prank(borrower);
+        vm.expectRevert(LendingMarket.LendingMarket__ZeroAmount.selector);
+        market.depositCollateral(0);
+    }
+
+    function test_depositCollateral_marketNotApprovedVenue_reverts() public {
+        uint256 shares = _giveCollateral(borrower, COLLATERAL_USDC);
+        // Venue NOT approved -> the vault transfer hook rejects custody by the market.
+        vm.startPrank(borrower);
+        vault.approve(address(market), shares);
+        vm.expectPartialRevert(ComplianceRegistry.ComplianceRegistry__ReceiverNotWhitelisted.selector);
+        market.depositCollateral(shares);
+        vm.stopPrank();
+    }
+
+    function test_depositCollateral_notWhitelistedBorrower_reverts() public {
+        // borrower holds no shares and is not whitelisted
+        _approveVenue();
+        vm.prank(borrower);
+        vm.expectRevert(abi.encodeWithSelector(LendingMarket.LendingMarket__NotWhitelisted.selector, borrower));
+        market.depositCollateral(1e18);
+    }
+
+    function test_withdrawCollateral_happyPath() public {
+        uint256 shares = _giveCollateral(borrower, COLLATERAL_USDC);
+        _approveVenue();
+        _postCollateral(borrower, shares);
+
+        uint256 half = shares / 2;
+        vm.prank(borrower);
+        market.withdrawCollateral(half, borrower);
+
+        assertEq(market.collateralOf(borrower), shares - half);
+        assertEq(market.totalCollateral(), shares - half);
+        assertEq(vault.balanceOf(borrower), half);
+    }
+
+    function test_withdrawCollateral_all() public {
+        uint256 shares = _giveCollateral(borrower, COLLATERAL_USDC);
+        _approveVenue();
+        _postCollateral(borrower, shares);
+
+        vm.prank(borrower);
+        market.withdrawCollateral(shares, borrower);
+        assertEq(market.collateralOf(borrower), 0);
+        assertEq(vault.balanceOf(borrower), shares);
+    }
+
+    function test_withdrawCollateral_moreThanPosted_reverts() public {
+        uint256 shares = _giveCollateral(borrower, COLLATERAL_USDC);
+        _approveVenue();
+        _postCollateral(borrower, shares);
+
+        vm.prank(borrower);
+        vm.expectRevert(LendingMarket.LendingMarket__InsufficientCollateral.selector);
+        market.withdrawCollateral(shares + 1, borrower);
+    }
+
+    function test_withdrawCollateral_toNonWhitelisted_reverts() public {
+        uint256 shares = _giveCollateral(borrower, COLLATERAL_USDC);
+        _approveVenue();
+        _postCollateral(borrower, shares);
+
+        // Sending restricted shares to a non-whitelisted address is rejected by the vault hook.
+        vm.prank(borrower);
+        vm.expectPartialRevert(ComplianceRegistry.ComplianceRegistry__ReceiverNotWhitelisted.selector);
+        market.withdrawCollateral(shares, makeAddr("nonWhitelisted"));
+    }
+
+    function testFuzz_collateral_roundtrip(uint256 usdcAmt) public {
+        usdcAmt = bound(usdcAmt, 1e6, 50_000_000e6);
+        uint256 shares = _giveCollateral(borrower, usdcAmt);
+        _approveVenue();
+        _postCollateral(borrower, shares);
+        assertEq(market.collateralOf(borrower), shares);
+        vm.prank(borrower);
+        market.withdrawCollateral(shares, borrower);
+        assertEq(market.collateralOf(borrower), 0);
+        assertEq(vault.balanceOf(borrower), shares);
     }
 }
