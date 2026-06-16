@@ -34,6 +34,7 @@ contract LendingMarketTest is Test {
     address lender = makeAddr("usdcLender");
     address lender2 = makeAddr("usdcLender2");
     address borrower = makeAddr("borrower");
+    address liquidator = makeAddr("liquidator");
     address feeRecipient = makeAddr("feeRecipient");
 
     uint256 constant SUPPLY_100K = 100_000e6;
@@ -497,5 +498,83 @@ contract LendingMarketTest is Test {
         market.borrow(amount, borrower);
         assertTrue(market.isHealthy(borrower));
         assertApproxEqAbs(market.borrowAssetsOf(borrower), amount, 1);
+    }
+
+    // --- Liquidation (slice 4) ---
+
+    /// @dev Borrow at max LTV, then drop NAV 15% (within the oracle deviation
+    ///      guard) so the position breaches the 80% liquidation threshold.
+    function _makeLiquidatable() internal {
+        _enableBorrow(100_000e6, 100_000e6, 100_000e6);
+        vm.prank(borrower);
+        market.borrow(70_000e6, borrower); // at 70% LLTV
+        _publishNav(85_000e6); // collateral value 85k; debt 70k > 0.8*85k=68k
+    }
+
+    function _fundLiquidator(uint256 amt) internal {
+        _whitelist(liquidator);
+        deal(address(usdc), liquidator, amt);
+        vm.prank(liquidator);
+        usdc.approve(address(market), amt);
+    }
+
+    function test_liquidate_healthyPosition_reverts() public {
+        _enableBorrow(100_000e6, 100_000e6, 100_000e6);
+        vm.prank(borrower);
+        market.borrow(50_000e6, borrower); // healthy
+        _fundLiquidator(50_000e6);
+        vm.prank(liquidator);
+        vm.expectRevert(LendingMarket.LendingMarket__PositionHealthy.selector);
+        market.liquidate(borrower, 10_000e6);
+    }
+
+    function test_liquidate_notWhitelistedLiquidator_reverts() public {
+        _makeLiquidatable();
+        deal(address(usdc), liquidator, 20_000e6);
+        vm.startPrank(liquidator);
+        usdc.approve(address(market), 20_000e6);
+        vm.expectRevert(abi.encodeWithSelector(LendingMarket.LendingMarket__NotWhitelisted.selector, liquidator));
+        market.liquidate(borrower, 20_000e6);
+        vm.stopPrank();
+    }
+
+    function test_liquidate_partial_seizesWithIncentive() public {
+        _makeLiquidatable();
+        _fundLiquidator(30_000e6);
+        uint256 repay = 20_000e6;
+
+        vm.prank(liquidator);
+        (uint256 repaid, uint256 seized) = market.liquidate(borrower, repay);
+
+        assertEq(repaid, repay);
+        assertGt(seized, 0);
+        assertEq(vault.balanceOf(liquidator), seized);
+        // Seized collateral is worth ~ repaid * (1 + 5% incentive).
+        uint256 seizedValue = shareOracle.priceCollateralUSDC(seized);
+        assertApproxEqRel(seizedValue, repaid * 10_500 / 10_000, 0.01e18);
+        // Borrower debt reduced by the repaid amount.
+        assertApproxEqAbs(market.borrowAssetsOf(borrower), 70_000e6 - repay, 2);
+    }
+
+    function test_liquidate_badDebt_socializedToSuppliers() public {
+        _enableBorrow(100_000e6, 100_000e6, 100_000e6);
+        vm.prank(borrower);
+        market.borrow(70_000e6, borrower);
+        // Two-step NAV drop (each < 20% deviation guard) -> underwater.
+        _publishNav(82_000e6);
+        _publishNav(66_000e6); // collateral value 66k < 70k debt
+
+        uint256 supplyBefore = market.totalSupplyAssets();
+        _fundLiquidator(100_000e6);
+
+        vm.prank(liquidator);
+        vm.expectEmit(false, false, false, false);
+        emit LendingMarket.BadDebtRealized(borrower, 0); // args not checked
+        market.liquidate(borrower, 100_000e6);
+
+        // All collateral seized, borrower debt cleared, suppliers took the loss.
+        assertEq(market.collateralOf(borrower), 0);
+        assertEq(market.borrowShares(borrower), 0);
+        assertLt(market.totalSupplyAssets(), supplyBefore);
     }
 }

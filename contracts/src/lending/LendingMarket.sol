@@ -20,10 +20,14 @@ import {NavShareOracle} from "./NavShareOracle.sol";
 ///         ComplianceRegistry so it can custody restricted shares. It holds NO
 ///         power over the InsuranceVault: it only custodies shares and reads NAV.
 ///
-///         Slice 1 (this revision): lender side — supply/withdraw USDC with
-///         virtual-share accounting (first-depositor inflation protection),
-///         compliance gate and supply cap. Collateral, borrow, interest accrual
-///         and liquidation are added in subsequent slices.
+///         Lifecycle: lenders supply/withdraw USDC (virtual-share accounting for
+///         first-depositor inflation protection, supply cap); borrowers post/
+///         withdraw nbUSDC collateral and borrow/repay USDC bounded by `lltvBps`;
+///         interest accrues on a utilization-based linear IRM with a protocol fee;
+///         unhealthy positions (above `liqLtvBps`) are liquidated at a
+///         `liqIncentiveBps` discount, with residual bad debt socialized to
+///         suppliers. NAV is read from the guarded NavShareOracle: a stale/paused
+///         feed freezes borrowing and collateral withdrawal.
 contract LendingMarket {
     using SafeERC20 for IERC20;
 
@@ -97,6 +101,8 @@ contract LendingMarket {
     event Borrow(address indexed borrower, address indexed to, uint256 assets, uint256 shares);
     event Repay(address indexed borrower, uint256 assets, uint256 shares);
     event AccrueInterest(uint256 interest, uint256 feeShares);
+    event Liquidate(address indexed liquidator, address indexed borrower, uint256 repaid, uint256 seized);
+    event BadDebtRealized(address indexed borrower, uint256 assets);
 
     // --- Errors ---
     error LendingMarket__InvalidParams();
@@ -109,6 +115,7 @@ contract LendingMarket {
     error LendingMarket__InsufficientLiquidity();
     error LendingMarket__BorrowCapExceeded(uint256 cap);
     error LendingMarket__NoDebt();
+    error LendingMarket__PositionHealthy();
 
     constructor(MarketParams memory p) {
         if (
@@ -294,6 +301,57 @@ contract LendingMarket {
 
         loanToken.safeTransferFrom(msg.sender, address(this), pay);
         emit Repay(msg.sender, pay, shares);
+    }
+
+    /// @notice Liquidate an unhealthy position: repay USDC debt and seize nbUSDC
+    ///         collateral at a `liqIncentiveBps` discount. The liquidator must be a
+    ///         compliant receiver of restricted shares. If collateral is exhausted
+    ///         while debt remains, the residual is socialized to suppliers.
+    function liquidate(address borrower, uint256 repayAssets) external returns (uint256 repaid, uint256 seized) {
+        if (repayAssets == 0) revert LendingMarket__ZeroAmount();
+        if (!compliance.canReceive(msg.sender)) revert LendingMarket__NotWhitelisted(msg.sender);
+        _accrue();
+        if (_isHealthy(borrower, liqLtvBps)) revert LendingMarket__PositionHealthy();
+
+        uint256 debt = _borrowAssets(borrower);
+        repaid = repayAssets > debt ? debt : repayAssets;
+
+        uint256 collShares = collateralOf[borrower];
+        uint256 collValue = oracle.priceCollateralUSDC(collShares);
+
+        uint256 seizeValue = Math.mulDiv(repaid, MAX_BPS + liqIncentiveBps, MAX_BPS);
+        seized = Math.mulDiv(collShares, seizeValue, collValue);
+        if (seized > collShares) {
+            // Collateral fully consumed: seize all and recompute the repayable amount.
+            seized = collShares;
+            uint256 backed = Math.mulDiv(collValue, MAX_BPS, MAX_BPS + liqIncentiveBps);
+            repaid = backed > debt ? debt : backed;
+        }
+
+        uint256 repaidShares = repaid == debt
+            ? borrowShares[borrower]
+            : Math.mulDiv(repaid, totalBorrowShares + VIRTUAL_SHARES, totalBorrowAssets + VIRTUAL_ASSETS);
+
+        borrowShares[borrower] -= repaidShares;
+        totalBorrowShares -= repaidShares;
+        totalBorrowAssets -= repaid;
+        collateralOf[borrower] -= seized;
+        totalCollateral -= seized;
+
+        // Bad debt: collateral gone but debt remains -> socialize the loss to suppliers.
+        uint256 residualShares = borrowShares[borrower];
+        if (collateralOf[borrower] == 0 && residualShares != 0) {
+            uint256 badDebt = _borrowAssets(borrower);
+            borrowShares[borrower] = 0;
+            totalBorrowShares -= residualShares;
+            totalBorrowAssets -= badDebt;
+            totalSupplyAssets = totalSupplyAssets > badDebt ? totalSupplyAssets - badDebt : 0;
+            emit BadDebtRealized(borrower, badDebt);
+        }
+
+        loanToken.safeTransferFrom(msg.sender, address(this), repaid);
+        collateralToken.safeTransfer(msg.sender, seized);
+        emit Liquidate(msg.sender, borrower, repaid, seized);
     }
 
     /// @notice Settle accrued interest. Permissionless (keeper-friendly).
