@@ -42,6 +42,11 @@ Prospective institutional depositors must understand, at minimum:
   may contain defects. The protocol has not yet completed an external
   security audit (`audits/README.md`). On-chain transactions are
   irreversible.
+- Share nature. The vault share is a NAV-bearing reinsurance vault token; not a
+  stablecoin; not legal tender; not redeemable at a fixed 1:1 value; subject to
+  eligibility, vault terms, NAV, fees, claims, liquidity and risk of loss. Its
+  production symbol is `nbRV`; any `USDC`-like symbol must not be read as a 1:1
+  redeemable stable asset.
 - Liquidity risk. nbUSDC shares are restricted and redemptions are bounded
   by a liquidity buffer; capital allocated to active underwriting is not
   instantly redeemable. Above-buffer withdrawals are restricted by design,

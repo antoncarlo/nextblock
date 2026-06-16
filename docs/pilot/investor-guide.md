@@ -3,6 +3,12 @@
 For Institutional LP participants who deposit test USDC into a vault and receive
 restricted `nbUSDC` shares during the testnet pilot.
 
+> **Share disclosure.** Vault share token; not a stablecoin; not legal tender; not
+> redeemable at a fixed 1:1 value; subject to eligibility, vault terms, NAV, fees,
+> claims, liquidity and risk of loss. The production share symbol is `nbRV`
+> (NextBlock Reinsurance Vault share); a `USDC`-like symbol must never be read as a
+> 1:1 redeemable stable asset.
+
 > Testnet only. No real funds, no yield, no financial offering. See the
 > [testnet disclaimer](./testnet-disclaimer.md).
 

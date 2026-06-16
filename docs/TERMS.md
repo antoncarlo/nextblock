@@ -17,7 +17,10 @@ NextBlock is an institutional protocol for tokenizing reinsurance
 portfolios: an insurance tokenization yield layer in which whitelisted
 cedants transfer premium flows into ERC-4626-style USDC vaults whose
 restricted shares (nbUSDC) are held by whitelisted institutional liquidity
-providers. Underwriting decisions, capital allocation, claim handling and
+providers. The vault share is a NAV-bearing token; not a stablecoin; not legal
+tender; not redeemable at a fixed 1:1 value; subject to eligibility, vault terms,
+NAV, fees, claims, liquidity and risk of loss (production symbol `nbRV`).
+Underwriting decisions, capital allocation, claim handling and
 emergency response are separated into distinct on-chain roles bounded by a
 timelock. NextBlock is a technology platform; it is not itself an insurer,
 reinsurer, broker, investment adviser or custodian.

@@ -12,6 +12,7 @@ import { useLensLPStatus, LensDataStatus } from '@/hooks/useNextBlockLens';
 import { DataSourceBadge } from '@/components/shared/DataSourceBadge';
 import { MOCK_USDC_ABI } from '@/config/contracts';
 import { parseUSDC, formatUSDC } from '@/lib/formatting';
+import { SHARE_SYMBOL, SHARE_DISCLAIMER } from '@/lib/disclosure';
 
 type TabMode = 'deposit' | 'withdraw';
 
@@ -177,7 +178,7 @@ export function DepositSidebar({
                   <p className="text-sm font-semibold text-gray-900">
                     {formatUSDC(lpStatus.assetValue)} USDC
                     <span className="ml-1 text-xs font-normal text-gray-400">
-                      ({formatUSDC(lpStatus.shareBalance)} nbUSDC shares)
+                      ({formatUSDC(lpStatus.shareBalance)} {SHARE_SYMBOL} vault shares)
                     </span>
                   </p>
                   <p className="text-xs text-gray-500">
@@ -227,6 +228,10 @@ export function DepositSidebar({
             )}
           </>
         )}
+      </div>
+      {/* Canonical risk disclosure: the share is NAV-bearing, not a stablecoin. */}
+      <div className="border-t border-gray-100 px-4 py-3">
+        <p className="text-[11px] leading-snug text-gray-400">{SHARE_DISCLAIMER}</p>
       </div>
     </div>
   );
