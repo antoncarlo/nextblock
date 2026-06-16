@@ -19,6 +19,7 @@ contract ComplianceRegistryTest is Test {
     address public lp = makeAddr("institutionalLP");
     address public lp2 = makeAddr("institutionalLP2");
     address public attacker = makeAddr("attacker");
+    address public venue = makeAddr("lendingMarket"); // approved contract venue (e.g., LendingMarket)
 
     uint64 public validExpiry;
 
@@ -312,5 +313,80 @@ contract ComplianceRegistryTest is Test {
         assertFalse(compliance.canReceive(lp));
         assertFalse(compliance.canTransfer(lp, lp, 1));
         assertFalse(compliance.canTransfer(lp, address(0), 1));
+    }
+
+    // =========== APPROVED VENUE (permissioned composability) ===========
+
+    function test_setApprovedVenue_onlyKycOperator() public {
+        bytes32 kycRole = protocolRoles.KYC_OPERATOR_ROLE();
+        vm.prank(attacker);
+        vm.expectRevert(
+            abi.encodeWithSelector(ComplianceRegistry.ComplianceRegistry__UnauthorizedRole.selector, attacker, kycRole)
+        );
+        compliance.setApprovedVenue(venue, true);
+    }
+
+    function test_setApprovedVenue_zeroAddress_reverts() public {
+        vm.prank(kycOperator);
+        vm.expectRevert(ComplianceRegistry.ComplianceRegistry__InvalidParams.selector);
+        compliance.setApprovedVenue(address(0), true);
+    }
+
+    function test_setApprovedVenue_emitsEvent_andStores() public {
+        vm.prank(kycOperator);
+        vm.expectEmit(true, false, false, true);
+        emit ComplianceRegistry.ApprovedVenueUpdated(venue, true);
+        compliance.setApprovedVenue(venue, true);
+        assertTrue(compliance.approvedVenue(venue));
+    }
+
+    function test_approvedVenue_canReceive_withoutKycOrWhitelist() public {
+        // A venue is NOT whitelisted and has no KYC expiry, yet once approved it
+        // may custody restricted shares (a contract has no KYC to expire).
+        assertFalse(compliance.canReceive(venue));
+        vm.prank(kycOperator);
+        compliance.setApprovedVenue(venue, true);
+        assertTrue(compliance.canReceive(venue));
+        compliance.requireCanReceive(venue); // must not revert
+    }
+
+    function test_approvedVenue_blocked_cannotReceive() public {
+        vm.prank(kycOperator);
+        compliance.setApprovedVenue(venue, true);
+        vm.prank(sentinel);
+        compliance.setBlocked(venue, true);
+        // blocked wins over approval
+        assertFalse(compliance.canReceive(venue));
+        vm.expectRevert(abi.encodeWithSelector(ComplianceRegistry.ComplianceRegistry__AddressBlocked.selector, venue));
+        compliance.requireCanReceive(venue);
+    }
+
+    function test_approvedVenue_transferFromLpToVenue_allowed() public {
+        // Core deposit-collateral path: a whitelisted LP transfers nbUSDC into an
+        // approved venue (the LendingMarket).
+        _onboard(lp);
+        vm.prank(kycOperator);
+        compliance.setApprovedVenue(venue, true);
+        assertTrue(compliance.canTransfer(lp, venue, 1_000e6));
+    }
+
+    function test_approvedVenue_revoke_restoresGate() public {
+        vm.startPrank(kycOperator);
+        compliance.setApprovedVenue(venue, true);
+        assertTrue(compliance.canReceive(venue));
+        compliance.setApprovedVenue(venue, false);
+        vm.stopPrank();
+        // Once revoked, the plain (un-whitelisted) address is ineligible again.
+        assertFalse(compliance.canReceive(venue));
+    }
+
+    function testFuzz_blockedVenueAlwaysIneligible(bool approved) public {
+        vm.prank(kycOperator);
+        compliance.setApprovedVenue(venue, approved);
+        vm.prank(sentinel);
+        compliance.setBlocked(venue, true);
+        // Invariant: a blocked venue can never receive, regardless of approval.
+        assertFalse(compliance.canReceive(venue));
+        assertFalse(compliance.canTransfer(lp, venue, 1));
     }
 }

@@ -13,6 +13,7 @@ interface IComplianceRegistry {
     function requireCanTransfer(address from, address to, uint256 amount) external view;
     function isBlocked(address user) external view returns (bool);
     function investorLimit(address user) external view returns (uint256);
+    function approvedVenue(address venue) external view returns (bool);
 }
 
 /// @title ComplianceRegistry
@@ -50,12 +51,19 @@ contract ComplianceRegistry is ProtocolRoleConstants, IComplianceRegistry {
     ///         Enforced by the vault in Phase 3, stored here as compliance datum.
     mapping(address => uint256) private _investorLimit;
 
+    /// @notice True if the address is an approved on-chain venue allowed to custody
+    ///         restricted shares (e.g., a permissioned LendingMarket). A contract
+    ///         venue has no KYC to expire, so it is exempt from the whitelist/kycExpiry
+    ///         checks, but the `blocked` flag still applies (Sentinel can revoke it).
+    mapping(address => bool) public approvedVenue;
+
     // --- Events ---
     event WhitelistUpdated(address indexed user, bool allowed);
     event BlockedStatusUpdated(address indexed user, bool blocked);
     event JurisdictionUpdated(address indexed user, uint16 code);
     event KycExpiryUpdated(address indexed user, uint64 expiry);
     event InvestorLimitUpdated(address indexed user, uint256 limit);
+    event ApprovedVenueUpdated(address indexed venue, bool approved);
 
     // --- Errors ---
     error ComplianceRegistry__UnauthorizedRole(address caller, bytes32 role);
@@ -110,6 +118,15 @@ contract ComplianceRegistry is ProtocolRoleConstants, IComplianceRegistry {
         emit InvestorLimitUpdated(user, limit);
     }
 
+    /// @notice Approve or revoke an on-chain venue authorized to custody restricted
+    ///         shares (permissioned composability, e.g. a LendingMarket). Only
+    ///         KYC_OPERATOR_ROLE. Revocation of risk is also possible via setBlocked.
+    function setApprovedVenue(address venue, bool approved) external onlyProtocolRole(KYC_OPERATOR_ROLE) {
+        if (venue == address(0)) revert ComplianceRegistry__InvalidParams();
+        approvedVenue[venue] = approved;
+        emit ApprovedVenueUpdated(venue, approved);
+    }
+
     // --- Sentinel Actions ---
 
     /// @notice Block or unblock an address (sanctions/freeze/incident response).
@@ -124,8 +141,9 @@ contract ComplianceRegistry is ProtocolRoleConstants, IComplianceRegistry {
 
     /// @inheritdoc IComplianceRegistry
     function canReceive(address user) public view returns (bool) {
-        if (!whitelisted[user]) return false;
         if (blocked[user]) return false;
+        if (approvedVenue[user]) return true; // approved venue: exempt from whitelist/kycExpiry
+        if (!whitelisted[user]) return false;
         if (kycExpiry[user] < uint64(block.timestamp)) return false;
         return true;
     }
@@ -147,6 +165,7 @@ contract ComplianceRegistry is ProtocolRoleConstants, IComplianceRegistry {
     ///      so vault transfer hooks surface actionable compliance errors.
     function requireCanReceive(address user) public view {
         if (blocked[user]) revert ComplianceRegistry__AddressBlocked(user);
+        if (approvedVenue[user]) return; // approved venue: exempt from whitelist/kycExpiry
         if (!whitelisted[user]) revert ComplianceRegistry__ReceiverNotWhitelisted(user);
         uint64 expiry = kycExpiry[user];
         if (expiry < uint64(block.timestamp)) revert ComplianceRegistry__KycExpired(user, expiry);
