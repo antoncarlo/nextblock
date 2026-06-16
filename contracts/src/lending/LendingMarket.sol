@@ -110,6 +110,9 @@ contract LendingMarket is ProtocolRoleConstants, ReentrancyGuard {
     event BadDebtRealized(address indexed borrower, uint256 assets);
     event Paused(address indexed by);
     event Unpaused(address indexed by);
+    event RiskParamsUpdated(uint256 lltvBps, uint256 liqLtvBps, uint256 liqIncentiveBps);
+    event CapsUpdated(uint256 supplyCap, uint256 borrowCap);
+    event ProtocolFeeUpdated(uint256 protocolFeeBps);
 
     // --- Errors ---
     error LendingMarket__InvalidParams();
@@ -182,6 +185,57 @@ contract LendingMarket is ProtocolRoleConstants, ReentrancyGuard {
     function unpause() external onlyProtocolRole(SENTINEL_ROLE) {
         paused = false;
         emit Unpaused(msg.sender);
+    }
+
+    // --- Parameter governance (risk-direction gate) ---
+
+    /// @dev Risk-DECREASING changes are immediate (Underwriting Curator);
+    ///      risk-INCREASING changes require OWNER_ROLE (the timelock in production).
+    function _authorizeParamChange(bool riskIncreasing) internal view {
+        bytes32 role = riskIncreasing ? OWNER_ROLE : UNDERWRITING_CURATOR_ROLE;
+        if (!protocolRoles.hasRole(role, msg.sender)) revert LendingMarket__Unauthorized(msg.sender, role);
+    }
+
+    /// @dev A cap is "looser" when it permits more (0 = unlimited = loosest).
+    function _capLoosened(uint256 newCap, uint256 oldCap) internal pure returns (bool) {
+        if (newCap == oldCap) return false;
+        if (newCap == 0) return true; // unlimited
+        if (oldCap == 0) return false; // was unlimited, now bounded -> tighter
+        return newCap > oldCap;
+    }
+
+    /// @notice Update collateral-risk parameters. Loosening (higher LLTV / liq LTV /
+    ///         incentive) is governance-gated; tightening is curator-immediate.
+    function setRiskParams(uint256 newLltvBps, uint256 newLiqLtvBps, uint256 newLiqIncentiveBps) external {
+        if (newLltvBps > newLiqLtvBps || newLiqLtvBps >= MAX_BPS || newLiqIncentiveBps > MAX_BPS) {
+            revert LendingMarket__InvalidParams();
+        }
+        bool riskIncreasing = newLltvBps > lltvBps || newLiqLtvBps > liqLtvBps || newLiqIncentiveBps > liqIncentiveBps;
+        _authorizeParamChange(riskIncreasing);
+        lltvBps = newLltvBps;
+        liqLtvBps = newLiqLtvBps;
+        liqIncentiveBps = newLiqIncentiveBps;
+        emit RiskParamsUpdated(newLltvBps, newLiqLtvBps, newLiqIncentiveBps);
+    }
+
+    /// @notice Update supply/borrow caps. Raising a cap (looser) is governance-gated;
+    ///         lowering (tighter) is curator-immediate.
+    function setCaps(uint256 newSupplyCap, uint256 newBorrowCap) external {
+        bool riskIncreasing = _capLoosened(newSupplyCap, supplyCap) || _capLoosened(newBorrowCap, borrowCap);
+        _authorizeParamChange(riskIncreasing);
+        supplyCap = newSupplyCap;
+        borrowCap = newBorrowCap;
+        emit CapsUpdated(newSupplyCap, newBorrowCap);
+    }
+
+    /// @notice Update the protocol fee on interest. Raising it is governance-gated;
+    ///         lowering it is curator-immediate. Pending interest is settled first.
+    function setProtocolFee(uint256 newProtocolFeeBps) external {
+        if (newProtocolFeeBps > MAX_BPS) revert LendingMarket__InvalidParams();
+        _authorizeParamChange(newProtocolFeeBps > protocolFeeBps);
+        _accrue();
+        protocolFeeBps = newProtocolFeeBps;
+        emit ProtocolFeeUpdated(newProtocolFeeBps);
     }
 
     // --- Interest accrual (utilization-based linear IRM, simple interest per settle) ---

@@ -70,6 +70,7 @@ contract LendingMarketTest is Test {
     address lender2 = makeAddr("usdcLender2");
     address borrower = makeAddr("borrower");
     address liquidator = makeAddr("liquidator");
+    address curatorOnly = makeAddr("curatorOnly"); // holds CURATOR but NOT OWNER
     address feeRecipient = makeAddr("feeRecipient");
 
     uint256 constant SUPPLY_100K = 100_000e6;
@@ -90,6 +91,11 @@ contract LendingMarketTest is Test {
 
         shareOracle = new NavShareOracle(address(navOracle), address(vault));
         market = new LendingMarket(_params(0));
+
+        // A curator that does NOT hold OWNER, to test the risk-direction gate.
+        bytes32 curatorRole = roles.UNDERWRITING_CURATOR_ROLE();
+        vm.prank(deployer);
+        roles.grantRole(curatorRole, curatorOnly);
     }
 
     // --- Helpers ---
@@ -682,5 +688,86 @@ contract LendingMarketTest is Test {
 
         vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
         evil.doWithdraw(5_000e6);
+    }
+
+    // --- Parameter setters: risk-direction gate (follow-up) ---
+
+    function test_setRiskParams_tighten_byCurator() public {
+        // Lowering LLTV is risk-decreasing -> a curator may do it immediately.
+        vm.prank(curatorOnly);
+        market.setRiskParams(6000, 8000, 500);
+        assertEq(market.lltvBps(), 6000);
+    }
+
+    function test_setRiskParams_loosen_requiresOwner() public {
+        bytes32 ownerRole = roles.OWNER_ROLE();
+        // Raising LLTV is risk-increasing -> a curator without OWNER is rejected.
+        vm.expectRevert(
+            abi.encodeWithSelector(LendingMarket.LendingMarket__Unauthorized.selector, curatorOnly, ownerRole)
+        );
+        vm.prank(curatorOnly);
+        market.setRiskParams(7500, 8000, 500);
+        // OWNER (timelock in production; deployer in staging) can.
+        vm.prank(deployer);
+        market.setRiskParams(7500, 8000, 500);
+        assertEq(market.lltvBps(), 7500);
+    }
+
+    function test_setRiskParams_invalid_reverts() public {
+        vm.prank(deployer);
+        vm.expectRevert(LendingMarket.LendingMarket__InvalidParams.selector);
+        market.setRiskParams(8500, 8000, 500); // lltv > liqLtv
+    }
+
+    function test_setCaps_tighten_byCurator() public {
+        // Unlimited (0) -> finite is tightening -> curator may do it.
+        vm.prank(curatorOnly);
+        market.setCaps(500_000e6, 300_000e6);
+        assertEq(market.supplyCap(), 500_000e6);
+        assertEq(market.borrowCap(), 300_000e6);
+    }
+
+    function test_setCaps_loosen_requiresOwner() public {
+        vm.prank(curatorOnly);
+        market.setCaps(500_000e6, 300_000e6);
+        bytes32 ownerRole = roles.OWNER_ROLE();
+        // Raising a cap is loosening -> requires OWNER.
+        vm.expectRevert(
+            abi.encodeWithSelector(LendingMarket.LendingMarket__Unauthorized.selector, curatorOnly, ownerRole)
+        );
+        vm.prank(curatorOnly);
+        market.setCaps(600_000e6, 300_000e6);
+        vm.prank(deployer);
+        market.setCaps(600_000e6, 300_000e6);
+        assertEq(market.supplyCap(), 600_000e6);
+    }
+
+    function test_borrowCap_enforced() public {
+        _enableBorrow(1_000_000e6, 100_000e6, 100_000e6);
+        // Tighten to a 30k borrow cap (curator).
+        vm.prank(curatorOnly);
+        market.setCaps(0, 30_000e6);
+        // 40k is within LLTV (70k) and liquidity, but exceeds the borrow cap.
+        vm.prank(borrower);
+        vm.expectRevert(abi.encodeWithSelector(LendingMarket.LendingMarket__BorrowCapExceeded.selector, 30_000e6));
+        market.borrow(40_000e6, borrower);
+    }
+
+    function test_setProtocolFee_lower_byCurator() public {
+        vm.prank(curatorOnly);
+        market.setProtocolFee(500); // 10% -> 5%
+        assertEq(market.protocolFeeBps(), 500);
+    }
+
+    function test_setProtocolFee_raise_requiresOwner() public {
+        bytes32 ownerRole = roles.OWNER_ROLE();
+        vm.expectRevert(
+            abi.encodeWithSelector(LendingMarket.LendingMarket__Unauthorized.selector, curatorOnly, ownerRole)
+        );
+        vm.prank(curatorOnly);
+        market.setProtocolFee(2000);
+        vm.prank(deployer);
+        market.setProtocolFee(2000);
+        assertEq(market.protocolFeeBps(), 2000);
     }
 }
