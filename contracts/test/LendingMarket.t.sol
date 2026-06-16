@@ -11,6 +11,41 @@ import {InsuranceVault} from "../src/InsuranceVault.sol";
 import {MockUSDC} from "../src/MockUSDC.sol";
 import {NavShareOracle} from "../src/lending/NavShareOracle.sol";
 import {LendingMarket} from "../src/lending/LendingMarket.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
+/// @dev Malicious loan token that re-enters the market on the outbound transfer.
+contract ReentrantToken is ERC20 {
+    LendingMarket public market;
+    bool public attacking;
+
+    constructor() ERC20("Evil USDC", "eUSDC") {}
+
+    function mintSelf(uint256 amt) external {
+        _mint(address(this), amt);
+    }
+
+    function setMarket(LendingMarket m) external {
+        market = m;
+    }
+
+    function doSupply(uint256 amt) external {
+        _approve(address(this), address(market), amt);
+        market.supply(amt);
+    }
+
+    function doWithdraw(uint256 amt) external {
+        attacking = true;
+        market.withdraw(amt, address(this));
+    }
+
+    function _update(address from, address to, uint256 value) internal override {
+        super._update(from, to, value);
+        if (attacking && from == address(market)) {
+            market.withdraw(1, address(this)); // re-enter -> must hit the guard
+        }
+    }
+}
 
 /// @title LendingMarketTest
 /// @notice Isolated permissioned lending market (nbUSDC collateral / USDC loan).
@@ -576,5 +611,76 @@ contract LendingMarketTest is Test {
         assertEq(market.collateralOf(borrower), 0);
         assertEq(market.borrowShares(borrower), 0);
         assertLt(market.totalSupplyAssets(), supplyBefore);
+    }
+
+    // --- Hardening: pause (Sentinel) ---
+
+    function test_pause_onlySentinel() public {
+        address notSentinel = makeAddr("notSentinel");
+        bytes32 sentinelRole = roles.SENTINEL_ROLE();
+        vm.expectRevert(
+            abi.encodeWithSelector(LendingMarket.LendingMarket__Unauthorized.selector, notSentinel, sentinelRole)
+        );
+        vm.prank(notSentinel);
+        market.pause();
+    }
+
+    function test_pause_blocksEntry_allowsExit() public {
+        _enableBorrow(100_000e6, 100_000e6, 100_000e6);
+        vm.prank(borrower);
+        market.borrow(30_000e6, borrower);
+
+        vm.prank(deployer); // SENTINEL
+        market.pause();
+        assertTrue(market.paused());
+
+        // Entry blocked.
+        _whitelist(lender2);
+        deal(address(usdc), lender2, 1_000e6);
+        vm.startPrank(lender2);
+        usdc.approve(address(market), 1_000e6);
+        vm.expectRevert(LendingMarket.LendingMarket__Paused.selector);
+        market.supply(1_000e6);
+        vm.stopPrank();
+
+        vm.prank(borrower);
+        vm.expectRevert(LendingMarket.LendingMarket__Paused.selector);
+        market.borrow(1_000e6, borrower);
+
+        // Exit allowed while paused: repay and withdraw still work.
+        deal(address(usdc), borrower, 10_000e6);
+        vm.startPrank(borrower);
+        usdc.approve(address(market), 10_000e6);
+        market.repay(10_000e6);
+        vm.stopPrank();
+
+        vm.prank(lender);
+        market.withdraw(1_000e6, lender);
+    }
+
+    function test_unpause_restoresEntry() public {
+        vm.prank(deployer);
+        market.pause();
+        vm.prank(deployer);
+        market.unpause();
+        assertFalse(market.paused());
+        _supply(market, lender, 1_000e6); // entry works again
+    }
+
+    // --- Hardening: reentrancy guard ---
+
+    function test_reentrancy_withdrawBlocked() public {
+        ReentrantToken evil = new ReentrantToken();
+        LendingMarket.MarketParams memory p = _params(0);
+        p.loanToken = address(evil);
+        LendingMarket evilMarket = new LendingMarket(p);
+        evil.setMarket(evilMarket);
+
+        _whitelist(address(evil)); // token contract must be a compliant supplier
+        evil.mintSelf(10_000e6);
+        evil.doSupply(10_000e6);
+
+        vm.expectRevert(ReentrancyGuard.ReentrancyGuardReentrantCall.selector);
+        evil.doWithdraw(5_000e6);
     }
 }

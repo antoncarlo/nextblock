@@ -5,7 +5,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
-import {ProtocolRoles} from "../ProtocolRoles.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
+import {ProtocolRoles, ProtocolRoleConstants} from "../ProtocolRoles.sol";
 import {IComplianceRegistry} from "../ComplianceRegistry.sol";
 import {NavShareOracle} from "./NavShareOracle.sol";
 
@@ -28,7 +30,7 @@ import {NavShareOracle} from "./NavShareOracle.sol";
 ///         `liqIncentiveBps` discount, with residual bad debt socialized to
 ///         suppliers. NAV is read from the guarded NavShareOracle: a stale/paused
 ///         feed freezes borrowing and collateral withdrawal.
-contract LendingMarket {
+contract LendingMarket is ProtocolRoleConstants, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     // --- Constants ---
@@ -93,6 +95,9 @@ contract LendingMarket {
     // --- Accrual ---
     uint64 public lastAccrued;
 
+    // --- Emergency ---
+    bool public paused;
+
     // --- Events ---
     event Supply(address indexed lender, uint256 assets, uint256 shares);
     event Withdraw(address indexed lender, address indexed to, uint256 assets, uint256 shares);
@@ -103,6 +108,8 @@ contract LendingMarket {
     event AccrueInterest(uint256 interest, uint256 feeShares);
     event Liquidate(address indexed liquidator, address indexed borrower, uint256 repaid, uint256 seized);
     event BadDebtRealized(address indexed borrower, uint256 assets);
+    event Paused(address indexed by);
+    event Unpaused(address indexed by);
 
     // --- Errors ---
     error LendingMarket__InvalidParams();
@@ -116,6 +123,8 @@ contract LendingMarket {
     error LendingMarket__BorrowCapExceeded(uint256 cap);
     error LendingMarket__NoDebt();
     error LendingMarket__PositionHealthy();
+    error LendingMarket__Unauthorized(address caller, bytes32 role);
+    error LendingMarket__Paused();
 
     constructor(MarketParams memory p) {
         if (
@@ -148,6 +157,31 @@ contract LendingMarket {
         slopePerSecondWad = p.slopePerSecondWad;
 
         lastAccrued = uint64(block.timestamp);
+    }
+
+    // --- Modifiers ---
+    modifier onlyProtocolRole(bytes32 role) {
+        if (!protocolRoles.hasRole(role, msg.sender)) revert LendingMarket__Unauthorized(msg.sender, role);
+        _;
+    }
+
+    modifier whenNotPaused() {
+        if (paused) revert LendingMarket__Paused();
+        _;
+    }
+
+    // --- Emergency (Sentinel) ---
+
+    /// @notice Pause risk-increasing actions (supply, borrow, collateral deposit).
+    ///         Exits (withdraw, repay, withdrawCollateral) and liquidation stay open.
+    function pause() external onlyProtocolRole(SENTINEL_ROLE) {
+        paused = true;
+        emit Paused(msg.sender);
+    }
+
+    function unpause() external onlyProtocolRole(SENTINEL_ROLE) {
+        paused = false;
+        emit Unpaused(msg.sender);
     }
 
     // --- Interest accrual (utilization-based linear IRM, simple interest per settle) ---
@@ -188,7 +222,7 @@ contract LendingMarket {
 
     /// @notice Supply USDC liquidity and receive supply shares. Lender must be a
     ///         compliant (whitelisted, non-blocked, KYC-valid) institutional LP.
-    function supply(uint256 assets) external returns (uint256 shares) {
+    function supply(uint256 assets) external nonReentrant whenNotPaused returns (uint256 shares) {
         if (assets == 0) revert LendingMarket__ZeroAmount();
         if (!compliance.canReceive(msg.sender)) revert LendingMarket__NotWhitelisted(msg.sender);
         _accrue();
@@ -206,7 +240,7 @@ contract LendingMarket {
 
     /// @notice Withdraw `assets` USDC of supplied liquidity to `to`. Shares burned
     ///         are rounded up (favoring the protocol / remaining lenders).
-    function withdraw(uint256 assets, address to) external returns (uint256 shares) {
+    function withdraw(uint256 assets, address to) external nonReentrant returns (uint256 shares) {
         if (assets == 0) revert LendingMarket__ZeroAmount();
         if (to == address(0)) revert LendingMarket__InvalidParams();
         _accrue();
@@ -228,7 +262,7 @@ contract LendingMarket {
 
     /// @notice Post nbUSDC as collateral. The market must be an `approvedVenue` in
     ///         the ComplianceRegistry, otherwise the vault transfer hook reverts.
-    function depositCollateral(uint256 shares) external {
+    function depositCollateral(uint256 shares) external nonReentrant whenNotPaused {
         if (shares == 0) revert LendingMarket__ZeroAmount();
         if (!compliance.canReceive(msg.sender)) revert LendingMarket__NotWhitelisted(msg.sender);
         collateralOf[msg.sender] += shares;
@@ -240,7 +274,7 @@ contract LendingMarket {
     /// @notice Withdraw posted collateral to `to`. The vault transfer hook enforces
     ///         that `to` is a compliant receiver. Borrow-health checks are added in
     ///         the borrow slice (no debt can exist yet).
-    function withdrawCollateral(uint256 shares, address to) external {
+    function withdrawCollateral(uint256 shares, address to) external nonReentrant {
         if (shares == 0) revert LendingMarket__ZeroAmount();
         if (to == address(0)) revert LendingMarket__InvalidParams();
         if (shares > collateralOf[msg.sender]) revert LendingMarket__InsufficientCollateral();
@@ -258,7 +292,7 @@ contract LendingMarket {
     /// @notice Borrow USDC against posted nbUSDC collateral. Borrower must be a
     ///         compliant LP; the position must stay within `lltvBps`. Reverts if
     ///         the NAV feed is stale/paused (collateral cannot be valued safely).
-    function borrow(uint256 assets, address to) external returns (uint256 shares) {
+    function borrow(uint256 assets, address to) external nonReentrant whenNotPaused returns (uint256 shares) {
         if (assets == 0) revert LendingMarket__ZeroAmount();
         if (to == address(0)) revert LendingMarket__InvalidParams();
         if (!compliance.canReceive(msg.sender)) revert LendingMarket__NotWhitelisted(msg.sender);
@@ -281,7 +315,7 @@ contract LendingMarket {
 
     /// @notice Repay outstanding USDC debt for the caller. Pass `type(uint256).max`
     ///         to repay in full. No compliance gate (exiting debt is always allowed).
-    function repay(uint256 assets) external returns (uint256 shares) {
+    function repay(uint256 assets) external nonReentrant returns (uint256 shares) {
         if (assets == 0) revert LendingMarket__ZeroAmount();
         _accrue();
         uint256 debt = _borrowAssets(msg.sender);
@@ -307,7 +341,11 @@ contract LendingMarket {
     ///         collateral at a `liqIncentiveBps` discount. The liquidator must be a
     ///         compliant receiver of restricted shares. If collateral is exhausted
     ///         while debt remains, the residual is socialized to suppliers.
-    function liquidate(address borrower, uint256 repayAssets) external returns (uint256 repaid, uint256 seized) {
+    function liquidate(address borrower, uint256 repayAssets)
+        external
+        nonReentrant
+        returns (uint256 repaid, uint256 seized)
+    {
         if (repayAssets == 0) revert LendingMarket__ZeroAmount();
         if (!compliance.canReceive(msg.sender)) revert LendingMarket__NotWhitelisted(msg.sender);
         _accrue();
