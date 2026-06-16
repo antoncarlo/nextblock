@@ -71,8 +71,28 @@ contract LendingMarketTest is Test {
             protocolFeeBps: 1000,
             supplyCap: supplyCap,
             borrowCap: 0,
-            feeRecipient: feeRecipient
+            feeRecipient: feeRecipient,
+            baseRatePerSecondWad: 0,
+            slopePerSecondWad: 1e10 // ~31.5% APR at full utilization
         });
+    }
+
+    function _publishNav(uint256 nav) internal {
+        vm.prank(deployer);
+        navOracle.publishNav(address(vault), nav, 9000, keccak256("nav"));
+    }
+
+    /// @dev Full borrow-enabling setup: lender liquidity, borrower collateral, NAV.
+    function _enableBorrow(uint256 supplyAmt, uint256 collUsdc, uint256 nav) internal returns (uint256 collShares) {
+        _supply(market, lender, supplyAmt);
+        collShares = _giveCollateral(borrower, collUsdc);
+        _approveVenue();
+        _postCollateral(borrower, collShares);
+        _publishNav(nav);
+    }
+
+    function _collateralValue(address who) internal view returns (uint256) {
+        return shareOracle.priceCollateralUSDC(market.collateralOf(who));
     }
 
     function _whitelist(address who) internal {
@@ -352,5 +372,130 @@ contract LendingMarketTest is Test {
         market.withdrawCollateral(shares, borrower);
         assertEq(market.collateralOf(borrower), 0);
         assertEq(vault.balanceOf(borrower), shares);
+    }
+
+    // --- Borrow / Repay / Accrual (slice 3) ---
+
+    function test_borrow_happyPath() public {
+        _enableBorrow(100_000e6, 100_000e6, 100_000e6);
+        uint256 maxDebt = _collateralValue(borrower) * 7000 / 10_000;
+        uint256 amount = maxDebt / 2;
+
+        uint256 balBefore = usdc.balanceOf(borrower);
+        vm.prank(borrower);
+        uint256 shares = market.borrow(amount, borrower);
+
+        assertGt(shares, 0);
+        assertEq(usdc.balanceOf(borrower), balBefore + amount);
+        assertEq(market.totalBorrowAssets(), amount);
+        assertApproxEqAbs(market.borrowAssetsOf(borrower), amount, 1);
+    }
+
+    function test_borrow_exceedsLltv_reverts() public {
+        _enableBorrow(100_000e6, 100_000e6, 100_000e6);
+        uint256 collValue = _collateralValue(borrower);
+        uint256 tooMuch = collValue * 7200 / 10_000; // 72% > 70% LLTV
+
+        vm.prank(borrower);
+        vm.expectRevert(LendingMarket.LendingMarket__HealthFactorTooLow.selector);
+        market.borrow(tooMuch, borrower);
+    }
+
+    function test_borrow_insufficientLiquidity_reverts() public {
+        // Plenty of collateral, but only 10k USDC supplied.
+        _enableBorrow(10_000e6, 100_000e6, 100_000e6);
+        // 50k is within LLTV (70k) but exceeds the 10k available liquidity.
+        vm.prank(borrower);
+        vm.expectRevert(LendingMarket.LendingMarket__InsufficientLiquidity.selector);
+        market.borrow(50_000e6, borrower);
+    }
+
+    function test_borrow_notWhitelisted_reverts() public {
+        _enableBorrow(100_000e6, 100_000e6, 100_000e6);
+        address stranger = makeAddr("stranger");
+        vm.prank(stranger);
+        vm.expectRevert(abi.encodeWithSelector(LendingMarket.LendingMarket__NotWhitelisted.selector, stranger));
+        market.borrow(1_000e6, stranger);
+    }
+
+    function test_borrow_staleNav_reverts() public {
+        _enableBorrow(100_000e6, 100_000e6, 100_000e6);
+        vm.warp(block.timestamp + navOracle.maxStaleness() + 1);
+        vm.prank(borrower);
+        vm.expectPartialRevert(NavOracle.NavOracle__StaleNav.selector);
+        market.borrow(10_000e6, borrower);
+    }
+
+    function test_repay_partial() public {
+        _enableBorrow(100_000e6, 100_000e6, 100_000e6);
+        vm.prank(borrower);
+        market.borrow(50_000e6, borrower);
+
+        deal(address(usdc), borrower, 20_000e6);
+        vm.startPrank(borrower);
+        usdc.approve(address(market), 20_000e6);
+        market.repay(20_000e6);
+        vm.stopPrank();
+
+        assertApproxEqAbs(market.borrowAssetsOf(borrower), 30_000e6, 1);
+        assertApproxEqAbs(market.totalBorrowAssets(), 30_000e6, 1);
+    }
+
+    function test_repay_full_clearsDebt() public {
+        _enableBorrow(100_000e6, 100_000e6, 100_000e6);
+        vm.prank(borrower);
+        market.borrow(50_000e6, borrower);
+
+        // Fund a little extra in case interest accrued, repay generously.
+        deal(address(usdc), borrower, 60_000e6);
+        vm.startPrank(borrower);
+        usdc.approve(address(market), 60_000e6);
+        market.repay(type(uint256).max);
+        vm.stopPrank();
+
+        assertEq(market.borrowShares(borrower), 0);
+        assertEq(market.borrowAssetsOf(borrower), 0);
+        assertEq(market.totalBorrowShares(), 0);
+    }
+
+    function test_accrue_interestGrowsDebtAndSupply() public {
+        _enableBorrow(100_000e6, 100_000e6, 100_000e6);
+        vm.prank(borrower);
+        market.borrow(50_000e6, borrower);
+
+        uint256 borrowBefore = market.totalBorrowAssets();
+        uint256 supplyBefore = market.totalSupplyAssets();
+
+        vm.warp(block.timestamp + 30 days);
+        market.accrue();
+
+        uint256 borrowDelta = market.totalBorrowAssets() - borrowBefore;
+        uint256 supplyDelta = market.totalSupplyAssets() - supplyBefore;
+        assertGt(borrowDelta, 0);
+        // Interest added to both books equally (USDC conservation of the accrual).
+        assertEq(borrowDelta, supplyDelta);
+        // Protocol fee captured as supply shares to the fee recipient.
+        assertGt(market.supplyShares(feeRecipient), 0);
+    }
+
+    function test_withdrawCollateral_breaksHealth_reverts() public {
+        uint256 collShares = _enableBorrow(100_000e6, 100_000e6, 100_000e6);
+        vm.prank(borrower);
+        market.borrow(35_000e6, borrower); // 50% of 70k max
+
+        // Removing 90% of collateral leaves ~10k value, max debt ~7k < 35k debt.
+        vm.prank(borrower);
+        vm.expectRevert(LendingMarket.LendingMarket__HealthFactorTooLow.selector);
+        market.withdrawCollateral(collShares * 9 / 10, borrower);
+    }
+
+    function testFuzz_borrowWithinLltv_isHealthy(uint256 amount) public {
+        _enableBorrow(1_000_000e6, 100_000e6, 100_000e6);
+        uint256 maxDebt = _collateralValue(borrower) * 7000 / 10_000;
+        amount = bound(amount, 1e6, maxDebt - 1e6);
+        vm.prank(borrower);
+        market.borrow(amount, borrower);
+        assertTrue(market.isHealthy(borrower));
+        assertApproxEqAbs(market.borrowAssetsOf(borrower), amount, 1);
     }
 }
