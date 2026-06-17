@@ -49,6 +49,7 @@ export function Header() {
   const isApplyActive = pathname?.startsWith('/app/apply') ?? false;
   const isAdminActive = pathname?.startsWith('/app/admin') ?? false;
   const isPilotActive = pathname?.startsWith('/app/pilot') ?? false;
+  const isBorrowActive = pathname?.startsWith('/app/borrow') ?? false;
 
   return (
     <header
@@ -101,6 +102,15 @@ export function Header() {
             className="hover:bg-black/5"
           >
             Pilot
+          </Link>
+
+          {/* Borrow against nbRV collateral — sempre visibile */}
+          <Link
+            href="/app/borrow"
+            style={navLinkStyle(isBorrowActive)}
+            className="hover:bg-black/5"
+          >
+            Borrow
           </Link>
 
           {/* Syndicates — solo per Syndicate Manager e Admin */}
