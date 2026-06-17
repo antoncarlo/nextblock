@@ -50,6 +50,7 @@ export function Header() {
   const isAdminActive = pathname?.startsWith('/app/admin') ?? false;
   const isPilotActive = pathname?.startsWith('/app/pilot') ?? false;
   const isBorrowActive = pathname?.startsWith('/app/borrow') ?? false;
+  const isMoneyFlowActive = pathname?.startsWith('/app/money-flow') ?? false;
 
   return (
     <header
@@ -111,6 +112,15 @@ export function Header() {
             className="hover:bg-black/5"
           >
             Borrow
+          </Link>
+
+          {/* Money Flow — sempre visibile (vista economica read-only) */}
+          <Link
+            href="/app/money-flow"
+            style={navLinkStyle(isMoneyFlowActive)}
+            className="hover:bg-black/5"
+          >
+            Money Flow
           </Link>
 
           {/* Syndicates — solo per Syndicate Manager e Admin */}
