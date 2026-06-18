@@ -44,7 +44,7 @@ export function isSettled(status: number): boolean {
   return status === ClaimStatusValue.PAID || status === ClaimStatusValue.REJECTED;
 }
 
-export function filterClaims(claims: readonly ClaimLike[], f: ClaimFilter): ClaimLike[] {
+export function filterClaims<T extends ClaimLike>(claims: readonly T[], f: ClaimFilter): T[] {
   return claims.filter(
     (c) =>
       (f.status === undefined || c.status === f.status) &&
