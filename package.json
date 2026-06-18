@@ -13,7 +13,7 @@
     "check:addressbook": "node scripts/check-addressbook.mjs",
     "ci:frontend:install": "npm ci",
     "ci:frontend:lint": "npm --prefix app run lint",
-    "ci:frontend:typecheck": "node app/node_modules/typescript/bin/tsc -p app/tsconfig.json --noEmit",
+    "ci:frontend:typecheck": "node node_modules/typescript/bin/tsc -p app/tsconfig.json --noEmit",
     "ci:frontend:build": "npm --prefix app run build",
     "ci:frontend": "npm run ci:frontend:install && npm run ci:frontend:lint && npm run ci:frontend:typecheck && npm run ci:frontend:build",
     "ci:contracts:fmt": "cd contracts && forge fmt --check",
