@@ -6,6 +6,7 @@ import { useAccount } from 'wagmi';
 import { WalletButton } from './WalletButton';
 import { WalletRoleIndicator, useWalletRole, useActiveRole } from './WalletRoleIndicator';
 import { EmailAuthControls } from './EmailAuthControls';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { useEmailSession } from '@/hooks/useEmailSession';
 
 const navLinkStyle = (active: boolean): React.CSSProperties => ({
@@ -275,6 +276,7 @@ export function Header() {
         {/* Wallet */}
         <div className="flex items-center gap-3">
           <EmailAuthControls />
+          {isConnected && <NotificationBell />}
           <WalletRoleIndicator />
           <WalletButton />
         </div>
