@@ -24,5 +24,9 @@
     "audit:contracts:coverage": "cd contracts && forge coverage --report summary",
     "ci:contracts": "npm run ci:contracts:fmt && npm run ci:contracts:build && npm run ci:contracts:test",
     "ci": "npm run ci:frontend && npm run ci:contracts"
+  },
+  "overrides": {
+    "form-data": "^4.0.6",
+    "ws": "^8.21.0"
   }
 }
