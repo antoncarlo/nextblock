@@ -92,6 +92,7 @@ export default function PilotHubPage() {
 
   useEffect(() => {
     if (!isConnected || !address) return;
+    // eslint-disable-next-line
     void runKybFetch();
   }, [isConnected, address, runKybFetch]);
 

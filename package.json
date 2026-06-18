@@ -11,9 +11,9 @@
     "build": "npm --prefix app run build",
     "codegen:addressbook": "node scripts/generate-addressbook.mjs",
     "check:addressbook": "node scripts/check-addressbook.mjs",
-    "ci:frontend:install": "npm --prefix app ci",
+    "ci:frontend:install": "npm ci",
     "ci:frontend:lint": "npm --prefix app run lint",
-    "ci:frontend:typecheck": "node app/node_modules/typescript/bin/tsc -p app/tsconfig.json --noEmit",
+    "ci:frontend:typecheck": "node node_modules/typescript/bin/tsc -p app/tsconfig.json --noEmit",
     "ci:frontend:build": "npm --prefix app run build",
     "ci:frontend": "npm run ci:frontend:install && npm run ci:frontend:lint && npm run ci:frontend:typecheck && npm run ci:frontend:build",
     "ci:contracts:fmt": "cd contracts && forge fmt --check",
@@ -24,5 +24,9 @@
     "audit:contracts:coverage": "cd contracts && forge coverage --report summary",
     "ci:contracts": "npm run ci:contracts:fmt && npm run ci:contracts:build && npm run ci:contracts:test",
     "ci": "npm run ci:frontend && npm run ci:contracts"
+  },
+  "overrides": {
+    "form-data": "^4.0.6",
+    "ws": "^8.21.0"
   }
 }
