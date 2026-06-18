@@ -51,6 +51,7 @@ export function Header() {
   const isPilotActive = pathname?.startsWith('/app/pilot') ?? false;
   const isBorrowActive = pathname?.startsWith('/app/borrow') ?? false;
   const isMoneyFlowActive = pathname?.startsWith('/app/money-flow') ?? false;
+  const isClaimsActive = pathname?.startsWith('/app/claims') ?? false;
 
   return (
     <header
@@ -121,6 +122,15 @@ export function Header() {
             className="hover:bg-black/5"
           >
             Money Flow
+          </Link>
+
+          {/* Claims control room — sempre visibile (coda read-only; azioni gated nel panel) */}
+          <Link
+            href="/app/claims"
+            style={navLinkStyle(isClaimsActive)}
+            className="hover:bg-black/5"
+          >
+            Claims
           </Link>
 
           {/* Syndicates — solo per Syndicate Manager e Admin */}
