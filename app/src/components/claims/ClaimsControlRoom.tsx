@@ -31,6 +31,7 @@ export function ClaimsControlRoom() {
   const [anomalyOnly, setAnomalyOnly] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
 
+  // eslint-disable-next-line
   const nowSec = BigInt(Math.floor(Date.now() / 1000));
   const vaults = Array.from(new Set(claims.map((c) => c.vault)));
   const rows = filterClaims(claims, {

@@ -55,6 +55,7 @@ export function EvidencePanel({ claimId, evidenceHash }: { claimId: bigint; evid
 
   async function sign(action: string): Promise<SignedAuth | null> {
     if (!address) return null;
+    // eslint-disable-next-line
     const timestamp = Math.floor(Date.now() / 1000);
     const signature = await signMessageAsync({ message: operatorAuthMessage(action, timestamp) });
     return { address, timestamp, signature };
