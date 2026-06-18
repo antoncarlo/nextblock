@@ -187,7 +187,9 @@ contract DeployStack is Script, ProtocolRoleConstants {
         vault = InsuranceVault(
             // Share symbol intentionally avoids a "USDC"/stable connotation: the
             // share is a NAV-bearing reinsurance vault token, not a 1:1 stablecoin.
-            factory.createVault("NextBlock Reinsurance Vault - Balanced", "nbRV-BAL", "Balanced Core", curatorAddr, 2000, 0)
+            factory.createVault(
+                "NextBlock Reinsurance Vault - Balanced", "nbRV-BAL", "Balanced Core", curatorAddr, 2000, 0
+            )
         );
     }
 
