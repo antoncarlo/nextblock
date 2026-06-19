@@ -10,6 +10,7 @@ import { getEmailActorFromRequest } from '@/lib/app-auth/session';
 import { consumeNonce, createSupabaseNonceStore } from '@/lib/kyb/nonces';
 import { clientIp, createSupabaseRateLimitStore, rateLimit } from '@/lib/rate-limit';
 import { logApiError } from '@/lib/api-log';
+import { getSanctionsProvider } from '@/lib/sanctions/provider';
 
 /**
  * Operator review transition. Wallet reviews bind application id AND target
@@ -117,7 +118,7 @@ export async function POST(
 
   const { data: application, error: fetchError } = await supabase
     .from('kyb_applications')
-    .select('id, status')
+    .select('id, status, company_name, jurisdiction')
     .eq('id', id)
     .single();
   if (fetchError || !application) {
@@ -130,6 +131,86 @@ export async function POST(
       { error: `invalid transition ${fromStatus} -> ${toStatus}` },
       { status: 422 },
     );
+  }
+
+  // Sanctions gate: the `under_review → approved` step is the moment the
+  // entity becomes whitelistable, so this is the right hook to require a
+  // clean screening result. Provider call + audit-log row + match persistence
+  // happen BEFORE the status transition. On a match we leave the row in
+  // `under_review` and surface the run + matches; a Sentinel resolves them
+  // in /app/admin/sanctions before this endpoint will let the approve land.
+  if (toStatus === 'approved') {
+    const kybId = application.id as string;
+    let provider;
+    try {
+      provider = getSanctionsProvider();
+    } catch (err) {
+      logApiError('kyb/review', 'sanctions_provider_misconfigured', {
+        code: err instanceof Error ? err.name : 'unknown',
+      });
+      return NextResponse.json({ error: 'sanctions screening unavailable' }, { status: 503 });
+    }
+
+    const subject = {
+      kybApplicationUuid: kybId,
+      kind: 'entity' as const,
+      name: application.company_name as string,
+      country: typeof application.jurisdiction === 'string' ? application.jurisdiction.slice(0, 2).toUpperCase() : undefined,
+    };
+
+    const result = await provider.screen(subject);
+
+    const { data: runRow, error: runErr } = await supabase
+      .from('sanctions_screening_runs')
+      .insert({
+        kyb_application_id: kybId,
+        subject_kind: subject.kind,
+        subject_name: subject.name,
+        subject_country: subject.country ?? null,
+        provider: result.provider,
+        provider_search_id: result.providerSearchId ?? null,
+        result_code: result.resultCode,
+        match_count: result.matches.length,
+        raw_response: result.rawResponse ?? null,
+      })
+      .select('id')
+      .single();
+    if (runErr || !runRow) {
+      logApiError('kyb/review', 'sanctions_run_insert_failed', { code: runErr?.code ?? 'unknown' });
+      return NextResponse.json({ error: 'sanctions audit append failed' }, { status: 502 });
+    }
+
+    if (result.resultCode === 'error') {
+      return NextResponse.json({ error: 'sanctions provider error' }, { status: 502 });
+    }
+
+    if (result.resultCode === 'match' && result.matches.length > 0) {
+      const matchRows = result.matches.map((m) => ({
+        run_id: runRow.id,
+        kyb_application_id: kybId,
+        provider_match_id: m.providerMatchId,
+        matched_name: m.matchedName,
+        sanctions_list: m.sanctionsList,
+        severity: m.severity,
+        match_score: m.matchScore ?? null,
+        evidence: m.evidence ?? null,
+      }));
+      const { error: matchErr } = await supabase.from('sanctions_matches').insert(matchRows);
+      if (matchErr) {
+        logApiError('kyb/review', 'sanctions_match_insert_failed', { code: matchErr.code ?? 'unknown' });
+        return NextResponse.json({ error: 'sanctions match persist failed' }, { status: 502 });
+      }
+      // Block the approve. The row stays under_review; the Sentinel queue
+      // (/app/admin/sanctions) takes it from here.
+      return NextResponse.json(
+        {
+          error: 'sanctions match — Sentinel review required',
+          sanctionsRunId: runRow.id,
+          matchCount: result.matches.length,
+        },
+        { status: 422 },
+      );
+    }
   }
 
   const { error: updateError } = await supabase
