@@ -11,6 +11,7 @@ import {
 import { filterClaims, isOverdue, claimAgeSeconds, severityOf } from '@/lib/claimsqueue';
 import { ClaimTimeline } from './ClaimTimeline';
 import { EvidencePanel } from './EvidencePanel';
+import { AuditTrailPanel } from './AuditTrailPanel';
 
 const SLA_THRESHOLD_SEC = 7n * 24n * 60n * 60n; // 7 days
 const STATUS_VALUES = [0, 1, 2, 3, 4, 5] as const;
@@ -137,6 +138,9 @@ export function ClaimsControlRoom() {
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                               <ClaimTimeline claim={c} />
                               <EvidencePanel claimId={c.claimId} evidenceHash={c.evidenceHash} />
+                              <div className="sm:col-span-2">
+                                <AuditTrailPanel claimId={c.claimId} />
+                              </div>
                             </div>
                           </td>
                         </tr>

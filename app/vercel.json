@@ -6,6 +6,10 @@
     {
       "path": "/api/notifications/refresh",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/audit/claims/refresh",
+      "schedule": "*/5 * * * *"
     }
   ]
 }
