@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useAccount } from 'wagmi';
 import { useVaultInfo } from '@/hooks/useVaultData';
 import { formatUSDC } from '@/lib/formatting';
+import { PremiumPaymentPanel } from '@/components/cedant/PremiumPaymentPanel';
 
 /**
  * Cedant dashboard — the single landing page for an approved cedant.
@@ -200,6 +201,8 @@ export default function CedantDashboardPage() {
           )}
         </Card>
       </div>
+
+      {vaultAddress && <PremiumPaymentPanel vaultAddress={vaultAddress} />}
 
       <Card title="Recent activity">
         {payload.auditFeed.length === 0 ? (
