@@ -8,6 +8,7 @@ import { WalletRoleIndicator, useWalletRole, useActiveRole } from './WalletRoleI
 import { EmailAuthControls } from './EmailAuthControls';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { useEmailSession } from '@/hooks/useEmailSession';
+import { useCedantStatus } from '@/hooks/useCedantStatus';
 
 const navLinkStyle = (active: boolean): React.CSSProperties => ({
   padding: '6px 18px',
@@ -29,6 +30,7 @@ export function Header() {
   const [showSyndicateInfo, setShowSyndicateInfo] = useState(false);
   const { activeRole } = useActiveRole();
   const { isAppAdmin, canOperateKyb } = useEmailSession();
+  const cedant = useCedantStatus();
 
   // On-chain role resolution (ProtocolRoles/ComplianceRegistry)
   const { role: baseRole } = useWalletRole();
@@ -53,6 +55,8 @@ export function Header() {
   const isBorrowActive = pathname?.startsWith('/app/borrow') ?? false;
   const isMoneyFlowActive = pathname?.startsWith('/app/money-flow') ?? false;
   const isClaimsActive = pathname?.startsWith('/app/claims') ?? false;
+  const isCedantActive = pathname?.startsWith('/app/cedant') ?? false;
+  const showCedant = cedant.state === 'present';
 
   return (
     <header
@@ -133,6 +137,17 @@ export function Header() {
           >
             Claims
           </Link>
+
+          {/* Cedant dashboard — visibile solo quando il wallet collegato è un cedant approvato/in onboarding */}
+          {showCedant && (
+            <Link
+              href="/app/cedant/dashboard"
+              style={navLinkStyle(isCedantActive)}
+              className="hover:bg-black/5"
+            >
+              Cedant
+            </Link>
+          )}
 
           {/* Syndicates — solo per Syndicate Manager e Admin */}
           {showSyndicates && (
