@@ -11,6 +11,7 @@ import { consumeNonce, createSupabaseNonceStore } from '@/lib/kyb/nonces';
 import { clientIp, createSupabaseRateLimitStore, rateLimit } from '@/lib/rate-limit';
 import { logApiError } from '@/lib/api-log';
 import { getSanctionsProvider } from '@/lib/sanctions/provider';
+import { getWalletScreeningProvider } from '@/lib/sanctions/wallet-provider';
 
 /**
  * Operator review transition. Wallet reviews bind application id AND target
@@ -118,7 +119,7 @@ export async function POST(
 
   const { data: application, error: fetchError } = await supabase
     .from('kyb_applications')
-    .select('id, status, company_name, jurisdiction')
+    .select('id, status, company_name, jurisdiction, wallet_address')
     .eq('id', id)
     .single();
   if (fetchError || !application) {
@@ -207,6 +208,74 @@ export async function POST(
           error: 'sanctions match — Sentinel review required',
           sanctionsRunId: runRow.id,
           matchCount: result.matches.length,
+        },
+        { status: 422 },
+      );
+    }
+
+    // Wallet-level screening (Batch F). The name screen covers the entity;
+    // this complementary check screens the submitting wallet itself against
+    // OFAC-listed addresses / known mixers / fraud clusters. Same fail-loud
+    // posture, same audit trail.
+    let walletProvider;
+    try {
+      walletProvider = getWalletScreeningProvider();
+    } catch (err) {
+      logApiError('kyb/review', 'wallet_screening_misconfigured', {
+        code: err instanceof Error ? err.name : 'unknown',
+      });
+      return NextResponse.json({ error: 'wallet screening unavailable' }, { status: 503 });
+    }
+
+    const walletAddress = (application.wallet_address as string).toLowerCase() as `0x${string}`;
+    const walletResult = await walletProvider.screen({
+      address: walletAddress,
+      kybApplicationUuid: kybId,
+    });
+
+    const { data: walletRunRow, error: walletRunErr } = await supabase
+      .from('sanctions_screening_runs')
+      .insert({
+        kyb_application_id: kybId,
+        subject_kind: 'wallet',
+        subject_name: walletAddress,
+        subject_country: null,
+        provider: walletResult.provider,
+        provider_search_id: walletResult.providerCorrelationId ?? null,
+        result_code: walletResult.resultCode,
+        match_count: walletResult.matches.length,
+        raw_response: walletResult.rawResponse ?? null,
+      })
+      .select('id')
+      .single();
+    if (walletRunErr || !walletRunRow) {
+      logApiError('kyb/review', 'wallet_run_insert_failed', { code: walletRunErr?.code ?? 'unknown' });
+      return NextResponse.json({ error: 'wallet screening audit append failed' }, { status: 502 });
+    }
+    if (walletResult.resultCode === 'error') {
+      return NextResponse.json({ error: 'wallet screening provider error' }, { status: 502 });
+    }
+    if (walletResult.resultCode === 'match' && walletResult.matches.length > 0) {
+      const walletMatchRows = walletResult.matches.map((m) => ({
+        run_id: walletRunRow.id,
+        kyb_application_id: kybId,
+        provider_match_id: m.providerMatchId,
+        matched_name: walletAddress, // for wallet matches, the matched subject IS the address
+        sanctions_list: m.category,
+        severity: m.severity,
+        match_score: m.score ?? null,
+        evidence: m.evidence ?? null,
+      }));
+      const { error: walletMatchErr } = await supabase.from('sanctions_matches').insert(walletMatchRows);
+      if (walletMatchErr) {
+        logApiError('kyb/review', 'wallet_match_insert_failed', { code: walletMatchErr.code ?? 'unknown' });
+        return NextResponse.json({ error: 'wallet match persist failed' }, { status: 502 });
+      }
+      return NextResponse.json(
+        {
+          error: 'wallet sanctions match — Sentinel review required',
+          sanctionsRunId: walletRunRow.id,
+          matchCount: walletResult.matches.length,
         },
         { status: 422 },
       );
