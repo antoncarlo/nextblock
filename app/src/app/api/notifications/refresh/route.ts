@@ -6,6 +6,8 @@ import { verifyCronSecret } from '@/lib/notifications/auth';
 import { diffClaimStatus, normalizeAddress } from '@/lib/notifications/derive';
 import { NEXTBLOCK_ADDRESSES } from '@/config/generated/addressBook';
 import { logApiError } from '@/lib/api-log';
+import { getEmailProvider } from '@/lib/email/provider';
+import { renderNotificationEmail } from '@/lib/email/templates';
 
 /**
  * Notification refresh — server-cron entrypoint.
@@ -182,6 +184,38 @@ export async function POST(request: NextRequest) {
         continue;
       }
       inserted += 1;
+
+      // Optional email fan-out — only when the recipient has explicitly
+      // opted in (privacy-by-default). Failures here are non-fatal: the
+      // in-app row is the source of truth, email is best-effort.
+      const { data: prefs } = await supabase
+        .from('notification_prefs')
+        .select('email_enabled, email')
+        .eq('address', draft.recipientAddr)
+        .maybeSingle();
+      if (prefs?.email_enabled && prefs.email) {
+        try {
+          const email = renderNotificationEmail({
+            claimId: Number(draft.claimId),
+            kind: draft.kind,
+            message: draft.message,
+            vault: draft.vault,
+            appUrl: process.env.NEXT_PUBLIC_APP_URL ?? 'https://nextblock.finance',
+          });
+          const provider = getEmailProvider();
+          await provider.send({
+            to: prefs.email,
+            subject: email.subject,
+            text: email.text,
+            html: email.html,
+          });
+        } catch (err) {
+          logApiError('notifications/refresh', 'email_send_failed', {
+            code: err instanceof Error ? err.name : 'unknown',
+          });
+          // continue — we already persisted the in-app notification
+        }
+      }
     }
 
     // Upsert the high-water mark even when no draft (first-sight-settled case),
