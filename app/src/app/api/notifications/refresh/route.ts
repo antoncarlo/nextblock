@@ -10,19 +10,35 @@ import { logApiError } from '@/lib/api-log';
 /**
  * Notification refresh — server-cron entrypoint.
  *
- * Walks every on-chain claim (lens dashboard), looks up the claimant's last
+ * Walks every on-chain claim (lens dashboard), looks up each recipient's last
  * known status from `notification_state`, and inserts a row in `notifications`
  * for every transition (plus the high-water mark in `notification_state`).
  *
- * MVP recipient set: the claimant of each claim. Reviewer broadcast (Claims
- * Committee / Sentinel / Owner) is intentionally not in scope for this pass;
- * it can be added by extending the recipient loop without changing the diff
- * machinery — `diffClaimStatus` is per-(claim, recipient).
+ * Recipient set per claim:
+ *   - the claimant (always)
+ *   - every address in REVIEWER_ADDRESSES (env, comma-separated lowercase
+ *     hex addresses). These are the Sentinel / Committee / Owner wallets the
+ *     operator wants notified about every claim transition. Empty / unset =
+ *     no reviewer broadcast (back-compat with the original single-recipient
+ *     behavior).
+ *
+ * `diffClaimStatus` is per-(claim, recipient), so each recipient has its own
+ * high-water mark in `notification_state` — a newly added reviewer doesn't
+ * get spammed with the full history of pre-existing claims (the diff function
+ * suppresses first-sight of settled claims by design).
  *
  * Auth: `Authorization: Bearer <CRON_SECRET>`. Fail-closed when unset, so this
  * route is unreachable until the operator wires the env var (Vercel Cron
  * automatically attaches the project's CRON_SECRET).
  */
+
+function reviewerAddresses(): `0x${string}`[] {
+  const raw = process.env.REVIEWER_ADDRESSES ?? '';
+  return raw
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter((s) => /^0x[0-9a-f]{40}$/.test(s)) as `0x${string}`[];
+}
 
 const GET_CLAIM_COUNT_ABI = [
   {
@@ -104,6 +120,7 @@ export async function POST(request: NextRequest) {
   let scanned = 0;
   let inserted = 0;
   const cap = Number(total);
+  const reviewers = reviewerAddresses();
 
   for (let i = 0; i < cap; i += 1) {
     let v: {
@@ -137,68 +154,75 @@ export async function POST(request: NextRequest) {
     if (v.status !== DATA_STATUS_AVAILABLE) continue;
     scanned += 1;
 
-    const recipient = normalizeAddress(v.claim.claimant);
+    const claimant = normalizeAddress(v.claim.claimant);
     const claimId = Number(v.claim.claimId);
 
-    const { data: stateRow } = await supabase
-      .from('notification_state')
-      .select('last_status')
-      .eq('claim_id', claimId)
-      .eq('recipient_addr', recipient)
-      .maybeSingle();
-    const last = stateRow ? Number(stateRow.last_status) : null;
+    // Recipient set: claimant + reviewer addresses (deduped). The claimant
+    // already being a reviewer is a non-issue — the Set keeps a single entry.
+    const recipients = new Set<`0x${string}`>([claimant, ...reviewers]);
 
-    const draft = diffClaimStatus(
-      {
-        claimId: v.claim.claimId,
-        vault: v.claim.vault,
-        portfolioId: v.claim.portfolioId,
-        requestedAmount: v.claim.requestedAmount,
-        status: v.claim.status,
-        submittedAt: v.claim.submittedAt,
-        challengeDeadline: v.claim.challengeDeadline,
-        frozen: v.claim.frozen,
-        disputeWindowElapsed: false,
-        hasAssessment: false,
-        anomalous: false,
-        assessmentAnomalyBps: 0,
-      },
-      recipient,
-      last,
-    );
+    for (const recipient of recipients) {
+      const { data: stateRow } = await supabase
+        .from('notification_state')
+        .select('last_status')
+        .eq('claim_id', claimId)
+        .eq('recipient_addr', recipient)
+        .maybeSingle();
+      const last = stateRow ? Number(stateRow.last_status) : null;
 
-    if (draft) {
-      const { error: insErr } = await supabase.from('notifications').insert({
-        recipient_addr: draft.recipientAddr,
-        claim_id: Number(draft.claimId),
-        vault: draft.vault,
-        kind: draft.kind,
-        from_status: draft.fromStatus,
-        to_status: draft.toStatus,
-        message: draft.message,
-      });
-      if (insErr) {
-        logApiError('notifications/refresh', 'insert_failed', { code: insErr.code ?? 'unknown' });
-        continue;
+      const draft = diffClaimStatus(
+        {
+          claimId: v.claim.claimId,
+          vault: v.claim.vault,
+          portfolioId: v.claim.portfolioId,
+          requestedAmount: v.claim.requestedAmount,
+          status: v.claim.status,
+          submittedAt: v.claim.submittedAt,
+          challengeDeadline: v.claim.challengeDeadline,
+          frozen: v.claim.frozen,
+          disputeWindowElapsed: false,
+          hasAssessment: false,
+          anomalous: false,
+          assessmentAnomalyBps: 0,
+        },
+        recipient,
+        last,
+      );
+
+      if (draft) {
+        const { error: insErr } = await supabase.from('notifications').insert({
+          recipient_addr: draft.recipientAddr,
+          claim_id: Number(draft.claimId),
+          vault: draft.vault,
+          kind: draft.kind,
+          from_status: draft.fromStatus,
+          to_status: draft.toStatus,
+          message: draft.message,
+        });
+        if (insErr) {
+          logApiError('notifications/refresh', 'insert_failed', { code: insErr.code ?? 'unknown' });
+        } else {
+          inserted += 1;
+        }
       }
-      inserted += 1;
-    }
 
-    // Upsert the high-water mark even when no draft (first-sight-settled case),
-    // so we don't re-scan the same claim against the same recipient forever.
-    const { error: stateErr } = await supabase.from('notification_state').upsert(
-      {
-        claim_id: claimId,
-        recipient_addr: recipient,
-        last_status: v.claim.status,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'claim_id,recipient_addr' },
-    );
-    if (stateErr) {
-      logApiError('notifications/refresh', 'state_upsert_failed', { code: stateErr.code ?? 'unknown' });
+      // Upsert the high-water mark even when no draft (first-sight-settled
+      // case), so we don't re-scan the same claim against the same recipient
+      // forever.
+      const { error: stateErr } = await supabase.from('notification_state').upsert(
+        {
+          claim_id: claimId,
+          recipient_addr: recipient,
+          last_status: v.claim.status,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'claim_id,recipient_addr' },
+      );
+      if (stateErr) {
+        logApiError('notifications/refresh', 'state_upsert_failed', { code: stateErr.code ?? 'unknown' });
+      }
     }
   }
 
-  return NextResponse.json({ scanned, inserted, total: cap });
+  return NextResponse.json({ scanned, inserted, total: cap, reviewers: reviewers.length });
 }
