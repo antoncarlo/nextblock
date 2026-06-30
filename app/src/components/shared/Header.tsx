@@ -44,10 +44,10 @@ export function Header() {
   const showApply             = (!isConnected && !isAppAdmin) || role === 'investor';
   const showAdmin             = role === 'admin' || isAppAdmin || canOperateKyb;
   // Pilot is a Base Sepolia testnet ops hub (MockUSDC faucet + onboarding
-  // diagnostic). Institutional-grade nav hides it from LP/Cedant/Curator;
-  // operators reach it from the operator cluster. The route stays public so
-  // onboarding deep-links still resolve.
-  const showPilot             = role === 'admin' || isAppAdmin || canOperateKyb;
+  // diagnostic). ADMIN-ONLY in the nav: hidden from every other role (incl. KYC
+  // operators) and from disconnected/logged-out visitors. The route stays public
+  // so onboarding deep-links still resolve for invited pilot participants.
+  const showPilot             = role === 'admin' || isAppAdmin;
   // Redeem (LP exit via RedemptionQueue) is an Institutional-LP action — gated
   // to the LP cluster, hidden from Cedant/Curator.
   const showRedeem            = role === 'investor' || role === 'admin' || isAppAdmin;
