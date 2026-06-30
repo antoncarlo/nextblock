@@ -43,6 +43,14 @@ export function Header() {
   const showMyCompany         = role === 'insurance' || role === 'admin' || isAppAdmin;
   const showApply             = (!isConnected && !isAppAdmin) || role === 'investor';
   const showAdmin             = role === 'admin' || isAppAdmin || canOperateKyb;
+  // Pilot is a Base Sepolia testnet ops hub (MockUSDC faucet + onboarding
+  // diagnostic). Institutional-grade nav hides it from LP/Cedant/Curator;
+  // operators reach it from the operator cluster. The route stays public so
+  // onboarding deep-links still resolve.
+  const showPilot             = role === 'admin' || isAppAdmin || canOperateKyb;
+  // Redeem (LP exit via RedemptionQueue) is an Institutional-LP action — gated
+  // to the LP cluster, hidden from Cedant/Curator.
+  const showRedeem            = role === 'investor' || role === 'admin' || isAppAdmin;
 
   // ─── Active link helpers ────────────────────────────────────────────────────
   const isVaultsActive = pathname === '/app';
@@ -53,6 +61,7 @@ export function Header() {
   const isAdminActive = pathname?.startsWith('/app/admin') ?? false;
   const isPilotActive = pathname?.startsWith('/app/pilot') ?? false;
   const isBorrowActive = pathname?.startsWith('/app/borrow') ?? false;
+  const isRedeemActive = pathname?.startsWith('/app/redeem') ?? false;
   const isMoneyFlowActive = pathname?.startsWith('/app/money-flow') ?? false;
   const isClaimsActive = pathname?.startsWith('/app/claims') ?? false;
   const isCedantActive = pathname?.startsWith('/app/cedant') ?? false;
@@ -102,15 +111,6 @@ export function Header() {
             Vaults
           </Link>
 
-          {/* Pilot onboarding hub — sempre visibile (self-service testnet) */}
-          <Link
-            href="/app/pilot"
-            style={navLinkStyle(isPilotActive)}
-            className="hover:bg-black/5"
-          >
-            Pilot
-          </Link>
-
           {/* Borrow against nbRV collateral — sempre visibile */}
           <Link
             href="/app/borrow"
@@ -119,6 +119,17 @@ export function Header() {
           >
             Borrow
           </Link>
+
+          {/* Redeem — LP exit via the RedemptionQueue (instant-in-buffer / queued) */}
+          {showRedeem && (
+            <Link
+              href="/app/redeem"
+              style={navLinkStyle(isRedeemActive)}
+              className="hover:bg-black/5"
+            >
+              Redeem
+            </Link>
+          )}
 
           {/* Money Flow — sempre visibile (vista economica read-only) */}
           <Link
@@ -284,6 +295,18 @@ export function Header() {
               className="hover:bg-black/5"
             >
               Admin
+            </Link>
+          )}
+
+          {/* Testnet ops hub (ex-"Pilot") — operator cluster only. Base Sepolia
+              faucet + onboarding diagnostic; not institutional-facing. */}
+          {showPilot && (
+            <Link
+              href="/app/pilot"
+              style={navLinkStyle(isPilotActive)}
+              className="hover:bg-black/5"
+            >
+              Testnet
             </Link>
           )}
         </nav>

@@ -1,0 +1,44 @@
+# NextBlock RedemptionQueue subgraph manifest (Goldsky / The Graph compatible).
+#
+# Deploy (owner-gated — needs a Goldsky or Graph Studio account):
+#   cd indexer
+#   npm install
+#   npm run codegen && npm run build
+#   goldsky subgraph deploy nextblock-redemption/v1 --path .
+#     (or: graph deploy --studio nextblock-redemption)
+#
+# Base Sepolia (chain id 84532). startBlock is just before the live queue deploy.
+specVersion: 0.0.5
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: RedemptionQueue
+    network: base-sepolia
+    source:
+      address: "0x243205af6C2a89C33c67f967901415C06F2a9cc0"
+      abi: RedemptionQueue
+      startBlock: 43528000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Epoch
+        - RedemptionRequest
+        - RedemptionClaim
+        - LpPosition
+        - ProtocolStat
+      abis:
+        - name: RedemptionQueue
+          file: ./abis/RedemptionQueue.json
+      eventHandlers:
+        - event: RedemptionRequested(indexed uint256,indexed address,uint256)
+          handler: handleRedemptionRequested
+        - event: EpochSettled(indexed uint256,uint256,uint256,uint256)
+          handler: handleEpochSettled
+        - event: RedemptionClaimed(indexed uint256,indexed address,uint256,uint256)
+          handler: handleRedemptionClaimed
+        - event: PausedSet(bool)
+          handler: handlePausedSet
+      file: ./src/redemption-queue.ts
