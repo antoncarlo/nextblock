@@ -1,0 +1,48 @@
+# Redemption settlement keeper — scheduled cron.
+#
+# Calls RedemptionKeeper.settleIfDue against the live RedemptionQueue: it settles
+# the current epoch only when matured + non-empty, and no-ops otherwise (so a
+# frequent schedule never reverts, double-settles, or wastes a settlement).
+#
+# OWNER-GATED activation (one-time): set these repo secrets/variables —
+#   secret  KEEPER_PRIVATE_KEY        key that holds ALLOCATOR_ROLE on the live generation
+#   secret  BASE_SEPOLIA_RPC_URL      Base Sepolia RPC endpoint
+#   var     REDEMPTION_QUEUE_ADDRESS  0x243205af6C2a89C33c67f967901415C06F2a9cc0 (live queue)
+#
+# The keeper key should be a DEDICATED allocator key (granted ALLOCATOR_ROLE via
+# the Safe/timelock), not the deployer EOA.
+
+name: redemption-keeper
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # every 6 hours; keeper no-ops until an epoch matures
+  workflow_dispatch: {} # manual trigger for on-demand settlement
+
+permissions:
+  contents: read
+
+concurrency:
+  group: redemption-keeper
+  cancel-in-progress: false
+
+jobs:
+  settle:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: contracts
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Settle matured epoch (no-op if nothing due)
+        env:
+          PRIVATE_KEY: ${{ secrets.KEEPER_PRIVATE_KEY }}
+          BASE_SEPOLIA_RPC_URL: ${{ secrets.BASE_SEPOLIA_RPC_URL }}
+          REDEMPTION_QUEUE_ADDRESS: ${{ vars.REDEMPTION_QUEUE_ADDRESS }}
+        run: |
+          forge script script/RedemptionKeeper.s.sol:RedemptionKeeper \
+            --rpc-url base_sepolia --broadcast --skip-simulation
