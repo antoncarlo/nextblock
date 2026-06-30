@@ -1,0 +1,64 @@
+# NextBlock RedemptionQueue subgraph — entities for the LP exit lifecycle.
+# Powers the historical series (redemptions, settlements, claims) that the
+# current-state UI cannot show without an indexer.
+
+type Epoch @entity {
+  "epochId"
+  id: ID!
+  epochId: BigInt!
+  totalSharesRequested: BigInt!
+  settledShares: BigInt!
+  settledAssets: BigInt!
+  "settle ratio in bps (settledShares / requested)"
+  ratioBps: BigInt!
+  settled: Boolean!
+  settledAt: BigInt
+  requestCount: Int!
+  openedAtBlock: BigInt!
+  requests: [RedemptionRequest!]! @derivedFrom(field: "epoch")
+  claims: [RedemptionClaim!]! @derivedFrom(field: "epoch")
+}
+
+type RedemptionRequest @entity(immutable: true) {
+  "txHash-logIndex"
+  id: ID!
+  epoch: Epoch!
+  lp: LpPosition!
+  shares: BigInt!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type RedemptionClaim @entity(immutable: true) {
+  "txHash-logIndex"
+  id: ID!
+  epoch: Epoch!
+  lp: LpPosition!
+  assetsPaid: BigInt!
+  sharesReturned: BigInt!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+type LpPosition @entity {
+  "lp address"
+  id: ID!
+  totalSharesRequested: BigInt!
+  totalAssetsClaimed: BigInt!
+  totalSharesReturned: BigInt!
+  requestCount: Int!
+  claimCount: Int!
+}
+
+type ProtocolStat @entity {
+  "singleton: 'global'"
+  id: ID!
+  totalSharesRequested: BigInt!
+  totalSettledShares: BigInt!
+  totalSettledAssets: BigInt!
+  totalAssetsClaimed: BigInt!
+  epochsSettled: Int!
+  paused: Boolean!
+}

@@ -6,6 +6,7 @@ import { useAccount } from 'wagmi';
 import { useVaultInfo } from '@/hooks/useVaultData';
 import { formatUSDC } from '@/lib/formatting';
 import { PremiumPaymentPanel } from '@/components/cedant/PremiumPaymentPanel';
+import { BordereauUploadPanel } from '@/components/cedant/BordereauUploadPanel';
 
 /**
  * Cedant dashboard — the single landing page for an approved cedant.
@@ -203,6 +204,7 @@ export default function CedantDashboardPage() {
       </div>
 
       {vaultAddress && <PremiumPaymentPanel vaultAddress={vaultAddress} />}
+      {vaultAddress && <BordereauUploadPanel />}
 
       <Card title="Recent activity">
         {payload.auditFeed.length === 0 ? (

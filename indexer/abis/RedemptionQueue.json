@@ -1,0 +1,40 @@
+[
+  {
+    "type": "event",
+    "name": "RedemptionRequested",
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "name": "epochId", "type": "uint256" },
+      { "indexed": true, "name": "lp", "type": "address" },
+      { "indexed": false, "name": "shares", "type": "uint256" }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "EpochSettled",
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "name": "epochId", "type": "uint256" },
+      { "indexed": false, "name": "settledShares", "type": "uint256" },
+      { "indexed": false, "name": "settledAssets", "type": "uint256" },
+      { "indexed": false, "name": "ratioBps", "type": "uint256" }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "RedemptionClaimed",
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "name": "epochId", "type": "uint256" },
+      { "indexed": true, "name": "lp", "type": "address" },
+      { "indexed": false, "name": "assetsPaid", "type": "uint256" },
+      { "indexed": false, "name": "sharesReturned", "type": "uint256" }
+    ]
+  },
+  {
+    "type": "event",
+    "name": "PausedSet",
+    "anonymous": false,
+    "inputs": [{ "indexed": false, "name": "paused", "type": "bool" }]
+  }
+]
