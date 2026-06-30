@@ -14,19 +14,29 @@ interface RoleCardData {
   icon: React.ReactNode;
 }
 
+// Three first-class institutional participants. Big title = product label;
+// small eyebrow = canonical reinsurance term (kept to avoid Cedant/Reinsurer
+// confusion). Each routes to its own onboarding flow in the app.
 const roleCards: RoleCardData[] = [
   {
-    id: "syndicate manager",
-    label: "For Vault Syndicates",
-    title: "Reinsurers · Insurers · Asset Managers",
-    content: "Deploy compliant vaults. Access global capital. You control underwriting — the protocol handles infrastructure.",
+    id: "reinsurer",
+    label: "Reinsurer · Cedant",
+    title: "Cede a portfolio, tokenize the risk",
+    content: "Transfer ceded premium on-chain and tokenize your reinsurance portfolio. You bring the risk; the protocol handles settlement, compliance and access to global institutional capital.",
+    icon: <Handshake />,
+  },
+  {
+    id: "syndicate curator",
+    label: "Syndicate Curator · Underwriting",
+    title: "Deploy & manage insurance vaults",
+    content: "Design compliant vault strategies, set risk parameters, select policies and underwrite. You control underwriting — the protocol handles infrastructure (Lloyd's-style managing agent).",
     icon: <Compass />,
   },
   {
-    id: "allocator",
-    label: "For Allocators",
-    title: "Family Offices · Funds · Endowments",
-    content: "Access the only RWA uncorrelated to equities, bonds, and crypto.",
+    id: "institutional lp",
+    label: "Institutional Liquidity Provider · LP",
+    title: "Provide capital, earn reinsurance yield",
+    content: "Deposit USDC into institutional vaults, hold restricted nbUSDC shares, and earn reinsurance-backed yield — the only RWA uncorrelated to equities, bonds and crypto. Continuous NAV.",
     icon: <Key />,
   },
 ];
