@@ -24,6 +24,10 @@ base_sepolia = { key = "${BASESCAN_API_KEY}", chain = 84532 }
 
 [profile.default.fuzz]
 runs = 256
+# Pinned seed: fuzz/invariant runs are deterministic so a latent counterexample
+# (e.g. the RedemptionQueue dust underflow) can't pass by seed luck on one run
+# and fail on the next. Reproducible locally and in CI.
+seed = "0x4e455854424c4f434b"
 
 [profile.ci.fuzz]
 runs = 1000
