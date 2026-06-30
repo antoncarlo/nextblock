@@ -20,6 +20,7 @@ import {
   isGrantableRoleId,
   grantableRoleByKey,
   defaultRoleKeyForApplicant,
+  authorizationActionForApplicant,
   isValidAddress,
   buildGrantRoleCalldata,
   buildSafeGrantRolePayload,
@@ -54,6 +55,11 @@ check('cedant -> AUTHORIZED_CEDANT', defaultRoleKeyForApplicant('cedant') === 'A
 check('curator -> UNDERWRITING_CURATOR', defaultRoleKeyForApplicant('curator') === 'UNDERWRITING_CURATOR');
 check('unknown -> null', defaultRoleKeyForApplicant('committee') === null);
 check('undefined -> null', defaultRoleKeyForApplicant(undefined) === null);
+check('lp -> no role (whitelist, not role)', defaultRoleKeyForApplicant('lp') === null);
+check('action cedant -> role AUTHORIZED_CEDANT', (() => { const a = authorizationActionForApplicant('cedant'); return a.kind === 'role' && a.roleKey === 'AUTHORIZED_CEDANT'; })());
+check('action curator -> role UNDERWRITING_CURATOR', (() => { const a = authorizationActionForApplicant('curator'); return a.kind === 'role' && a.roleKey === 'UNDERWRITING_CURATOR'; })());
+check('action lp -> whitelist', authorizationActionForApplicant('lp').kind === 'whitelist');
+check('action unknown -> manual', authorizationActionForApplicant('committee').kind === 'manual');
 
 // --- grantable set excludes restricted roles ---
 check('8 grantable roles', GRANTABLE_ROLES.length === 8);

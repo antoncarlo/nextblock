@@ -123,6 +123,7 @@ export default function PilotHubPage() {
         isCommittee: access.isCommittee,
         isSentinel: access.isSentinel,
         isAllocator: access.isAllocator,
+        isCompliantLP: access.isCompliantLP,
       }
     : NO_ROLES;
 

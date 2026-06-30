@@ -23,7 +23,7 @@ export const KYB_STATUSES = [
 
 export type KybStatus = (typeof KYB_STATUSES)[number];
 
-export const KYB_APPLICANT_TYPES = ['cedant', 'curator'] as const;
+export const KYB_APPLICANT_TYPES = ['cedant', 'curator', 'lp'] as const;
 export type KybApplicantType = (typeof KYB_APPLICANT_TYPES)[number];
 
 const EVM_ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;

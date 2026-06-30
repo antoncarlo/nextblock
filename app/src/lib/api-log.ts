@@ -1,20 +1,10 @@
 /**
- * Structured, PII-free error logging for API routes. One JSON line per
- * event so platform log search (Vercel) can filter by route/kind. Never log
- * payloads, wallet addresses, emails or other request content.
+ * Backwards-compatible facade around the structured logging in observability.ts.
+ *
+ * Existing call sites import `logApiError` from `@/lib/api-log`. New call sites
+ * should prefer the richer helpers in `@/lib/observability` directly
+ * (`logApiInfo` / `logApiWarn` / `withRequestLogging` / `getRequestId`), but
+ * this re-export keeps the existing fleet of routes building unchanged.
  */
-export function logApiError(
-  route: string,
-  kind: string,
-  detail?: { code?: string | number | null },
-): void {
-  console.error(
-    JSON.stringify({
-      level: 'error',
-      route,
-      kind,
-      code: detail?.code ?? null,
-      at: new Date().toISOString(),
-    }),
-  );
-}
+export { logApiError, logApiInfo, logApiWarn, withRequestLogging, getRequestId } from './observability';
+export type { LogLevel, LogDetail } from './observability';

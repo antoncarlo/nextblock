@@ -29,13 +29,13 @@ export function ShareCalculation({
         <div className="flex items-center justify-between">
           <span className="text-xs text-gray-500">You will receive</span>
           <span className="font-mono-num text-sm font-semibold text-gray-900">
-            ~{sharesEstimate.toLocaleString('en-US', { maximumFractionDigits: 2 })} shares
+            ~{sharesEstimate.toLocaleString('en-US', { maximumFractionDigits: 2 })} nbUSDC
           </span>
         </div>
         <div className="mt-1.5 flex items-center justify-between">
           <span className="text-xs text-gray-500">Exchange rate</span>
           <span className="font-mono-num text-xs text-gray-600">
-            1 share = ${sharePrice.toFixed(4)} USDC
+            1 nbUSDC = ${sharePrice.toFixed(4)} USDC
           </span>
         </div>
       </div>
@@ -54,7 +54,7 @@ export function ShareCalculation({
       <div className="mt-1.5 flex items-center justify-between">
         <span className="text-xs text-gray-500">Exchange rate</span>
         <span className="font-mono-num text-xs text-gray-600">
-          1 share = ${sharePrice.toFixed(4)} USDC
+          1 nbUSDC = ${sharePrice.toFixed(4)} USDC
         </span>
       </div>
     </div>

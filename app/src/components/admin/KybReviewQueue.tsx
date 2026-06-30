@@ -12,6 +12,11 @@ import {
 } from '@/lib/kyb/schema';
 import { DataSourceBadge } from '@/components/shared/DataSourceBadge';
 import { useEmailSession } from '@/hooks/useEmailSession';
+import {
+  authorizationActionForApplicant,
+  grantableRoleByKey,
+  buildGrantRoleCalldata,
+} from '@/lib/roles/handoff';
 
 /**
  * KYB review queue for the KYC Operator.
@@ -28,7 +33,7 @@ import { useEmailSession } from '@/hooks/useEmailSession';
 
 interface KybAppRow {
   id: string;
-  applicant_type: 'cedant' | 'curator';
+  applicant_type: 'cedant' | 'curator' | 'lp';
   wallet_address: string;
   company_name: string;
   legal_entity_type: string;
@@ -336,27 +341,65 @@ export function KybReviewQueue() {
                       </div>
                     )}
 
-                    {app.status === 'approved' && (
-                      <div className="rounded-lg bg-gray-50 p-3">
-                        <p className="mb-1 font-semibold text-gray-700">
-                          Next step (separate authorized act — NOT sent by this UI)
-                        </p>
-                        <p className="mb-2 text-gray-500">
-                          Propose via the protocol Safe as KYC Operator on ComplianceRegistry:
-                        </p>
-                        <p className="font-mono break-all text-gray-700">
-                          target: {NEXTBLOCK_ADDRESSES.complianceRegistry}
-                        </p>
-                        <p className="font-mono break-all text-gray-700">
-                          calldata (setWhitelist):{' '}
-                          {encodeFunctionData({
-                            abi: SET_WHITELIST_ABI,
-                            functionName: 'setWhitelist',
-                            args: [app.wallet_address as `0x${string}`, true],
-                          })}
-                        </p>
-                      </div>
-                    )}
+                    {app.status === 'approved' && (() => {
+                      // Feature D: the approval implies ONE pre-filled on-chain
+                      // action. Roles (cedant/syndicate) -> grantRole; LP ->
+                      // setWhitelist. Executed by the authorized operator / Safe,
+                      // never auto-signed here.
+                      const action = authorizationActionForApplicant(app.applicant_type);
+                      if (action.kind === 'role') {
+                        const role = grantableRoleByKey(action.roleKey);
+                        return (
+                          <div className="rounded-lg bg-gray-50 p-3">
+                            <p className="mb-1 font-semibold text-gray-700">
+                              One-click authorization (pre-filled — execute as OWNER / via Safe)
+                            </p>
+                            <p className="mb-2 text-gray-500">
+                              Grant {role?.label ?? action.roleKey} on ProtocolRoles:
+                            </p>
+                            <p className="font-mono break-all text-gray-700">
+                              target: {NEXTBLOCK_ADDRESSES.protocolRoles}
+                            </p>
+                            <p className="font-mono break-all text-gray-700">
+                              calldata (grantRole):{' '}
+                              {role
+                                ? buildGrantRoleCalldata(role.id, app.wallet_address as `0x${string}`)
+                                : '—'}
+                            </p>
+                          </div>
+                        );
+                      }
+                      if (action.kind === 'whitelist') {
+                        return (
+                          <div className="rounded-lg bg-gray-50 p-3">
+                            <p className="mb-1 font-semibold text-gray-700">
+                              One-click authorization (pre-filled — execute as KYC Operator / via Safe)
+                            </p>
+                            <p className="mb-2 text-gray-500">
+                              Whitelist as Institutional LP on ComplianceRegistry:
+                            </p>
+                            <p className="font-mono break-all text-gray-700">
+                              target: {NEXTBLOCK_ADDRESSES.complianceRegistry}
+                            </p>
+                            <p className="font-mono break-all text-gray-700">
+                              calldata (setWhitelist):{' '}
+                              {encodeFunctionData({
+                                abi: SET_WHITELIST_ABI,
+                                functionName: 'setWhitelist',
+                                args: [app.wallet_address as `0x${string}`, true],
+                              })}
+                            </p>
+                          </div>
+                        );
+                      }
+                      return (
+                        <div className="rounded-lg bg-gray-50 p-3">
+                          <p className="text-gray-500">
+                            Approved — select the authorization action manually (no default for this applicant type).
+                          </p>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </div>

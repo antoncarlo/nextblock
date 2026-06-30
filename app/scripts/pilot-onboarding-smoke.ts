@@ -77,7 +77,9 @@ check('curator -> curator + asset_manager tracks', deriveActiveTracks(ROLES({ is
 check('owner -> operator track', deriveActiveTracks(ROLES({ isOwner: true })).some(t => t.key === 'OPERATOR'));
 check('hasAnyRole false for none', !hasAnyRole(NO_ROLES));
 check('hasAnyRole true for sentinel', hasAnyRole(ROLES({ isSentinel: true })));
-check('ROLE_TRACKS covers 6 role tracks', ROLE_TRACKS.length === 6);
+check('hasAnyRole false for LP-only (whitelist is not a role)', !hasAnyRole(ROLES({ isCompliantLP: true })));
+check('LP whitelist -> LP track present', deriveActiveTracks(ROLES({ isCompliantLP: true })).some(t => t.key === 'LP'));
+check('ROLE_TRACKS covers 7 tracks', ROLE_TRACKS.length === 7);
 
 // --- next action priority ---
 check('disconnected -> blocked connect', nextAction({ ...base, walletConnected: false }).severity === 'blocked');
@@ -92,6 +94,8 @@ check('kyb error -> info retry', (() => { const a = nextAction({ ...base, kyb: '
 check('approved + roles not resolved -> info', nextAction({ ...base, roles: NO_ROLES, rolesResolved: false }).severity === 'info');
 check('approved + no role -> action grant', (() => { const a = nextAction({ ...base, roles: NO_ROLES, rolesResolved: true }); return a.severity === 'action' && a.message.includes('grant'); })());
 check('cedant role + no usdc -> action mint', (() => { const a = nextAction({ ...base, usdc6: 0n }); return a.severity === 'action' && a.ctaLabel === 'Mint test USDC'; })());
+check('LP whitelisted + no usdc -> action mint', (() => { const a = nextAction({ ...base, roles: ROLES({ isCompliantLP: true }), usdc6: 0n }); return a.severity === 'action' && a.ctaLabel === 'Mint test USDC'; })());
+check('LP whitelisted + funded -> ready to /app', (() => { const a = nextAction({ ...base, roles: ROLES({ isCompliantLP: true }) }); return a.severity === 'ready' && a.ctaRoute === '/app'; })());
 check('sentinel role no usdc -> ready (no usdc nudge)', (() => { const a = nextAction({ ...base, roles: ROLES({ isSentinel: true }), usdc6: 0n }); return a.severity === 'ready'; })());
 check('fully ready -> ready w/ route', (() => { const a = nextAction(base); return a.severity === 'ready' && !!a.ctaRoute; })());
 

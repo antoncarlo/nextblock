@@ -80,7 +80,7 @@ export function grantableRoleByKey(key: string): GrantableRole | undefined {
 }
 
 /** KYB applicant types currently encoded by the onboarding form. */
-export type KybApplicantType = 'cedant' | 'curator';
+export type KybApplicantType = 'cedant' | 'curator' | 'lp';
 
 /**
  * Default role key implied by a KYB applicant_type. Other pilot actors
@@ -91,6 +91,33 @@ export function defaultRoleKeyForApplicant(applicantType: string | null | undefi
   if (applicantType === 'cedant') return 'AUTHORIZED_CEDANT';
   if (applicantType === 'curator') return 'UNDERWRITING_CURATOR';
   return null;
+}
+
+/**
+ * The on-chain authorization implied by an APPROVED KYB applicant — the
+ * one-click action the operator executes after approval (feature "D").
+ * - cedant / curator  -> grant the implied operational role (ProtocolRoles)
+ * - lp                -> whitelist the wallet (ComplianceRegistry.setWhitelist),
+ *                        because an Institutional LP is authorized by the
+ *                        whitelist, not by a ProtocolRoles role.
+ * - anything else     -> manual: the operator selects the action explicitly.
+ *
+ * This NEVER signs or grants by itself: it only resolves WHICH pre-filled
+ * action the approval implies. Execution stays with the authorized operator
+ * wallet (OWNER for roles, KYC_OPERATOR for whitelist) or the Safe.
+ */
+export type AuthorizationAction =
+  | { kind: 'role'; roleKey: string }
+  | { kind: 'whitelist' }
+  | { kind: 'manual' };
+
+export function authorizationActionForApplicant(
+  applicantType: string | null | undefined,
+): AuthorizationAction {
+  const roleKey = defaultRoleKeyForApplicant(applicantType);
+  if (roleKey) return { kind: 'role', roleKey };
+  if (applicantType === 'lp') return { kind: 'whitelist' };
+  return { kind: 'manual' };
 }
 
 const EVM_ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;

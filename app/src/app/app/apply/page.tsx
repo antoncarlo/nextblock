@@ -11,24 +11,28 @@ import {
   type KybStatus,
 } from '@/lib/kyb/schema';
 
-// Phase 9: the hardcoded frontend whitelists were removed. Authorization is
-// resolved ON-CHAIN via ProtocolRoles (AUTHORIZED_CEDANT_ROLE /
-// UNDERWRITING_CURATOR_ROLE) and ComplianceRegistry. This page submits the
-// onboarding request to the KYB backend (instructional record, reviewed by
-// the KYC Operator); on-chain role grants remain a separate authorized act
-// after due diligence.
+// Self-service onboarding is scoped to the two financial participants of the
+// protocol: the Institutional LP (capital provider) and the Underwriting
+// Curator (strategy/risk). The Cedant / Reinsurer onboards through the
+// dedicated operator-assisted flow at /app/cedant/onboard, not here.
+//
+// Authorization is resolved ON-CHAIN: ProtocolRoles (UNDERWRITING_CURATOR_ROLE)
+// and ComplianceRegistry.canReceive (Institutional LP whitelist / nbUSDC
+// eligibility). This page submits the institutional KYB/KYC record to the
+// backend (reviewed by the KYC Operator); the on-chain whitelist or role grant
+// remains a separate authorized act after due diligence.
 
-type Role = 'insurance' | 'syndicate manager' | null;
+type Role = 'lp' | 'curator' | null;
 type Step = 'choose' | 'form' | 'submitted';
 
-const INSURANCE_TYPES = [
-  'Property & Casualty (P&C)',
-  'Life & Health',
-  'Marine & Aviation',
-  'Catastrophe / Nat-Cat',
-  'Cyber & Technology',
-  'Parametric',
-  'Reinsurer',
+const INVESTOR_TYPES = [
+  'Pension Fund',
+  'Insurance / Reinsurance Company',
+  'Sovereign Wealth / Endowment',
+  'Hedge Fund',
+  'Family Office',
+  'Asset Manager',
+  'Bank / Treasury',
   'Other',
 ];
 
@@ -49,23 +53,23 @@ export default function ApplyPage() {
   const [role, setRole] = useState<Role>(null);
   const [step, setStep] = useState<Step>('choose');
 
-  // Insurance Company form state
-  const [insForm, setInsForm] = useState({
-    companyName: '',
-    legalEntity: '',
+  // Institutional LP form state
+  const [lpForm, setLpForm] = useState({
+    entityName: '',
+    investorType: '',
     jurisdiction: '',
-    licenseNumber: '',
-    insuranceType: '',
-    portfolioSize: '',
+    aum: '',
+    regulator: '',
     contactName: '',
     contactEmail: '',
     website: '',
     walletAddress: address ?? '',
-    description: '',
+    mandate: '',
+    qualifiedInvestor: false,
     agreedTerms: false,
   });
 
-  // Syndicate Manager form state
+  // Underwriting Curator form state
   const [curForm, setCurForm] = useState({
     entityName: '',
     entityType: '',
@@ -81,9 +85,11 @@ export default function ApplyPage() {
     agreedTerms: false,
   });
 
-  // ON-CHAIN authorization status (ProtocolRoles); no frontend whitelist.
+  // ON-CHAIN authorization status. The LP "approved" signal is ComplianceRegistry
+  // whitelist eligibility (canReceive), NOT a ProtocolRoles role; the Curator is
+  // a role grant.
   const access = useProtocolAccess();
-  const isInsuranceApproved = access.status === 'onchain' && access.isCedant;
+  const isLpApproved = access.status === 'onchain' && access.isCompliantLP;
   const isCuratorApproved = access.status === 'onchain' && access.isCurator;
   const rolesUnavailable = access.status === 'unavailable';
 
@@ -175,22 +181,24 @@ export default function ApplyPage() {
     }
   };
 
-  const handleInsSubmit = (e: React.FormEvent) => {
+  const handleLpSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     void submitApplication({
-      applicantType: 'cedant',
-      walletAddress: (insForm.walletAddress || address || '') as string,
-      companyName: insForm.companyName,
-      legalEntityType: insForm.legalEntity || insForm.insuranceType,
-      jurisdiction: insForm.jurisdiction,
-      licenseNumber: insForm.licenseNumber,
-      declaredPortfolio: insForm.portfolioSize,
-      contactName: insForm.contactName,
-      contactEmail: insForm.contactEmail,
-      website: insForm.website,
-      description: insForm.insuranceType
-        ? `[Insurance type: ${insForm.insuranceType}] ${insForm.description}`.trim()
-        : insForm.description,
+      applicantType: 'lp',
+      walletAddress: (lpForm.walletAddress || address || '') as string,
+      companyName: lpForm.entityName,
+      legalEntityType: lpForm.investorType,
+      jurisdiction: lpForm.jurisdiction,
+      licenseNumber: lpForm.regulator,
+      declaredPortfolio: lpForm.aum,
+      contactName: lpForm.contactName,
+      contactEmail: lpForm.contactEmail,
+      website: lpForm.website,
+      description: [
+        lpForm.investorType ? `[Investor type: ${lpForm.investorType}]` : '',
+        lpForm.qualifiedInvestor ? '[Qualified/Professional investor: confirmed]' : '',
+        lpForm.mandate,
+      ].filter(Boolean).join(' ').trim(),
       chainId: KYB_CHAIN_ID,
     });
   };
@@ -270,7 +278,7 @@ export default function ApplyPage() {
             )}
             {myApps.kind === 'ready' && myApps.apps.map((a, i) => (
               <span key={i} style={{ fontSize: '12px', color: '#374151', background: '#F3F4F6', borderRadius: '9999px', padding: '3px 10px' }}>
-                {a.applicantType === 'cedant' ? 'Cedant' : 'Curator'}: <strong>{a.status.replace('_', ' ')}</strong>
+                {a.applicantType === 'lp' ? 'Institutional LP' : a.applicantType === 'cedant' ? 'Cedant' : 'Curator'}: <strong>{a.status.replace('_', ' ')}</strong>
               </span>
             ))}
             {myApps.kind === 'ready' && myApps.apps.length > 0 && <DataSourceBadge source="backend" />}
@@ -302,7 +310,7 @@ export default function ApplyPage() {
             Join NextBlock
           </h1>
           <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '15px', color: 'rgba(255,255,255,0.6)', maxWidth: '560px', lineHeight: 1.6 }}>
-            NextBlock is an institutional protocol for tokenized reinsurance portfolios. Apply for on-chain authorization as a Cedant / Reinsurer (portfolio submission) or as an Underwriting Curator.
+            NextBlock is an institutional protocol for tokenized reinsurance portfolios, open to qualified institutional participants only. Apply for on-chain authorization as an Institutional LP (capital provider) or as an Underwriting Curator. Insurers / reinsurers ceding risk onboard through the dedicated cedant flow.
           </p>
         </div>
       </div>
@@ -310,22 +318,22 @@ export default function ApplyPage() {
       <div className="mx-auto" style={{ maxWidth: '860px', padding: '40px 32px 80px' }}>
 
         {/* Already approved banners */}
-        {isInsuranceApproved && (
+        {isLpApproved && (
           <div style={{ background: 'rgba(22,101,52,0.08)', border: '1px solid rgba(22,101,52,0.25)', borderRadius: '12px', padding: '16px 20px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#166534" strokeWidth="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             <div>
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '14px', fontWeight: 600, color: '#166534', margin: 0 }}>Your wallet holds AUTHORIZED_CEDANT_ROLE on-chain (Cedant / Reinsurer)</p>
+              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '14px', fontWeight: 600, color: '#166534', margin: 0 }}>Your wallet is whitelisted as an Institutional LP (eligible to hold nbUSDC)</p>
               <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '12px', color: '#166534', opacity: 0.8, margin: '2px 0 0' }}>
-                You have full access to vault creation and management. <Link href="/app/create-vault" style={{ color: '#166534', fontWeight: 600 }}>Create a vault →</Link>
+                You can deposit USDC and receive nbUSDC vault shares. <Link href="/app" style={{ color: '#166534', fontWeight: 600 }}>Browse vaults →</Link>
               </p>
             </div>
           </div>
         )}
-        {isCuratorApproved && !isInsuranceApproved && (
+        {isCuratorApproved && !isLpApproved && (
           <div style={{ background: 'rgba(27,58,107,0.06)', border: '1px solid rgba(27,58,107,0.2)', borderRadius: '12px', padding: '16px 20px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1B3A6B" strokeWidth="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             <div>
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '14px', fontWeight: 600, color: '#1B3A6B', margin: 0 }}>Your wallet holds UNDERWRITING_CURATOR_ROLE on-chain (Underwriting Curator)</p>
+              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '14px', fontWeight: 600, color: '#1B3A6B', margin: 0 }}>Your wallet is authorized as a Syndicate (UNDERWRITING_CURATOR_ROLE)</p>
               <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '12px', color: '#1B3A6B', opacity: 0.8, margin: '2px 0 0' }}>
                 You can deploy insurance vaults. <Link href="/app/create-vault" style={{ color: '#1B3A6B', fontWeight: 600 }}>Create a vault →</Link>
               </p>
@@ -344,12 +352,12 @@ export default function ApplyPage() {
             </p>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-              {/* Insurance Company Card */}
+              {/* Institutional LP Card */}
               <button
-                onClick={() => { setRole('insurance'); setStep('form'); }}
+                onClick={() => { setRole('lp'); setStep('form'); }}
                 style={{
-                  background: role === 'insurance' ? 'rgba(27,58,107,0.06)' : '#FFFFFF',
-                  border: `2px solid ${role === 'insurance' ? '#1B3A6B' : 'rgba(27,58,107,0.15)'}`,
+                  background: role === 'lp' ? 'rgba(27,58,107,0.06)' : '#FFFFFF',
+                  border: `2px solid ${role === 'lp' ? '#1B3A6B' : 'rgba(27,58,107,0.15)'}`,
                   borderRadius: '16px',
                   padding: '28px',
                   textAlign: 'left',
@@ -360,23 +368,23 @@ export default function ApplyPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
                   <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: 'rgba(27,58,107,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1B3A6B" strokeWidth="1.5">
-                      <path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0H5m14 0h2M5 21H3M9 7h1m-1 4h1m4-4h1m-1 4h1M9 21v-3.5a.5.5 0 01.5-.5h5a.5.5 0 01.5.5V21" />
+                      <path d="M3 21h18M5 21V7l8-4 8 4v14M9 9h.01M9 13h.01M9 17h.01M15 9h.01M15 13h.01M15 17h.01" />
                     </svg>
                   </div>
                   <div>
-                    <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '17px', fontWeight: 400, color: '#0F1218', margin: 0 }}>Cedant / Reinsurer</p>
-                    <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '12px', color: '#6B7280', margin: '2px 0 0' }}>Licensed insurer or reinsurer</p>
+                    <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '17px', fontWeight: 400, color: '#0F1218', margin: 0 }}>Institutional LP</p>
+                    <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '12px', color: '#6B7280', margin: '2px 0 0' }}>Qualified institutional investor</p>
                   </div>
                 </div>
                 <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '13px', color: '#374151', lineHeight: 1.6, marginBottom: '16px' }}>
-                  Tokenize your existing insurance portfolio. Upload policies, set coverage parameters, and access institutional liquidity through NextBlock vaults.
+                  Provide capital to tokenized reinsurance vaults. Deposit USDC, receive restricted nbUSDC shares, and earn reinsurance-backed yield with continuous NAV.
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {[
-                    'Create and manage insurance vaults',
-                    'Register and tokenize policy portfolios',
-                    'Deposit premiums and manage claims',
-                    'Access co-insurance liquidity',
+                    'Deposit USDC into institutional vaults',
+                    'Hold restricted nbUSDC shares (ERC-3643)',
+                    'Earn reinsurance premium yield (UPR-based NAV)',
+                    'Redeem within buffer / via redemption queue',
                   ].map((f) => (
                     <div key={f} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1B3A6B" strokeWidth="2.5"><path d="M5 13l4 4L19 7" /></svg>
@@ -385,16 +393,16 @@ export default function ApplyPage() {
                   ))}
                 </div>
                 <div style={{ marginTop: '20px', padding: '8px 14px', background: 'rgba(27,58,107,0.08)', borderRadius: '8px', display: 'inline-block' }}>
-                  <span style={{ fontFamily: "'Inter', sans-serif", fontSize: '11px', fontWeight: 600, color: '#1B3A6B', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Requires KYB + License Verification</span>
+                  <span style={{ fontFamily: "'Inter', sans-serif", fontSize: '11px', fontWeight: 600, color: '#1B3A6B', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Requires KYC/KYB + Whitelist (ComplianceRegistry)</span>
                 </div>
               </button>
 
-              {/* Syndicate Manager Card */}
+              {/* Underwriting Curator Card */}
               <button
-                onClick={() => { setRole('syndicate manager'); setStep('form'); }}
+                onClick={() => { setRole('curator'); setStep('form'); }}
                 style={{
-                  background: role === 'syndicate manager' ? 'rgba(201,168,76,0.06)' : '#FFFFFF',
-                  border: `2px solid ${role === 'syndicate manager' ? '#C9A84C' : 'rgba(201,168,76,0.3)'}`,
+                  background: role === 'curator' ? 'rgba(201,168,76,0.06)' : '#FFFFFF',
+                  border: `2px solid ${role === 'curator' ? '#C9A84C' : 'rgba(201,168,76,0.3)'}`,
                   borderRadius: '16px',
                   padding: '28px',
                   textAlign: 'left',
@@ -409,12 +417,12 @@ export default function ApplyPage() {
                     </svg>
                   </div>
                   <div>
-                    <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '17px', fontWeight: 400, color: '#0F1218', margin: 0 }}>Underwriting Curator</p>
-                    <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '12px', color: '#6B7280', margin: '2px 0 0' }}>Asset manager or risk strategist</p>
+                    <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '17px', fontWeight: 400, color: '#0F1218', margin: 0 }}>Syndicate</p>
+                    <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '12px', color: '#6B7280', margin: '2px 0 0' }}>Managing agent · underwriting (Lloyd&apos;s-style)</p>
                   </div>
                 </div>
                 <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '13px', color: '#374151', lineHeight: 1.6, marginBottom: '16px' }}>
-                  Design and deploy insurance risk strategies. Syndicates set vault parameters, select policies, and manage capital allocation for institutional investors.
+                  Design and deploy insurance risk strategies. Curators set vault parameters, select policies, and manage capital allocation for institutional investors.
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {[
@@ -434,18 +442,28 @@ export default function ApplyPage() {
                 </div>
               </button>
             </div>
+
+            {/* Cedant pointer */}
+            <div style={{ background: '#FFFFFF', border: '1px dashed rgba(27,58,107,0.3)', borderRadius: '12px', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+              <span style={{ fontFamily: "'Inter', sans-serif", fontSize: '13px', color: '#374151' }}>
+                Are you an insurer / reinsurer looking to cede risk and tokenize a portfolio?
+              </span>
+              <Link href="/app/cedant/onboard" style={{ fontFamily: "'Inter', sans-serif", fontSize: '13px', fontWeight: 600, color: '#1B3A6B', textDecoration: 'none' }}>
+                Go to Cedant onboarding →
+              </Link>
+            </div>
           </>
         )}
 
-        {/* ── STEP: Insurance Company Form ── */}
-        {step === 'form' && role === 'insurance' && (
-          <form onSubmit={handleInsSubmit}>
+        {/* ── STEP: Institutional LP Form ── */}
+        {step === 'form' && role === 'lp' && (
+          <form onSubmit={handleLpSubmit}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px' }}>
               <button type="button" onClick={() => setStep('choose')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', fontFamily: "'Inter', sans-serif", fontSize: '13px' }}>
                 ← Back
               </button>
               <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 400, color: '#0F1218', margin: 0 }}>
-                Cedant / Reinsurer — Portfolio Submission Application
+                Institutional LP — Investor Onboarding
               </h2>
             </div>
 
@@ -455,89 +473,84 @@ export default function ApplyPage() {
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
                 <div>
-                  <label style={labelStyle}>Company Name *</label>
-                  <input required style={inputStyle} placeholder="Klapton Re Ltd." value={insForm.companyName} onChange={e => setInsForm(f => ({ ...f, companyName: e.target.value }))} />
+                  <label style={labelStyle}>Institutional Entity / Fund Name *</label>
+                  <input required style={inputStyle} placeholder="e.g. Helvetia Pension Fund" value={lpForm.entityName} onChange={e => setLpForm(f => ({ ...f, entityName: e.target.value }))} />
                 </div>
                 <div>
-                  <label style={labelStyle}>Legal Entity Type *</label>
-                  <input required style={inputStyle} placeholder="IBC / LLC / S.A. / Ltd." value={insForm.legalEntity} onChange={e => setInsForm(f => ({ ...f, legalEntity: e.target.value }))} />
+                  <label style={labelStyle}>Investor Type *</label>
+                  <select required style={inputStyle} value={lpForm.investorType} onChange={e => setLpForm(f => ({ ...f, investorType: e.target.value }))}>
+                    <option value="">Select type</option>
+                    {INVESTOR_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
                 </div>
                 <div>
                   <label style={labelStyle}>Jurisdiction *</label>
-                  <select required style={inputStyle} value={insForm.jurisdiction} onChange={e => setInsForm(f => ({ ...f, jurisdiction: e.target.value }))}>
+                  <select required style={inputStyle} value={lpForm.jurisdiction} onChange={e => setLpForm(f => ({ ...f, jurisdiction: e.target.value }))}>
                     <option value="">Select jurisdiction</option>
                     {JURISDICTIONS.map(j => <option key={j} value={j}>{j}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label style={labelStyle}>License / Registration Number *</label>
-                  <input required style={inputStyle} placeholder="e.g. SKN-INS-2024-0042" value={insForm.licenseNumber} onChange={e => setInsForm(f => ({ ...f, licenseNumber: e.target.value }))} />
+                  <label style={labelStyle}>Assets Under Management (USD)</label>
+                  <input style={inputStyle} placeholder="e.g. $250,000,000" value={lpForm.aum} onChange={e => setLpForm(f => ({ ...f, aum: e.target.value }))} />
                 </div>
                 <div>
-                  <label style={labelStyle}>Insurance Type *</label>
-                  <select required style={inputStyle} value={insForm.insuranceType} onChange={e => setInsForm(f => ({ ...f, insuranceType: e.target.value }))}>
-                    <option value="">Select type</option>
-                    {INSURANCE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label style={labelStyle}>Portfolio Size (USD) *</label>
-                  <input required style={inputStyle} placeholder="e.g. $5,000,000" value={insForm.portfolioSize} onChange={e => setInsForm(f => ({ ...f, portfolioSize: e.target.value }))} />
+                  <label style={labelStyle}>Regulator / License (optional)</label>
+                  <input style={inputStyle} placeholder="e.g. FINMA, FCA, SEC RIA — reg. no." value={lpForm.regulator} onChange={e => setLpForm(f => ({ ...f, regulator: e.target.value }))} />
                 </div>
               </div>
             </div>
 
             <div style={{ background: '#FFFFFF', border: '1px solid rgba(27,58,107,0.12)', borderRadius: '16px', padding: '32px', marginBottom: '20px' }}>
               <h3 style={{ fontFamily: "'Inter', sans-serif", fontSize: '13px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#1B3A6B', marginBottom: '20px', paddingBottom: '12px', borderBottom: '1px solid rgba(27,58,107,0.1)' }}>
-                Contact & Wallet
+                Contact &amp; Wallet
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
                 <div>
                   <label style={labelStyle}>Contact Name *</label>
-                  <input required style={inputStyle} placeholder="John Smith" value={insForm.contactName} onChange={e => setInsForm(f => ({ ...f, contactName: e.target.value }))} />
+                  <input required style={inputStyle} placeholder="John Smith" value={lpForm.contactName} onChange={e => setLpForm(f => ({ ...f, contactName: e.target.value }))} />
                 </div>
                 <div>
                   <label style={labelStyle}>Contact Email *</label>
-                  <input required type="email" style={inputStyle} placeholder="john@company.com" value={insForm.contactEmail} onChange={e => setInsForm(f => ({ ...f, contactEmail: e.target.value }))} />
+                  <input required type="email" style={inputStyle} placeholder="john@institution.com" value={lpForm.contactEmail} onChange={e => setLpForm(f => ({ ...f, contactEmail: e.target.value }))} />
                 </div>
                 <div>
                   <label style={labelStyle}>Website</label>
-                  <input style={inputStyle} placeholder="https://company.com" value={insForm.website} onChange={e => setInsForm(f => ({ ...f, website: e.target.value }))} />
+                  <input style={inputStyle} placeholder="https://institution.com" value={lpForm.website} onChange={e => setLpForm(f => ({ ...f, website: e.target.value }))} />
                 </div>
                 <div>
-                  <label style={labelStyle}>Wallet Address (Admin) *</label>
+                  <label style={labelStyle}>Wallet Address *</label>
                   <input
                     required
                     style={{ ...inputStyle, background: address ? '#F9FAFB' : '#FFFFFF', fontFamily: 'monospace', fontSize: '12px' }}
                     placeholder="0x..."
-                    value={insForm.walletAddress || address || ''}
-                    onChange={e => setInsForm(f => ({ ...f, walletAddress: e.target.value }))}
+                    value={lpForm.walletAddress || address || ''}
+                    onChange={e => setLpForm(f => ({ ...f, walletAddress: e.target.value }))}
                   />
-                  {address && <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '11px', color: '#6B7280', marginTop: '4px' }}>Auto-filled from connected wallet</p>}
+                  {address && <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '11px', color: '#6B7280', marginTop: '4px' }}>Auto-filled from connected wallet — this is the address that will be whitelisted</p>}
                 </div>
               </div>
               <div style={{ marginTop: '16px' }}>
-                <label style={labelStyle}>Portfolio Description *</label>
+                <label style={labelStyle}>Investment Mandate / Notes</label>
                 <textarea
-                  required
                   rows={4}
                   style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }}
-                  placeholder="Describe your insurance portfolio, risk categories, geographic exposure, and how you plan to use NextBlock for tokenization..."
-                  value={insForm.description}
-                  onChange={e => setInsForm(f => ({ ...f, description: e.target.value }))}
+                  placeholder="Describe your mandate, ticket size, allocation horizon and any compliance constraints relevant to onboarding..."
+                  value={lpForm.mandate}
+                  onChange={e => setLpForm(f => ({ ...f, mandate: e.target.value }))}
                 />
               </div>
             </div>
 
             {/* Process timeline */}
             <div style={{ background: 'rgba(27,58,107,0.04)', border: '1px solid rgba(27,58,107,0.1)', borderRadius: '12px', padding: '20px 24px', marginBottom: '20px' }}>
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '12px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#1B3A6B', marginBottom: '14px' }}>Review Process</p>
+              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '12px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#1B3A6B', marginBottom: '14px' }}>Onboarding Process</p>
               <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                 {[
                   { step: '01', title: 'Application Submitted', time: 'Immediate' },
-                  { step: '02', title: 'KYB & License Review', time: '2–5 business days' },
-                  { step: '03', title: 'Compliance Check', time: '1–3 business days' },
-                  { step: '04', title: 'On-chain role granted', time: 'Upon approval' },
+                  { step: '02', title: 'KYC / KYB + Sanctions', time: '2–5 business days' },
+                  { step: '03', title: 'Whitelist (ComplianceRegistry)', time: 'Upon approval' },
+                  { step: '04', title: 'Deposit USDC → nbUSDC', time: 'Self-service after' },
                 ].map((s) => (
                   <div key={s.step} style={{ flex: '1', minWidth: '140px' }}>
                     <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 400, color: 'rgba(27,58,107,0.3)', margin: '0 0 4px' }}>{s.step}</p>
@@ -548,17 +561,30 @@ export default function ApplyPage() {
               </div>
             </div>
 
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '14px' }}>
+              <input
+                type="checkbox"
+                id="qualified-lp"
+                required
+                checked={lpForm.qualifiedInvestor}
+                onChange={e => setLpForm(f => ({ ...f, qualifiedInvestor: e.target.checked }))}
+                style={{ marginTop: '2px', accentColor: '#1B3A6B' }}
+              />
+              <label htmlFor="qualified-lp" style={{ fontFamily: "'Inter', sans-serif", fontSize: '13px', color: '#374151', lineHeight: 1.5, cursor: 'pointer' }}>
+                I confirm that the applicant is a <strong>qualified / professional institutional investor</strong> and not a retail participant, and meets the eligibility requirements of its jurisdiction.
+              </label>
+            </div>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '24px' }}>
               <input
                 type="checkbox"
-                id="terms-ins"
+                id="terms-lp"
                 required
-                checked={insForm.agreedTerms}
-                onChange={e => setInsForm(f => ({ ...f, agreedTerms: e.target.checked }))}
+                checked={lpForm.agreedTerms}
+                onChange={e => setLpForm(f => ({ ...f, agreedTerms: e.target.checked }))}
                 style={{ marginTop: '2px', accentColor: '#1B3A6B' }}
               />
-              <label htmlFor="terms-ins" style={{ fontFamily: "'Inter', sans-serif", fontSize: '13px', color: '#374151', lineHeight: 1.5, cursor: 'pointer' }}>
-                I confirm that the information provided is accurate and that my entity holds a valid insurance or reinsurance license. I agree to NextBlock&apos;s{' '}
+              <label htmlFor="terms-lp" style={{ fontFamily: "'Inter', sans-serif", fontSize: '13px', color: '#374151', lineHeight: 1.5, cursor: 'pointer' }}>
+                I confirm that the information provided is accurate. I agree to NextBlock&apos;s{' '}
                 <Link href="/" style={{ color: '#1B3A6B', textDecoration: 'underline' }}>Terms of Service</Link> and{' '}
                 <Link href="/" style={{ color: '#1B3A6B', textDecoration: 'underline' }}>Privacy Policy</Link>.
               </label>
@@ -576,7 +602,7 @@ export default function ApplyPage() {
             )}
             <button
               type="submit"
-              disabled={submitState === 'submitting' || !insForm.agreedTerms}
+              disabled={submitState === 'submitting' || !lpForm.agreedTerms || !lpForm.qualifiedInvestor}
               style={{
                 background: 'linear-gradient(135deg, #1B3A6B 0%, #2D5A9E 100%)',
                 color: '#FFFFFF',
@@ -588,23 +614,23 @@ export default function ApplyPage() {
                 fontWeight: 600,
                 cursor: submitState === 'submitting' ? 'wait' : 'pointer',
                 letterSpacing: '0.02em',
-                opacity: submitState === 'submitting' || !insForm.agreedTerms ? 0.6 : 1,
+                opacity: submitState === 'submitting' || !lpForm.agreedTerms || !lpForm.qualifiedInvestor ? 0.6 : 1,
               }}
             >
-              {submitState === 'submitting' ? 'Submitting...' : 'Submit Cedant Application'}
+              {submitState === 'submitting' ? 'Submitting...' : 'Submit LP Application'}
             </button>
           </form>
         )}
 
-        {/* ── STEP: Syndicate Manager Form ── */}
-        {step === 'form' && role === 'syndicate manager' && (
+        {/* ── STEP: Underwriting Curator Form ── */}
+        {step === 'form' && role === 'curator' && (
           <form onSubmit={handleCurSubmit}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px' }}>
               <button type="button" onClick={() => setStep('choose')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', fontFamily: "'Inter', sans-serif", fontSize: '13px' }}>
                 ← Back
               </button>
               <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 400, color: '#0F1218', margin: 0 }}>
-                Underwriting Curator Application
+                Syndicate Application — Underwriting Curator
               </h2>
             </div>
 
@@ -654,7 +680,7 @@ export default function ApplyPage() {
 
             <div style={{ background: '#FFFFFF', border: '1px solid rgba(201,168,76,0.25)', borderRadius: '16px', padding: '32px', marginBottom: '20px' }}>
               <h3 style={{ fontFamily: "'Inter', sans-serif", fontSize: '13px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#92400E', marginBottom: '20px', paddingBottom: '12px', borderBottom: '1px solid rgba(201,168,76,0.15)' }}>
-                Contact & Wallet
+                Contact &amp; Wallet
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
                 <div>
@@ -753,7 +779,7 @@ export default function ApplyPage() {
             </h2>
             <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '14px', color: '#6B7280', maxWidth: '480px', margin: '0 auto 8px', lineHeight: 1.6 }}>
               Thank you for applying to NextBlock. Our team will review your{' '}
-              {role === 'insurance' ? 'insurance company' : 'syndicate manager'} application and contact you at the provided email address.
+              {role === 'lp' ? 'institutional LP' : 'syndicate'} application and contact you at the provided email address.
             </p>
             <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '13px', color: '#9A9A9A', marginBottom: '32px' }}>
               Review typically takes <strong>3–7 business days</strong>.

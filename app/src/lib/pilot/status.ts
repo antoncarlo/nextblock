@@ -68,6 +68,9 @@ export interface RoleFlags {
   isCommittee: boolean;
   isSentinel: boolean;
   isAllocator: boolean;
+  /** ComplianceRegistry.canReceive: whitelisted Institutional LP (nbUSDC eligible).
+   *  This is NOT a ProtocolRoles role — LP eligibility is the whitelist itself. */
+  isCompliantLP: boolean;
 }
 
 export const NO_ROLES: RoleFlags = {
@@ -77,8 +80,10 @@ export const NO_ROLES: RoleFlags = {
   isCommittee: false,
   isSentinel: false,
   isAllocator: false,
+  isCompliantLP: false,
 };
 
+/** True if the wallet holds at least one operational ProtocolRoles role. */
 export function hasAnyRole(roles: RoleFlags): boolean {
   return (
     roles.isOwner ||
@@ -88,6 +93,12 @@ export function hasAnyRole(roles: RoleFlags): boolean {
     roles.isSentinel ||
     roles.isAllocator
   );
+}
+
+/** True if the wallet can operate at all: a role OR LP whitelist eligibility.
+ *  An Institutional LP needs no role — being whitelisted is its authorization. */
+export function isEligibleParticipant(roles: RoleFlags): boolean {
+  return hasAnyRole(roles) || roles.isCompliantLP;
 }
 
 /** A self-service track keyed to an on-chain role flag and its home route. */
@@ -100,8 +111,9 @@ export interface RoleTrack {
 }
 
 export const ROLE_TRACKS: readonly RoleTrack[] = [
+  { key: 'LP', label: 'Institutional LP', description: 'Deposit USDC, receive nbUSDC, manage your position.', route: '/app', flag: 'isCompliantLP' },
   { key: 'CEDANT', label: 'Company / Cedant', description: 'Submit portfolios and claims.', route: '/app/my-company', flag: 'isCedant' },
-  { key: 'CURATOR', label: 'Curator / Underwriting', description: 'Review, approve and activate portfolios; resolve claims.', route: '/app/syndicates/dashboard', flag: 'isCurator' },
+  { key: 'CURATOR', label: 'Syndicate / Underwriting', description: 'Review, approve and activate portfolios; resolve claims.', route: '/app/syndicates/dashboard', flag: 'isCurator' },
   { key: 'ASSET_MANAGER', label: 'Asset Manager / Vault Manager', description: 'Vault strategy oversight (allocation UI ships in a later branch).', route: '/app/syndicates/dashboard', flag: 'isCurator' },
   { key: 'COMMITTEE', label: 'Committee Member', description: 'Off-chain claim approval path.', route: '/app/admin', flag: 'isCommittee' },
   { key: 'SENTINEL', label: 'Sentinel / Admin', description: 'Pause and dispute risk actions; never moves funds.', route: '/app/admin', flag: 'isSentinel' },
@@ -202,13 +214,13 @@ export function nextAction(input: PilotInput): NextAction {
   if (!input.rolesResolved) {
     return { severity: 'info', message: 'Resolving your on-chain roles…' };
   }
-  if (!hasAnyRole(input.roles)) {
+  if (!isEligibleParticipant(input.roles)) {
     return {
       severity: 'action',
-      message: 'KYB approved. The operator must grant your on-chain role — share your wallet address with them.',
+      message: 'KYB approved. The operator now grants your authorization — an on-chain role (Cedant / Syndicate) or the LP whitelist. Share your wallet address with them.',
     };
   }
-  if (input.roles.isCedant && !meetsUsdcRequirement(input.usdc6)) {
+  if ((input.roles.isCedant || input.roles.isCompliantLP) && !meetsUsdcRequirement(input.usdc6)) {
     return {
       severity: 'action',
       message: 'You hold a role. Mint test USDC from the faucet to fund deposits and premium flows.',
@@ -301,17 +313,19 @@ export function computeChecklist(input: PilotInput): ChecklistItem[] {
 
   const role: ChecklistItem = {
     key: 'role',
-    label: 'On-chain role',
+    label: 'Authorization (role or LP whitelist)',
     state: !input.walletConnected
       ? 'na'
       : !input.rolesResolved
       ? 'loading'
-      : hasAnyRole(input.roles)
+      : isEligibleParticipant(input.roles)
       ? 'ok'
       : 'todo',
-    detail: hasAnyRole(input.roles)
+    detail: input.roles.isCompliantLP && !hasAnyRole(input.roles)
+      ? 'Whitelisted as Institutional LP (nbUSDC eligible).'
+      : isEligibleParticipant(input.roles)
       ? 'At least one operational role granted.'
-      : 'No on-chain role yet — operator grants it after KYB approval.',
+      : 'Not authorized yet — operator grants a role or the LP whitelist after KYB approval.',
   };
 
   return [wallet, chain, eth, usdc, kyb, role];

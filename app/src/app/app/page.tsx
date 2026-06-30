@@ -224,8 +224,8 @@ function InvestorView() {
       </div>
       {/* CTA Apply */}
       <div style={{ backgroundColor: "#F2F1EE", borderTop: "1px solid rgba(0,0,0,0.06)", padding: "48px 32px", textAlign: "center" }}>
-        <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "22px", color: "#1B3A6B", marginBottom: "8px" }}>Are you an insurer or asset manager?</p>
-        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "14px", color: "#6B7280", marginBottom: "24px" }}>Apply to become a Syndicate Manager or list your insurance portfolio on NextBlock.</p>
+        <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "22px", color: "#1B3A6B", marginBottom: "8px" }}>Browse freely — onboard when you are ready</p>
+        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "14px", color: "#6B7280", marginBottom: "24px" }}>Anyone can explore vaults and protocol data without a wallet. To invest as an Institutional LP, operate as a Syndicate, or cede a portfolio, connect your wallet and complete KYC / KYB.</p>
         <Link href="/app/apply" style={{ display: "inline-block", padding: "12px 32px", background: "#1B3A6B", color: "#FFFFFF", borderRadius: "50px", fontFamily: "'Inter', sans-serif", fontSize: "14px", fontWeight: 600, textDecoration: "none" }}>
           Apply Now →
         </Link>
