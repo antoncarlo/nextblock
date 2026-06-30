@@ -206,8 +206,6 @@ export async function POST(request: NextRequest) {
         } else {
           inserted += 1;
         }
-      }
-      inserted += 1;
 
       // Optional email fan-out — only when the recipient has explicitly
       // opted in (privacy-by-default). Failures here are non-fatal: the
@@ -240,7 +238,7 @@ export async function POST(request: NextRequest) {
           // continue — we already persisted the in-app notification
         }
       }
-    }
+      }
 
       // Upsert the high-water mark even when no draft (first-sight-settled
       // case), so we don't re-scan the same claim against the same recipient

@@ -64,6 +64,7 @@ export function useRedemptionHistory(lp?: `0x${string}`, count = 25): State {
   }, [lp, count]);
 
   useEffect(() => {
+    // eslint-disable-next-line -- initial fetch on mount/dep-change; load() owns its own in-flight guard
     void load();
   }, [load]);
 

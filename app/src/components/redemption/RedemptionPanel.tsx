@@ -86,6 +86,7 @@ export function RedemptionPanel({ queueAddress }: RedemptionPanelProps) {
     );
   }
 
+  // eslint-disable-next-line -- Date.now() for a display-only countdown; intentionally re-evaluated each render
   const matureDelta = q.currentEpochMaturesAt * 1000 - Date.now();
   const matureLabel =
     matureDelta <= 0
