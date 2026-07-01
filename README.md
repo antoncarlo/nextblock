@@ -8,6 +8,7 @@ assessment, premium/UPR accounting, claims with dispute paths) is governed by
 explicit on-chain roles. Think Lloyd's rebuilt as a tokenized protocol, not a
 consumer insurance app.
 
+
 > STATUS: Base Sepolia STAGING ONLY (chain id 84532). The protocol has NOT
 > received an external security audit. Do not use with real funds. Base-only
 > by design: no other chains are operational targets.
