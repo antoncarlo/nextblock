@@ -24,8 +24,10 @@ import {NavOracle} from "./NavOracle.sol";
 ///         - NavOracle input is ADVISORY: a paused/anomalous feed or a stale
 ///           attestation blocks new allocations; a missing attestation does not
 ///           (the oracle is optional in the MVP). NAV never moves funds.
-///         - The 70/30 split is a documented DEMO strategy built on the generic
-///           parametric proposeSplitAllocation — not a hardcoded policy.
+///         - Allocation is fully parametric: the Allocator supplies portfolios,
+///           bps weights and the total via proposeSplitAllocation — there is no
+///           hardcoded split. Segregation of the deployed underwriting capacity
+///           is the legal SPV, not an on-chain shortcut.
 contract VaultAllocator is ProtocolRoleConstants {
     // --- Constants (documented parameters; no magic numbers) ---
     uint256 public constant BASIS_POINTS = 10_000;
@@ -43,10 +45,6 @@ contract VaultAllocator is ProtocolRoleConstants {
 
     /// @notice Default per-cedant concentration limit: 60% of the investable base.
     uint256 public constant DEFAULT_MAX_CEDANT_CONCENTRATION_BPS = 6_000;
-
-    /// @notice DEMO strategy weights (70/30). Used only by proposeDemoSeventyThirty.
-    uint256 public constant DEMO_WEIGHT_A_BPS = 7_000;
-    uint256 public constant DEMO_WEIGHT_B_BPS = 3_000;
 
     // --- Enums / Structs ---
     enum ProposalStatus {
@@ -230,21 +228,6 @@ contract VaultAllocator is ProtocolRoleConstants {
             _checkAllocationGuards(vault, portfolioIds[i], legAmount);
             proposalIds[i] = _storeProposal(vault, portfolioIds[i], legAmount, false);
         }
-    }
-
-    /// @notice DEMO strategy: 70/30 split across two portfolios. Documented demo
-    ///         convenience over proposeSplitAllocation — not a permanent policy.
-    function proposeDemoSeventyThirty(address vault, uint256 portfolioA, uint256 portfolioB, uint256 totalAmount)
-        external
-        returns (uint256[] memory proposalIds)
-    {
-        uint256[] memory pids = new uint256[](2);
-        pids[0] = portfolioA;
-        pids[1] = portfolioB;
-        uint256[] memory weights = new uint256[](2);
-        weights[0] = DEMO_WEIGHT_A_BPS;
-        weights[1] = DEMO_WEIGHT_B_BPS;
-        return proposeSplitAllocation(vault, pids, weights, totalAmount);
     }
 
     /// @notice Execute a pending proposal. All strategy guards are re-validated
