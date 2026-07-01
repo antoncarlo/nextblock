@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
-import { kybApplicationPayloadSchema } from '@/lib/kyb/schema';
+import { kybApplicationPayloadSchema, KYB_APPLICANT_TYPE_LABELS } from '@/lib/kyb/schema';
 import { verifyOperatorAuth } from '@/lib/kyb/auth';
 import { getEmailActorFromRequest } from '@/lib/app-auth/session';
 import { clientIp, createSupabaseRateLimitStore, rateLimit } from '@/lib/rate-limit';
+import { getEmailProvider } from '@/lib/email/provider';
+import { renderKybApplicationEmail } from '@/lib/email/templates';
 import { logApiError } from '@/lib/api-log';
 
 /**
@@ -89,6 +91,36 @@ export async function POST(request: NextRequest) {
     }
     logApiError('kyb/applications', 'submit_storage_error', { code: error.code });
     return NextResponse.json({ error: 'storage error' }, { status: 502 });
+  }
+
+  // Best-effort admin alert so the reviewer learns "who is asking for what"
+  // without polling the queue. The inserted row above is the durable record;
+  // this send NEVER blocks or fails the submission. No-op in mock mode
+  // (default); delivers real email once EMAIL_PROVIDER=resend + KYB_NOTIFY_EMAIL
+  // are configured. Fired inline (not via cron) so it works on the free tier.
+  const notifyTo = process.env.KYB_NOTIFY_EMAIL;
+  if (notifyTo) {
+    try {
+      const email = renderKybApplicationEmail({
+        applicantTypeLabel: KYB_APPLICANT_TYPE_LABELS[p.applicantType],
+        companyName: p.companyName,
+        jurisdiction: p.jurisdiction,
+        contactName: p.contactName,
+        contactEmail: p.contactEmail,
+        declaredPortfolio: p.declaredPortfolio || null,
+        appUrl: process.env.NEXT_PUBLIC_APP_URL ?? 'https://nextblock.finance',
+      });
+      await getEmailProvider().send({
+        to: notifyTo,
+        subject: email.subject,
+        text: email.text,
+        html: email.html,
+      });
+    } catch (err) {
+      logApiError('kyb/applications', 'admin_notify_failed', {
+        code: err instanceof Error ? err.name : 'unknown',
+      });
+    }
   }
 
   return NextResponse.json({ id: data.id, status: data.status, createdAt: data.created_at }, { status: 201 });

@@ -7,8 +7,11 @@ import { NEXTBLOCK_ADDRESSES } from '@/config/generated/addressBook';
 import {
   operatorAuthMessage,
   isValidTransition,
+  isKybPending,
   KYB_STATUSES,
+  KYB_APPLICANT_TYPE_LABELS,
   type KybStatus,
+  type KybApplicantType,
 } from '@/lib/kyb/schema';
 import { DataSourceBadge } from '@/components/shared/DataSourceBadge';
 import { useEmailSession } from '@/hooks/useEmailSession';
@@ -28,7 +31,7 @@ import { useEmailSession } from '@/hooks/useEmailSession';
 
 interface KybAppRow {
   id: string;
-  applicant_type: 'cedant' | 'curator';
+  applicant_type: KybApplicantType;
   wallet_address: string;
   company_name: string;
   legal_entity_type: string;
@@ -80,6 +83,14 @@ const STATUS_COLORS: Record<KybStatus, { bg: string; color: string }> = {
   approved: { bg: '#F0FDF4', color: '#166534' },
   rejected: { bg: '#FEF2F2', color: '#B91C1C' },
   needs_info: { bg: '#FAF5FF', color: '#7E22CE' },
+};
+
+/** Per-role badge so the reviewer can tell an LP capital application apart from
+ *  a Reinsurer/Curator onboarding at a glance. LP uses the protocol green. */
+const TYPE_BADGE: Record<KybApplicantType, { bg: string; color: string; short: string }> = {
+  cedant: { bg: '#EEF2FF', color: '#3730A3', short: 'Reinsurer' },
+  curator: { bg: '#FFF7ED', color: '#9A3412', short: 'Syndicate Curator' },
+  lp: { bg: '#F0FDF4', color: '#166534', short: 'Institutional LP' },
 };
 
 export function KybReviewQueue() {
@@ -208,6 +219,24 @@ export function KybReviewQueue() {
     [address, emailSession.accessToken, emailSession.canOperateKyb, note, signMessageAsync, refreshList],
   );
 
+  // Derived review state: surface a pending count/breakdown (the in-dashboard
+  // "notification") and float applications that still need action to the top.
+  const readyApps = queue.kind === 'ready' ? queue.apps : [];
+  const pendingApps = readyApps.filter((a) => isKybPending(a.status));
+  const pendingByType = pendingApps.reduce<Partial<Record<KybApplicantType, number>>>((acc, a) => {
+    acc[a.applicant_type] = (acc[a.applicant_type] ?? 0) + 1;
+    return acc;
+  }, {});
+  const pendingBreakdown = (Object.keys(pendingByType) as KybApplicantType[])
+    .map((t) => `${pendingByType[t]} ${KYB_APPLICANT_TYPE_LABELS[t]}`)
+    .join(' · ');
+  const sortedApps = [...readyApps].sort((a, b) => {
+    const ap = isKybPending(a.status) ? 0 : 1;
+    const bp = isKybPending(b.status) ? 0 : 1;
+    if (ap !== bp) return ap - bp;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-6">
       <div className="mb-1 flex items-center justify-between">
@@ -249,6 +278,16 @@ export function KybReviewQueue() {
 
       {queue.kind === 'ready' && (
         <div className="space-y-3">
+          {pendingApps.length > 0 && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+              <p className="text-sm font-semibold text-amber-900">
+                🔔 {pendingApps.length} application{pendingApps.length > 1 ? 's' : ''} awaiting your review
+              </p>
+              {pendingBreakdown && (
+                <p className="mt-0.5 text-xs text-amber-700">{pendingBreakdown}</p>
+              )}
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <p className="text-xs text-gray-500">{queue.apps.length} application(s)</p>
             <button type="button" onClick={refreshList} className="text-xs font-medium text-blue-700 hover:text-blue-900">
@@ -258,7 +297,7 @@ export function KybReviewQueue() {
           {queue.apps.length === 0 && (
             <p className="text-xs text-gray-400">No applications on record.</p>
           )}
-          {queue.apps.map(app => {
+          {sortedApps.map(app => {
             const sc = STATUS_COLORS[app.status];
             const appEvents = queue.events.filter(e => e.application_id === app.id);
             const expanded = expandedId === app.id;
@@ -270,11 +309,19 @@ export function KybReviewQueue() {
                   onClick={() => setExpandedId(expanded ? null : app.id)}
                   className="flex w-full items-center justify-between px-4 py-3 text-left"
                 >
-                  <div>
-                    <span className="text-sm font-semibold text-gray-900">{app.company_name}</span>
-                    <span className="ml-2 text-xs text-gray-400">
-                      {app.applicant_type} · <code>{app.wallet_address.slice(0, 6)}...{app.wallet_address.slice(-4)}</code>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold"
+                      style={{ background: TYPE_BADGE[app.applicant_type].bg, color: TYPE_BADGE[app.applicant_type].color }}
+                    >
+                      {TYPE_BADGE[app.applicant_type].short}
                     </span>
+                    <div>
+                      <span className="text-sm font-semibold text-gray-900">{app.company_name}</span>
+                      <span className="ml-2 text-xs text-gray-400">
+                        <code>{app.wallet_address.slice(0, 6)}...{app.wallet_address.slice(-4)}</code>
+                      </span>
+                    </div>
                   </div>
                   <span
                     className="rounded-full px-2 py-0.5 text-xs font-semibold"
@@ -287,6 +334,9 @@ export function KybReviewQueue() {
                 {expanded && (
                   <div className="border-t border-gray-100 px-4 py-3 text-xs text-gray-600">
                     <div className="mb-3 grid grid-cols-2 gap-x-6 gap-y-1">
+                      <span className="col-span-2 font-semibold text-gray-800">
+                        Role: {KYB_APPLICANT_TYPE_LABELS[app.applicant_type]}
+                      </span>
                       <span>Entity type: {app.legal_entity_type}</span>
                       <span>Jurisdiction: {app.jurisdiction}</span>
                       <span>License: {app.license_number ?? 'n/a'}</span>

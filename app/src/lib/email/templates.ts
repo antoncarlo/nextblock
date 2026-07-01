@@ -66,6 +66,54 @@ export function renderNotificationEmail(input: NotificationEmailInput): Rendered
   return { subject, text, html };
 }
 
+export interface KybApplicationEmailInput {
+  /** Human-readable role, e.g. "Institutional Liquidity Provider". */
+  applicantTypeLabel: string;
+  companyName: string;
+  jurisdiction: string;
+  contactName: string;
+  contactEmail: string;
+  declaredPortfolio: string | null;
+  appUrl: string;
+}
+
+/**
+ * Admin alert: a new onboarding application landed and is awaiting review.
+ * Unlike the user-facing notification email this has no preferences footer —
+ * it goes to the KYB reviewer, not the applicant. Kept PII-light and factual
+ * so the reviewer can triage "who is asking for what" straight from the inbox.
+ */
+export function renderKybApplicationEmail(input: KybApplicationEmailInput): RenderedEmail {
+  const reviewUrl = safeUrl(input.appUrl, '/app/admin');
+  const subject = `NextBlock: New ${input.applicantTypeLabel} application — ${input.companyName}`;
+  const figureLine = input.declaredPortfolio ? `\nDeclared figure: ${input.declaredPortfolio}` : '';
+
+  const text =
+    `A new onboarding application is awaiting review.\n\n` +
+    `Role: ${input.applicantTypeLabel}\n` +
+    `Entity: ${input.companyName}\n` +
+    `Jurisdiction: ${input.jurisdiction}\n` +
+    `Contact: ${input.contactName} (${input.contactEmail})` +
+    figureLine +
+    `\n\nOpen the full application and approve it in the Admin panel:\n${reviewUrl}`;
+
+  const figureHtml = input.declaredPortfolio
+    ? `<p style="font-size:12px;color:#6b7280;margin:2px 0;">Declared figure: ${escapeHtml(input.declaredPortfolio)}</p>`
+    : '';
+
+  const html =
+    `<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#111827;max-width:560px;">` +
+    `<p style="font-size:14px;line-height:1.5;">A new onboarding application is awaiting review.</p>` +
+    `<p style="font-size:14px;margin:2px 0;"><strong>${escapeHtml(input.applicantTypeLabel)}</strong> — ${escapeHtml(input.companyName)}</p>` +
+    `<p style="font-size:12px;color:#6b7280;margin:2px 0;">Jurisdiction: ${escapeHtml(input.jurisdiction)}</p>` +
+    `<p style="font-size:12px;color:#6b7280;margin:2px 0;">Contact: ${escapeHtml(input.contactName)} (${escapeHtml(input.contactEmail)})</p>` +
+    figureHtml +
+    `<p style="font-size:14px;margin-top:16px;"><a href="${escapeAttr(reviewUrl)}" style="color:#166534;font-weight:500;">Review &amp; approve in the Admin panel →</a></p>` +
+    `</div>`;
+
+  return { subject, text, html };
+}
+
 function escapeHtml(s: string): string {
   return s
     .replaceAll('&', '&amp;')
