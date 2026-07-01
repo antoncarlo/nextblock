@@ -26,6 +26,22 @@ export type KybStatus = (typeof KYB_STATUSES)[number];
 export const KYB_APPLICANT_TYPES = ['cedant', 'curator', 'lp'] as const;
 export type KybApplicantType = (typeof KYB_APPLICANT_TYPES)[number];
 
+/** Human-readable role labels for the reviewer UI + notifications. Keeps the
+ *  raw enum values ('cedant'/'curator'/'lp') out of operator-facing surfaces. */
+export const KYB_APPLICANT_TYPE_LABELS: Record<KybApplicantType, string> = {
+  cedant: 'Reinsurer (Cedant)',
+  curator: 'Syndicate Curator',
+  lp: 'Institutional Liquidity Provider',
+};
+
+/** Statuses that still await an operator action — used to surface a pending
+ *  count / alert to the reviewer. approved and rejected are terminal. */
+export const KYB_PENDING_STATUSES = ['submitted', 'under_review', 'needs_info'] as const;
+
+export function isKybPending(status: KybStatus): boolean {
+  return (KYB_PENDING_STATUSES as readonly KybStatus[]).includes(status);
+}
+
 const EVM_ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
 
 /** Base Sepolia is the only MVP staging chain. */
