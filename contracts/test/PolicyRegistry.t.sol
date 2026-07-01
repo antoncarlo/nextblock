@@ -60,6 +60,73 @@ contract PolicyRegistryTest is Test {
         registry.advanceTime(30 days);
     }
 
+    // --- Real-time lock (truthful test switch) ---
+
+    function test_lockRealTime_zeroesOffsetAndLocks() public {
+        // Simulate a demo that fast-forwarded, then lock in real time.
+        vm.startPrank(admin);
+        registry.advanceTime(45 days);
+        assertEq(registry.timeOffset(), 45 days);
+        registry.lockRealTime();
+        vm.stopPrank();
+
+        assertTrue(registry.clockLocked(), "clock locked");
+        assertEq(registry.timeOffset(), 0, "offset zeroed");
+        assertEq(registry.currentTime(), block.timestamp, "currentTime is real block time");
+    }
+
+    function test_lockRealTime_disablesAdvanceTime() public {
+        vm.prank(admin);
+        registry.lockRealTime();
+
+        vm.prank(admin);
+        vm.expectRevert(PolicyRegistry.PolicyRegistry__ClockLocked.selector);
+        registry.advanceTime(1 days);
+    }
+
+    function test_lockRealTime_secondCallReverts() public {
+        vm.startPrank(admin);
+        registry.lockRealTime();
+        vm.expectRevert(PolicyRegistry.PolicyRegistry__ClockLocked.selector);
+        registry.lockRealTime();
+        vm.stopPrank();
+    }
+
+    function test_lockRealTime_onlyOwnerRole() public {
+        bytes32 ownerRole = protocolRoles.OWNER_ROLE();
+        vm.prank(notAdmin);
+        vm.expectRevert(
+            abi.encodeWithSelector(PolicyRegistry.PolicyRegistry__UnauthorizedRole.selector, notAdmin, ownerRole)
+        );
+        registry.lockRealTime();
+    }
+
+    function test_lockRealTime_event() public {
+        vm.prank(admin);
+        vm.expectEmit(false, false, false, true);
+        emit PolicyRegistry.RealTimeLocked(block.timestamp);
+        registry.lockRealTime();
+    }
+
+    /// @notice After the lock, an activated policy's timeline runs on real time:
+    ///         warping the chain (not advanceTime) is the only way it can expire.
+    function test_lockRealTime_policyExpiryUsesRealTime() public {
+        vm.startPrank(admin);
+        uint256 pid = registry.registerPolicy(
+            "P1", PolicyRegistry.VerificationType.ON_CHAIN, 50_000e6, 2_500e6, 90 days, insurer, 80_000e8
+        );
+        registry.activatePolicy(pid);
+        registry.lockRealTime();
+        // advanceTime is dead now; only real elapsed time can expire the policy.
+        vm.expectRevert(PolicyRegistry.PolicyRegistry__ClockLocked.selector);
+        registry.advanceTime(91 days);
+        vm.stopPrank();
+
+        assertFalse(registry.isPolicyExpired(pid), "not expired on real clock yet");
+        vm.warp(block.timestamp + 91 days);
+        assertTrue(registry.isPolicyExpired(pid), "expired after real 91 days");
+    }
+
     // --- Policy Registration ---
 
     function test_registerPolicy() public {

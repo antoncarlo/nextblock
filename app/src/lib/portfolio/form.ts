@@ -42,8 +42,12 @@ export interface PortfolioFormInput {
   cededPremium: string; // USDC, human units
   inceptionDate: string; // yyyy-mm-dd
   expiryDate: string; // yyyy-mm-dd
-  metadataURI: string; // optional
-  evidenceReference: string; // hashed -> documentHash (required: contract needs non-zero)
+  metadataURI: string; // optional — set to ipfs://<cid> after a real pin
+  evidenceReference: string; // legacy: hashed -> documentHash when no real pin
+  /** Real keccak256 of the pinned document bytes (from /api/portfolio/pin).
+   *  When present it supersedes the evidenceReference-derived hash so the
+   *  on-chain documentHash is the fingerprint of the actual document. */
+  pinnedDocumentHash?: `0x${string}`;
 }
 
 /** Validated on-chain SubmissionParams (bigint/hex), ready for the contract. */
@@ -94,8 +98,10 @@ export function validatePortfolioForm(input: PortfolioFormInput): ValidationResu
   if (input.lineOfBusiness.trim().length === 0) errors.push('Line of business is required.');
   if (input.jurisdiction.trim().length === 0) errors.push('Jurisdiction is required.');
   if (!(input.structureType in STRUCTURE_LABEL)) errors.push('Structure type is invalid.');
-  if (input.evidenceReference.trim().length === 0) {
-    errors.push('Evidence reference is required (hashed to the document hash).');
+  const hasPinnedHash =
+    typeof input.pinnedDocumentHash === 'string' && /^0x[0-9a-fA-F]{64}$/.test(input.pinnedDocumentHash);
+  if (!hasPinnedHash && input.evidenceReference.trim().length === 0) {
+    errors.push('Upload a document to pin (or provide an evidence reference) to derive the document hash.');
   }
 
   if (!USDC_RE.test(input.coverageLimit) || Number(input.coverageLimit) <= 0) {
@@ -120,7 +126,7 @@ export function validatePortfolioForm(input: PortfolioFormInput): ValidationResu
     params: {
       name: input.name.trim(),
       metadataURI: input.metadataURI.trim(),
-      documentHash: deriveDocumentHash(input.evidenceReference.trim()),
+      documentHash: hasPinnedHash ? input.pinnedDocumentHash! : deriveDocumentHash(input.evidenceReference.trim()),
       lineOfBusiness: input.lineOfBusiness.trim(),
       jurisdiction: input.jurisdiction.trim(),
       structureType: input.structureType,

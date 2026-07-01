@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useAccount } from 'wagmi';
+import { useAccount, useSignMessage } from 'wagmi';
+import { keccak256 } from 'viem';
+import { cedantAuthMessage } from '@/lib/portfolio/authMessage';
 import { useProtocolAccess } from '@/hooks/useProtocolAccess';
 import {
   useAllPortfolios,
@@ -132,6 +134,48 @@ function SubmitPortfolioForm({ actions }: { actions: Actions }) {
   const set = <K extends keyof PortfolioFormInput>(k: K, v: PortfolioFormInput[K]) =>
     setForm(f => ({ ...f, [k]: v }));
 
+  const { address } = useAccount();
+  const { signMessageAsync } = useSignMessage();
+  const [pin, setPin] = useState<{ kind: 'idle' | 'pinning' | 'done' | 'error'; msg?: string; cid?: string }>({
+    kind: 'idle',
+  });
+
+  // Real document integrity: hash the actual bytes, sign a cedant-scoped
+  // message binding that hash, and pin to IPFS. The route re-derives the hash
+  // server-side, so the signature is bound to the exact file. On success the
+  // real documentHash + ipfs:// metadataURI flow into the on-chain submission.
+  const onPickFile = async (file: File | undefined) => {
+    if (!file) return;
+    if (!address) {
+      setPin({ kind: 'error', msg: 'Connect a wallet first.' });
+      return;
+    }
+    setPin({ kind: 'pinning' });
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const documentHash = keccak256(bytes);
+      const timestamp = Math.floor(Date.now() / 1000);
+      const signature = await signMessageAsync({
+        message: cedantAuthMessage(`portfolio:pin:${documentHash}`, timestamp),
+      });
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('address', address);
+      fd.append('timestamp', String(timestamp));
+      fd.append('signature', signature);
+      const res = await fetch('/api/portfolio/pin', { method: 'POST', body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setPin({ kind: 'error', msg: typeof data.error === 'string' ? data.error : `HTTP ${res.status}` });
+        return;
+      }
+      setForm(f => ({ ...f, metadataURI: data.metadataURI, pinnedDocumentHash: data.documentHash }));
+      setPin({ kind: 'done', cid: data.cid });
+    } catch {
+      setPin({ kind: 'error', msg: 'Signature rejected or upload failed.' });
+    }
+  };
+
   const submit = () => {
     const result = validatePortfolioForm(form);
     if (!result.ok) {
@@ -160,8 +204,24 @@ function SubmitPortfolioForm({ actions }: { actions: Actions }) {
         <input className={input} placeholder="Ceded premium (USDC)" value={form.cededPremium} onChange={e => set('cededPremium', e.target.value)} />
         <label className="text-[11px] text-gray-500">Inception<input type="date" className={`${input} mt-1 block w-full`} value={form.inceptionDate} onChange={e => set('inceptionDate', e.target.value)} /></label>
         <label className="text-[11px] text-gray-500">Expiry<input type="date" className={`${input} mt-1 block w-full`} value={form.expiryDate} onChange={e => set('expiryDate', e.target.value)} /></label>
-        <input className={`${input} md:col-span-2`} placeholder="Metadata URI (optional, e.g. ipfs://...)" value={form.metadataURI} onChange={e => set('metadataURI', e.target.value)} />
-        <input className={`${input} md:col-span-2`} placeholder="Evidence reference (hashed to documentHash)" value={form.evidenceReference} onChange={e => set('evidenceReference', e.target.value)} />
+        <div className="md:col-span-2">
+          <label className="text-[11px] text-gray-500">
+            Portfolio document (SOV / treaty / bordereau) — pinned to IPFS; its keccak256 becomes the on-chain documentHash
+            <input
+              type="file"
+              className={`${input} mt-1 block w-full`}
+              onChange={e => onPickFile(e.target.files?.[0])}
+              disabled={pin.kind === 'pinning'}
+            />
+          </label>
+          {pin.kind === 'pinning' && <p className="mt-1 text-[11px] text-gray-500">Sign to pin — uploading to IPFS…</p>}
+          {pin.kind === 'done' && (
+            <p className="mt-1 break-all text-[11px] text-emerald-700">
+              Pinned ✓ {form.metadataURI} — documentHash {form.pinnedDocumentHash?.slice(0, 10)}…
+            </p>
+          )}
+          {pin.kind === 'error' && <p className="mt-1 text-[11px] text-red-700">Pin failed: {pin.msg}</p>}
+        </div>
       </div>
       {errors.length > 0 && (
         <ul className="mt-2 list-disc pl-5 text-xs text-red-700">

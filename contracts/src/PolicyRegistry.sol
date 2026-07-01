@@ -48,19 +48,31 @@ contract PolicyRegistry is Ownable, ProtocolRoleConstants {
     uint256 public nextPolicyId;
     mapping(uint256 => Policy) public policies;
 
-    /// @notice Time offset for virtual clock. Single source of truth for all contracts.
+    /// @notice Time offset for the (optional) virtual clock. Single source of
+    ///         truth for all contracts. Used only for demos/walkthroughs; a
+    ///         production deployment locks it to zero via lockRealTime().
     uint256 public timeOffset;
+
+    /// @notice Once true, timeOffset is permanently zero and advanceTime() is
+    ///         disabled: currentTime() is provably block.timestamp forever. This
+    ///         is the one-way switch a real (re)insurance test flips so no actor
+    ///         — not even the owner — can fast-forward premium/UPR/fee accrual.
+    bool public clockLocked;
 
     // --- Events ---
     event PolicyRegistered(uint256 indexed policyId, string name, VerificationType verificationType);
     event PolicyActivated(uint256 indexed policyId, uint256 startTime);
     event TimeAdvanced(uint256 newTimestamp, uint256 secondsAdded);
+    /// @notice Emitted once when the virtual clock is permanently locked to real time.
+    event RealTimeLocked(uint256 at);
 
     // --- Errors ---
     error PolicyRegistry__PolicyNotFound(uint256 policyId);
     error PolicyRegistry__InvalidStatus(uint256 policyId, PolicyStatus current, PolicyStatus expected);
     error PolicyRegistry__InvalidParams();
     error PolicyRegistry__UnauthorizedRole(address caller, bytes32 role);
+    /// @notice Time-travel is disabled because real time has been locked in.
+    error PolicyRegistry__ClockLocked();
 
     // --- Modifiers ---
     /// @dev Reverts unless msg.sender holds `role` in the central ProtocolRoles manager.
@@ -79,16 +91,33 @@ contract PolicyRegistry is Ownable, ProtocolRoleConstants {
 
     // --- Time Management ---
 
-    /// @notice Returns virtual current time (block.timestamp + timeOffset).
+    /// @notice Returns current time (block.timestamp + timeOffset). After
+    ///         lockRealTime() the offset is zero forever, so this equals the
+    ///         real block timestamp.
     function currentTime() public view returns (uint256) {
         return block.timestamp + timeOffset;
     }
 
     /// @notice Advance the virtual clock. Only OWNER_ROLE (demo/keeper control).
+    ///         Reverts once real time has been locked in.
     /// @param secondsToAdd Number of seconds to advance
     function advanceTime(uint256 secondsToAdd) external onlyProtocolRole(OWNER_ROLE) {
+        if (clockLocked) revert PolicyRegistry__ClockLocked();
         timeOffset += secondsToAdd;
         emit TimeAdvanced(currentTime(), secondsToAdd);
+    }
+
+    /// @notice Permanently switch the protocol to real time: zero the virtual
+    ///         offset and disable advanceTime() forever. One-way and idempotent-
+    ///         safe (a second call reverts). Flip this before a real
+    ///         (re)insurance test so premium earning, UPR recognition and fee
+    ///         accrual run on the true block clock — a truthful test, not a
+    ///         fast-forwarded demo. Only OWNER_ROLE.
+    function lockRealTime() external onlyProtocolRole(OWNER_ROLE) {
+        if (clockLocked) revert PolicyRegistry__ClockLocked();
+        timeOffset = 0;
+        clockLocked = true;
+        emit RealTimeLocked(block.timestamp);
     }
 
     // --- Policy Lifecycle ---

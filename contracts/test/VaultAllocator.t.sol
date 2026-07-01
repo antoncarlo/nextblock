@@ -449,13 +449,20 @@ contract VaultAllocatorTest is Test {
         allocator.executeAllocation(propId2);
     }
 
-    // =========== DEMO 70/30 SPLIT ===========
+    // =========== PARAMETRIC SPLIT (curator-supplied weights) ===========
 
-    function test_demoSeventyThirty_split() public {
+    function test_parametricSplit_seventyThirty() public {
         uint256 total = 100_000e6;
 
+        uint256[] memory pids = new uint256[](2);
+        pids[0] = pidA;
+        pids[1] = pidB;
+        uint256[] memory weights = new uint256[](2);
+        weights[0] = 7_000;
+        weights[1] = 3_000;
+
         vm.prank(allocatorBot);
-        uint256[] memory ids = allocator.proposeDemoSeventyThirty(address(vault), pidA, pidB, total);
+        uint256[] memory ids = allocator.proposeSplitAllocation(address(vault), pids, weights, total);
         assertEq(ids.length, 2);
 
         VaultAllocator.AllocationProposal memory a = allocator.getProposal(ids[0]);
