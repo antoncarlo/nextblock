@@ -1,23 +1,5 @@
 {
   "framework": "nextjs",
   "buildCommand": "npm run build",
-  "outputDirectory": ".next",
-  "crons": [
-    {
-      "path": "/api/notifications/refresh",
-      "schedule": "*/5 * * * *"
-    },
-    {
-      "path": "/api/audit/claims/refresh",
-      "schedule": "*/5 * * * *"
-    },
-    {
-      "path": "/api/sanctions/rescreen",
-      "schedule": "0 4 1 * *"
-    },
-    {
-      "path": "/api/ai/refresh",
-      "schedule": "*/15 * * * *"
-    }
-  ]
+  "outputDirectory": ".next"
 }
