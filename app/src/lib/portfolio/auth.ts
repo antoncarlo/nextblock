@@ -1,6 +1,9 @@
 import { createPublicClient, http, verifyMessage, keccak256, toBytes } from 'viem';
 import { baseSepolia } from 'viem/chains';
 import { NEXTBLOCK_ADDRESSES, NEXTBLOCK_CHAIN_ID } from '@/config/generated/addressBook';
+import { CEDANT_AUTH_WINDOW_SECONDS, cedantAuthMessage } from './authMessage';
+
+export { CEDANT_AUTH_WINDOW_SECONDS, cedantAuthMessage };
 
 /**
  * SERVER-ONLY cedant authentication for the portfolio document-pin API.
@@ -29,14 +32,6 @@ const HAS_ROLE_ABI = [
 
 const AUTHORIZED_CEDANT_ROLE = keccak256(toBytes('AUTHORIZED_CEDANT_ROLE'));
 const OWNER_ROLE = keccak256(toBytes('OWNER_ROLE'));
-
-/** Seconds a cedant signature stays valid (60s skew tolerated). */
-export const CEDANT_AUTH_WINDOW_SECONDS = 300;
-
-/** Canonical EIP-191 message binding the action (which includes the content hash). */
-export function cedantAuthMessage(action: string, timestamp: number): string {
-  return `NextBlock cedant authentication\naction: ${action}\ntimestamp: ${timestamp}`;
-}
 
 function getRpcUrl(): string {
   return process.env.BASE_SEPOLIA_RPC_URL ?? 'https://sepolia.base.org';
