@@ -18,6 +18,7 @@ import {
 } from '@/hooks/usePortfolioRegistry';
 import { usePortfolioActions } from '@/hooks/usePortfolioActions';
 import { validatePortfolioForm, type PortfolioFormInput } from '@/lib/portfolio/form';
+import { summarizeBordereau } from '@/lib/portfolio/bordereau';
 import { DataSourceBadge } from '@/components/shared/DataSourceBadge';
 
 /**
@@ -176,6 +177,44 @@ function SubmitPortfolioForm({ actions }: { actions: Actions }) {
     }
   };
 
+  // Bordereau import: parse the policy schedule (CSV export of the Excel),
+  // derive the PORTFOLIO-level aggregate (total coverage/premium, treaty
+  // period, dominant line/jurisdiction) into the form, and pin the same file
+  // as the on-chain document — so the numbers and the fingerprint both come
+  // from the real bordereau instead of being typed by hand.
+  const [bdx, setBdx] = useState<{ policyCount: number; warnings: string[] } | null>(null);
+  const [bdxError, setBdxError] = useState<string | null>(null);
+
+  const onImportBordereau = async (file: File | undefined) => {
+    if (!file) return;
+    setBdxError(null);
+    setBdx(null);
+    let text: string;
+    try {
+      text = await file.text();
+    } catch {
+      setBdxError('Could not read the file.');
+      return;
+    }
+    const res = summarizeBordereau(text);
+    if (!res.ok) {
+      setBdxError(res.errors.join(' '));
+      return;
+    }
+    const s = res.summary;
+    setForm(f => ({
+      ...f,
+      coverageLimit: s.coverageLimit,
+      cededPremium: s.cededPremium,
+      inceptionDate: s.inceptionDate || f.inceptionDate,
+      expiryDate: s.expiryDate || f.expiryDate,
+      lineOfBusiness: s.lineOfBusiness || f.lineOfBusiness,
+      jurisdiction: s.jurisdiction || f.jurisdiction,
+    }));
+    setBdx({ policyCount: s.policyCount, warnings: s.warnings });
+    await onPickFile(file); // pin the bordereau as the on-chain document
+  };
+
   const submit = () => {
     const result = validatePortfolioForm(form);
     if (!result.ok) {
@@ -191,6 +230,32 @@ function SubmitPortfolioForm({ actions }: { actions: Actions }) {
   return (
     <div className="mb-4 rounded-lg border border-gray-100 bg-gray-50 p-4">
       <p className="mb-3 text-xs font-semibold text-gray-700">Submit a portfolio (Cedant)</p>
+
+      <div className="mb-3 rounded-lg border border-dashed border-gray-300 bg-white p-3">
+        <label className="text-[11px] font-medium text-gray-600">
+          Import bordereau (CSV) — auto-fills coverage, premium, treaty dates and line/jurisdiction from the policy
+          schedule, and pins the file as the on-chain document (export your Excel sheet as CSV)
+          <input
+            type="file"
+            accept=".csv,text/csv"
+            className={`${input} mt-1 block w-full`}
+            onChange={e => onImportBordereau(e.target.files?.[0])}
+            disabled={pin.kind === 'pinning'}
+          />
+        </label>
+        {bdxError && <p className="mt-1 text-[11px] text-red-700">Bordereau: {bdxError}</p>}
+        {bdx && (
+          <div className="mt-1 text-[11px] text-emerald-700">
+            Parsed {bdx.policyCount} policy row(s) → aggregate filled below; review before submitting.
+            {bdx.warnings.length > 0 && (
+              <ul className="mt-1 list-disc pl-4 text-amber-700">
+                {bdx.warnings.map(w => <li key={w}>{w}</li>)}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
         <input className={input} placeholder="Name (e.g. EU Property CAT QS 2026)" value={form.name} onChange={e => set('name', e.target.value)} />
         <input className={input} placeholder="Line of business (e.g. Property CAT)" value={form.lineOfBusiness} onChange={e => set('lineOfBusiness', e.target.value)} />
