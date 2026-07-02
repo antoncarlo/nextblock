@@ -31,6 +31,7 @@ const HAS_ROLE_ABI = [
 ] as const;
 
 const AUTHORIZED_CEDANT_ROLE = keccak256(toBytes('AUTHORIZED_CEDANT_ROLE'));
+const UNDERWRITING_CURATOR_ROLE = keccak256(toBytes('UNDERWRITING_CURATOR_ROLE'));
 const OWNER_ROLE = keccak256(toBytes('OWNER_ROLE'));
 
 function getRpcUrl(): string {
@@ -47,7 +48,8 @@ export type CedantAuthResult =
   | { ok: true; address: `0x${string}` }
   | { ok: false; status: 401 | 403; error: string };
 
-export async function verifyCedantAuth(action: string, auth: CedantAuthInput): Promise<CedantAuthResult> {
+/** Shared step: timestamp window + EIP-191 signature over cedantAuthMessage. */
+async function verifySignedAction(action: string, auth: CedantAuthInput): Promise<CedantAuthResult> {
   const now = Math.floor(Date.now() / 1000);
   if (auth.timestamp > now + 60 || now - auth.timestamp > CEDANT_AUTH_WINDOW_SECONDS) {
     return { ok: false, status: 401, error: 'signature expired' };
@@ -66,6 +68,12 @@ export async function verifyCedantAuth(action: string, auth: CedantAuthInput): P
   if (!signatureValid) {
     return { ok: false, status: 401, error: 'invalid signature' };
   }
+  return { ok: true, address: auth.address };
+}
+
+export async function verifyCedantAuth(action: string, auth: CedantAuthInput): Promise<CedantAuthResult> {
+  const signed = await verifySignedAction(action, auth);
+  if (!signed.ok) return signed;
 
   const client = createPublicClient({ chain: baseSepolia, transport: http(getRpcUrl()) });
   const protocolRoles = NEXTBLOCK_ADDRESSES.protocolRoles as `0x${string}`;
@@ -89,6 +97,54 @@ export async function verifyCedantAuth(action: string, auth: CedantAuthInput): P
         ok: false,
         status: 403,
         error: `wallet lacks AUTHORIZED_CEDANT_ROLE/OWNER_ROLE on ProtocolRoles (chain ${NEXTBLOCK_CHAIN_ID})`,
+      };
+    }
+  } catch {
+    return { ok: false, status: 403, error: 'on-chain role check unavailable' };
+  }
+
+  return { ok: true, address: auth.address };
+}
+
+/**
+ * Read access to a CONFIDENTIAL portfolio document: the reviewing roles
+ * (Underwriting Curator / Owner, checked on-chain) or the wallet that uploaded
+ * it (`uploaderAddr`, recorded at upload after passing the cedant check).
+ */
+export async function verifyDocumentAccess(
+  action: string,
+  auth: CedantAuthInput,
+  uploaderAddr: string,
+): Promise<CedantAuthResult> {
+  const signed = await verifySignedAction(action, auth);
+  if (!signed.ok) return signed;
+
+  if (auth.address.toLowerCase() === uploaderAddr.toLowerCase()) {
+    return { ok: true, address: auth.address };
+  }
+
+  const client = createPublicClient({ chain: baseSepolia, transport: http(getRpcUrl()) });
+  const protocolRoles = NEXTBLOCK_ADDRESSES.protocolRoles as `0x${string}`;
+  try {
+    const [isCurator, isOwner] = await Promise.all([
+      client.readContract({
+        address: protocolRoles,
+        abi: HAS_ROLE_ABI,
+        functionName: 'hasRole',
+        args: [UNDERWRITING_CURATOR_ROLE, auth.address],
+      }),
+      client.readContract({
+        address: protocolRoles,
+        abi: HAS_ROLE_ABI,
+        functionName: 'hasRole',
+        args: [OWNER_ROLE, auth.address],
+      }),
+    ]);
+    if (!isCurator && !isOwner) {
+      return {
+        ok: false,
+        status: 403,
+        error: `wallet is neither the uploader nor holds UNDERWRITING_CURATOR_ROLE/OWNER_ROLE (chain ${NEXTBLOCK_CHAIN_ID})`,
       };
     }
   } catch {
