@@ -1,0 +1,95 @@
+# Scheduled ops jobs — re-arm of the crons removed from vercel.json (PR #55).
+#
+# The Vercel Hobby plan allows max 2 crons at daily cadence, which froze every
+# deploy while 4 sub-daily crons were declared. The endpoints stayed in the app
+# (auth: `Authorization: Bearer <CRON_SECRET>`, fail-closed when unset); this
+# workflow drives them from GitHub Actions at the original cadence, for free.
+#
+# OWNER-GATED activation (one-time): set the repo secret
+#   secret  CRON_SECRET   same value as the Vercel env var CRON_SECRET
+# Optional repo variable:
+#   var     APP_URL       defaults to https://www.nextblock.finance
+#
+# Cadence note: GitHub Actions schedules are best-effort (runs can be delayed a
+# few minutes under load). That is acceptable for these jobs — every endpoint
+# is idempotent and high-water-marked, so a late or duplicate call never
+# double-processes.
+
+name: scheduled-jobs
+
+on:
+  schedule:
+    - cron: '*/5 * * * *' # notifications + claims audit refresh
+    - cron: '*/15 * * * *' # AI assessor refresh
+    - cron: '30 4 1 * *' # monthly sanctions rescreen
+  workflow_dispatch: {} # manual trigger: runs every job
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scheduled-jobs-${{ github.event.schedule || 'manual' }}
+  cancel-in-progress: false
+
+env:
+  APP_URL: ${{ vars.APP_URL != '' && vars.APP_URL || 'https://www.nextblock.finance' }}
+
+jobs:
+  fast-refresh:
+    name: notifications + claims audit (5m)
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '*/5 * * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Guard — CRON_SECRET must be armed
+        run: |
+          if [ -z "${{ secrets.CRON_SECRET }}" ]; then
+            echo "::error::CRON_SECRET repo secret is not set — arm it once (same value as the Vercel env var)."
+            exit 1
+          fi
+      - name: Refresh in-app notifications
+        run: |
+          curl -sS -X POST --fail-with-body --max-time 60 --retry 2 --retry-delay 5 \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "$APP_URL/api/notifications/refresh"
+      - name: Refresh claims audit trail
+        run: |
+          curl -sS -X POST --fail-with-body --max-time 60 --retry 2 --retry-delay 5 \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "$APP_URL/api/audit/claims/refresh"
+
+  ai-refresh:
+    name: AI assessor refresh (15m)
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '*/15 * * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Guard — CRON_SECRET must be armed
+        run: |
+          if [ -z "${{ secrets.CRON_SECRET }}" ]; then
+            echo "::error::CRON_SECRET repo secret is not set — arm it once (same value as the Vercel env var)."
+            exit 1
+          fi
+      - name: Refresh AI assessments
+        run: |
+          curl -sS -X POST --fail-with-body --max-time 60 --retry 2 --retry-delay 5 \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "$APP_URL/api/ai/refresh"
+
+  sanctions-rescreen:
+    name: sanctions rescreen (monthly)
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '30 4 1 * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Guard — CRON_SECRET must be armed
+        run: |
+          if [ -z "${{ secrets.CRON_SECRET }}" ]; then
+            echo "::error::CRON_SECRET repo secret is not set — arm it once (same value as the Vercel env var)."
+            exit 1
+          fi
+      - name: Rescreen sanctions lists
+        run: |
+          curl -sS -X POST --fail-with-body --max-time 300 --retry 2 --retry-delay 10 \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "$APP_URL/api/sanctions/rescreen"
