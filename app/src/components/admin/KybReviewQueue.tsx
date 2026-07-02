@@ -15,6 +15,7 @@ import {
 } from '@/lib/kyb/schema';
 import { DataSourceBadge } from '@/components/shared/DataSourceBadge';
 import { useEmailSession } from '@/hooks/useEmailSession';
+import { useSetWhitelist } from '@/hooks/useComplianceAdmin';
 
 /**
  * KYB review queue for the KYC Operator.
@@ -24,9 +25,10 @@ import { useEmailSession } from '@/hooks/useEmailSession';
  * on-chain KYC_OPERATOR_ROLE / OWNER_ROLE membership. The client-side admin
  * gate is cosmetic; this signature+role check is the real one.
  *
- * DB approval is instructional only. For approved applications this panel
- * shows the FUTURE whitelist calldata to propose via the Safe flow — it never
- * sends transactions.
+ * DB approval is instructional only. For approved applications the panel
+ * closes the loop in one click: a direct setWhitelist write from the connected
+ * KYC-Operator wallet (the ComplianceRegistry enforces the role on-chain), with
+ * the Safe calldata still shown as the governance-grade alternative.
  */
 
 interface KybAppRow {
@@ -106,6 +108,12 @@ export function KybReviewQueue() {
   // Reuse the list signature while it is still comfortably inside the server
   // auth window, so a review action does not force a second list signature.
   const [listAuth, setListAuth] = useState<{ timestamp: number; signature: string } | null>(null);
+
+  // One-click on-chain whitelist for approved applications. The connected
+  // wallet must hold KYC_OPERATOR_ROLE — the registry enforces it on-chain;
+  // this button is a convenience over the WhitelistPanel / Safe path.
+  const whitelist = useSetWhitelist();
+  const [whitelistTarget, setWhitelistTarget] = useState<string | null>(null);
 
   const fetchList = useCallback(
     async (auth: { timestamp: number; signature: string } | null) => {
@@ -388,11 +396,33 @@ export function KybReviewQueue() {
 
                     {app.status === 'approved' && (
                       <div className="rounded-lg bg-gray-50 p-3">
-                        <p className="mb-1 font-semibold text-gray-700">
-                          Next step (separate authorized act — NOT sent by this UI)
-                        </p>
+                        <p className="mb-1 font-semibold text-gray-700">Next step — whitelist on ComplianceRegistry</p>
+                        <div className="mb-3 flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            disabled={!isConnected || whitelist.isPending || whitelist.isConfirming}
+                            onClick={() => {
+                              setWhitelistTarget(app.wallet_address.toLowerCase());
+                              whitelist.setWhitelist(app.wallet_address as `0x${string}`, true);
+                            }}
+                            className="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-800 disabled:bg-gray-200 disabled:text-gray-400"
+                          >
+                            {whitelistTarget === app.wallet_address.toLowerCase() && (whitelist.isPending || whitelist.isConfirming)
+                              ? 'Whitelisting…'
+                              : 'Whitelist on-chain now'}
+                          </button>
+                          {whitelistTarget === app.wallet_address.toLowerCase() && whitelist.isSuccess && (
+                            <span className="text-xs font-semibold text-emerald-700">Whitelisted ✓ — the applicant can now operate.</span>
+                          )}
+                          {whitelistTarget === app.wallet_address.toLowerCase() && whitelist.error && (
+                            <span className="text-xs text-red-700">Transaction rejected (wallet must hold KYC_OPERATOR_ROLE).</span>
+                          )}
+                          {!isConnected && (
+                            <span className="text-xs text-gray-500">Connect the KYC Operator wallet to whitelist directly.</span>
+                          )}
+                        </div>
                         <p className="mb-2 text-gray-500">
-                          Propose via the protocol Safe as KYC Operator on ComplianceRegistry:
+                          Governance alternative — propose via the protocol Safe as KYC Operator on ComplianceRegistry:
                         </p>
                         <p className="font-mono break-all text-gray-700">
                           target: {NEXTBLOCK_ADDRESSES.complianceRegistry}

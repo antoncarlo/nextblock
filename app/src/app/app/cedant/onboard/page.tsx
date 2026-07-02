@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useAccount } from 'wagmi';
 import { CedantIntakeForm } from '@/components/cedant/CedantIntakeForm';
 import { CedantStatusPanel } from '@/components/cedant/CedantStatusPanel';
+import { CedantPathSteps } from '@/components/shared/CedantPathSteps';
 
 /**
  * Cedant onboarding orchestrator. Single-page wizard with 4 implicit steps:
@@ -55,6 +56,11 @@ export default function CedantOnboardPage() {
         Submit your reinsurance underwriting profile. NextBlock reviews it (KYB + sanctions screening) and
         the Curator provisions a dedicated vault for your ceded portfolios.
       </p>
+
+      {/* Reinsurer path — where this form sits in the onboarding sequence. */}
+      <div className="mt-4">
+        <CedantPathSteps active={2} />
+      </div>
 
       {!isConnected ? (
         <div className="mt-6 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
