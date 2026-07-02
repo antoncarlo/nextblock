@@ -18,7 +18,8 @@ import {
 } from '@/hooks/usePortfolioRegistry';
 import { usePortfolioActions } from '@/hooks/usePortfolioActions';
 import { validatePortfolioForm, type PortfolioFormInput } from '@/lib/portfolio/form';
-import { summarizeBordereau } from '@/lib/portfolio/bordereau';
+import { summarizeBordereau, summarizeBordereauRows, type BordereauResult } from '@/lib/portfolio/bordereau';
+import { parseXlsx, isZipFile } from '@/lib/portfolio/xlsx';
 import { DataSourceBadge } from '@/components/shared/DataSourceBadge';
 
 /**
@@ -177,11 +178,11 @@ function SubmitPortfolioForm({ actions }: { actions: Actions }) {
     }
   };
 
-  // Bordereau import: parse the policy schedule (CSV export of the Excel),
-  // derive the PORTFOLIO-level aggregate (total coverage/premium, treaty
-  // period, dominant line/jurisdiction) into the form, and pin the same file
-  // as the on-chain document — so the numbers and the fingerprint both come
-  // from the real bordereau instead of being typed by hand.
+  // Bordereau import: parse the policy schedule (Excel .xlsx directly, or a
+  // CSV export), derive the PORTFOLIO-level aggregate (total coverage/premium,
+  // treaty period, dominant line/jurisdiction) into the form, and pin the same
+  // file as the on-chain document — so the numbers and the fingerprint both
+  // come from the real bordereau instead of being typed by hand.
   const [bdx, setBdx] = useState<{ policyCount: number; warnings: string[] } | null>(null);
   const [bdxError, setBdxError] = useState<string | null>(null);
 
@@ -189,14 +190,21 @@ function SubmitPortfolioForm({ actions }: { actions: Actions }) {
     if (!file) return;
     setBdxError(null);
     setBdx(null);
-    let text: string;
+    let res: BordereauResult;
     try {
-      text = await file.text();
-    } catch {
-      setBdxError('Could not read the file.');
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      if (isZipFile(bytes)) {
+        res = summarizeBordereauRows(await parseXlsx(bytes));
+      } else if (/\.xls$/i.test(file.name)) {
+        setBdxError('Legacy binary .xls is not supported — save the workbook as .xlsx or CSV.');
+        return;
+      } else {
+        res = summarizeBordereau(new TextDecoder().decode(bytes));
+      }
+    } catch (err) {
+      setBdxError(err instanceof Error ? err.message : 'Could not read the file.');
       return;
     }
-    const res = summarizeBordereau(text);
     if (!res.ok) {
       setBdxError(res.errors.join(' '));
       return;
@@ -233,11 +241,11 @@ function SubmitPortfolioForm({ actions }: { actions: Actions }) {
 
       <div className="mb-3 rounded-lg border border-dashed border-gray-300 bg-white p-3">
         <label className="text-[11px] font-medium text-gray-600">
-          Import bordereau (CSV) — auto-fills coverage, premium, treaty dates and line/jurisdiction from the policy
-          schedule, and pins the file as the on-chain document (export your Excel sheet as CSV)
+          Import bordereau (Excel .xlsx or CSV) — auto-fills coverage, premium, treaty dates and line/jurisdiction
+          from the policy schedule, and pins the file as the on-chain document
           <input
             type="file"
-            accept=".csv,text/csv"
+            accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             className={`${input} mt-1 block w-full`}
             onChange={e => onImportBordereau(e.target.files?.[0])}
             disabled={pin.kind === 'pinning'}

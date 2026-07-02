@@ -177,8 +177,12 @@ function fmtUsdc(n: number): string {
 
 /** Parse a bordereau CSV and derive the portfolio-level submission aggregate. */
 export function summarizeBordereau(csvText: string): BordereauResult {
-  const rows = parseCsv(csvText);
-  if (rows.length < 2) return { ok: false, errors: ['CSV has no data rows (need a header row + at least one policy).'] };
+  return summarizeBordereauRows(parseCsv(csvText));
+}
+
+/** Aggregate pre-parsed rows (header + policy lines) from CSV or .xlsx. */
+export function summarizeBordereauRows(rows: string[][]): BordereauResult {
+  if (rows.length < 2) return { ok: false, errors: ['No data rows found (need a header row + at least one policy).'] };
 
   const header = rows[0].map(normalizeHeader);
   const colOf = (field: string): number => {
