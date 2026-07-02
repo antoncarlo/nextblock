@@ -1,6 +1,8 @@
 "use client";
+import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import { useVaultAddresses } from "@/hooks/useVaultData";
+import { useProtocolAccess } from "@/hooks/useProtocolAccess";
 import { VaultTable } from "@/components/vault/VaultTable";
 import { VerificationBadge } from "@/components/shared/VerificationBadge";
 import { VerificationType } from "@/config/constants";
@@ -182,8 +184,40 @@ function QuickActions({ actions }: { actions: { icon: string; title: string; des
 
 // ─── Vista Investor / Non connesso ───────────────────────────────────────────
 function InvestorView() {
+  const access = useProtocolAccess();
+  const [nudgeDismissed, setNudgeDismissed] = useState(false);
+  useEffect(() => {
+    try {
+      // eslint-disable-next-line
+      setNudgeDismissed(localStorage.getItem('nb-lp-nudge-dismissed') === '1');
+    } catch {
+      // localStorage disabled — show the nudge, it is harmless.
+    }
+  }, []);
+  const showApprovedNudge = access.status === 'onchain' && access.isCompliantLP && !nudgeDismissed;
+
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#FAFAF8" }}>
+      {/* Whitelist-approved LPs get pulled straight to the first deposit. */}
+      {showApprovedNudge && (
+        <div style={{ background: "#F0FDF4", borderBottom: "1px solid #BBF7D0", padding: "12px 32px" }}>
+          <div className="mx-auto flex flex-wrap items-center justify-between gap-3" style={{ maxWidth: "1200px" }}>
+            <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: "#166534", margin: 0 }}>
+              <strong>You are approved as an Institutional LP</strong> — your wallet is whitelisted on the ComplianceRegistry. Pick a vault below and make your first USDC deposit.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setNudgeDismissed(true);
+                try { localStorage.setItem('nb-lp-nudge-dismissed', '1'); } catch { /* no-op */ }
+              }}
+              style={{ fontSize: "12px", color: "#166534", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
       <Hero
         label="Insurance Tokenization Protocol"
         title="Curated Insurance Vaults"

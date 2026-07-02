@@ -56,6 +56,19 @@ export default function CedantOnboardPage() {
         the Curator provisions a dedicated vault for your ceded portfolios.
       </p>
 
+      {/* Reinsurer path — where this form sits in the onboarding sequence. */}
+      <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
+        <span className="rounded-full bg-gray-100 px-2.5 py-1 text-gray-600">
+          1 · KYB application (<a href="/app/apply" className="font-semibold text-blue-800 underline">Apply</a>)
+        </span>
+        <span className="text-gray-400">→</span>
+        <span className="rounded-full bg-blue-50 px-2.5 py-1 font-semibold text-blue-900">2 · Company profile (this form)</span>
+        <span className="text-gray-400">→</span>
+        <span className="rounded-full bg-gray-100 px-2.5 py-1 text-gray-600">3 · Submit portfolio (My Company)</span>
+        <span className="text-gray-400">→</span>
+        <span className="rounded-full bg-gray-100 px-2.5 py-1 text-gray-600">4 · Pay ceded premium</span>
+      </div>
+
       {!isConnected ? (
         <div className="mt-6 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
           Connect your wallet to start. Onboarding is bound to the wallet you submit from; the same wallet

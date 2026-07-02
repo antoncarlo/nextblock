@@ -321,8 +321,26 @@ export default function ApplyPage() {
               </>
             )}
             {myApps.kind === 'ready' && myApps.apps.map((a, i) => (
-              <span key={i} style={{ fontSize: '12px', color: '#374151', background: '#F3F4F6', borderRadius: '9999px', padding: '3px 10px' }}>
-                {a.applicantType === 'lp' ? 'Institutional LP' : a.applicantType === 'cedant' ? 'Reinsurer (Cedant)' : 'Syndicate Curator'}: <strong>{a.status.replace('_', ' ')}</strong>
+              <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '12px', color: '#374151', background: '#F3F4F6', borderRadius: '9999px', padding: '3px 10px' }}>
+                  {a.applicantType === 'lp' ? 'Institutional LP' : a.applicantType === 'cedant' ? 'Reinsurer (Cedant)' : 'Syndicate Curator'}: <strong>{a.status.replace('_', ' ')}</strong>
+                </span>
+                {/* Approved → hand the applicant straight to the next step of their path. */}
+                {a.status === 'approved' && a.applicantType === 'cedant' && (
+                  <a href="/app/cedant/onboard" style={{ fontSize: '12px', fontWeight: 600, color: '#1B3A6B', textDecoration: 'underline' }}>
+                    Next: company onboarding →
+                  </a>
+                )}
+                {a.status === 'approved' && a.applicantType === 'lp' && (
+                  <a href="/app" style={{ fontSize: '12px', fontWeight: 600, color: '#166534', textDecoration: 'underline' }}>
+                    Next: deposit USDC →
+                  </a>
+                )}
+                {a.status === 'approved' && a.applicantType === 'curator' && (
+                  <a href="/app/create-vault" style={{ fontSize: '12px', fontWeight: 600, color: '#1B3A6B', textDecoration: 'underline' }}>
+                    Next: create your vault →
+                  </a>
+                )}
               </span>
             ))}
             {myApps.kind === 'ready' && myApps.apps.length > 0 && <DataSourceBadge source="backend" />}

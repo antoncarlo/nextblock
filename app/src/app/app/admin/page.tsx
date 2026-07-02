@@ -116,9 +116,19 @@ export default function AdminPage() {
           <KybReviewQueue />
           <RoleHandoffPanel />
           <WhitelistPanel />
-          <TimeControls />
-          <OracleControls />
-          <DemoControls />
+          {/* Legacy demo tooling (virtual clock, mock oracles, walkthrough
+              controls) — collapsed by default so the institutional review
+              surface stays clean. Useless/no-op once lockRealTime() is live. */}
+          <details className="rounded-xl border border-dashed border-gray-300 bg-white">
+            <summary className="cursor-pointer select-none px-6 py-4 text-sm font-semibold text-gray-500">
+              Legacy demo controls (virtual clock &amp; mock oracles — not part of the institutional protocol)
+            </summary>
+            <div className="space-y-6 border-t border-gray-100 p-6">
+              <TimeControls />
+              <OracleControls />
+              <DemoControls />
+            </div>
+          </details>
         </div>
 
         {/* Right column */}
