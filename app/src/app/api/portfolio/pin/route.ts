@@ -1,33 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { keccak256Hex } from '@/lib/evidence/hash';
 import { verifyCedantAuth } from '@/lib/portfolio/auth';
-import { isPinataConfigured, pinFileToIpfs } from '@/lib/ipfs/pinata';
+import { buildDocumentManifest } from '@/lib/portfolio/manifest';
+import { isPinataConfigured, pinJsonToIpfs } from '@/lib/ipfs/pinata';
+import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { logApiError } from '@/lib/api-log';
 
+const BUCKET = 'portfolio-documents';
 const MAX_SIZE = 25 * 1024 * 1024; // 25 MB — treaty/bordereau bundles
 
 /**
- * Pin a portfolio document bundle (SOV / treaty / bordereau) to IPFS and return
- * the REAL on-chain integrity values the cedant submits to PortfolioRegistry:
+ * CONFIDENTIAL pinning of a portfolio document (SOV / treaty / bordereau).
  *
- *   - documentHash = keccak256(actual file bytes)  (tamper-evident, verifiable)
- *   - metadataURI  = ipfs://<cid>                   (real, retrievable pointer)
+ * A bordereau carries insured-party data, and anything pinned to IPFS is
+ * world-readable to whoever learns the CID. So the document itself never
+ * touches IPFS:
  *
- * This replaces the mock where the cedant typed a URI and a reference string
- * that was hashed. Access is gated by a wallet signature over
- * `portfolio:pin:<documentHash>` verified against AUTHORIZED_CEDANT_ROLE
- * on-chain (the same role PortfolioRegistry.submitPortfolio requires), so the
- * shared Pinata quota cannot be abused. Fail-closed: 503 when Pinata is not
- * configured (no silent fake pin).
+ *   - raw bytes             → PRIVATE Supabase bucket `portfolio-documents`
+ *                             (same posture as claim evidence: RLS deny-by-default,
+ *                             read only via the signed download route)
+ *   - public IPFS pin       → a small integrity MANIFEST (hash + non-sensitive
+ *                             metadata, see lib/portfolio/manifest.ts)
+ *   - on-chain documentHash → keccak256 of the REAL bytes, re-derived server-side
  *
- * NOTE (confidentiality): treaty documents are sensitive. IPFS content is
- * world-readable to anyone who learns the CID. For confidential bundles, pin an
- * encrypted blob or a non-sensitive manifest instead — the documentHash stays
- * the fingerprint of the real bytes either way.
+ * Response shape is unchanged for the UI: { documentHash, metadataURI, cid,
+ * gatewayUrl, size } — metadataURI now points at the manifest, not the file.
+ * Idempotent: re-uploading identical bytes returns the already-recorded
+ * manifest instead of double-pinning. Access is gated by a wallet signature
+ * over `portfolio:pin:<documentHash>` verified against AUTHORIZED_CEDANT_ROLE
+ * on-chain. Fail-closed: 503 when Pinata or the storage backend is missing.
  */
 export async function POST(request: NextRequest) {
   if (!isPinataConfigured()) {
     return NextResponse.json({ error: 'pinning backend unavailable (PINATA_JWT not set)' }, { status: 503 });
+  }
+  const supabase = getSupabaseServerClient();
+  if (!supabase) {
+    return NextResponse.json({ error: 'document storage unavailable' }, { status: 503 });
   }
 
   let form: FormData;
@@ -63,20 +72,75 @@ export async function POST(request: NextRequest) {
   });
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
-  try {
-    const pinned = await pinFileToIpfs(bytes, file.name || 'portfolio-document', file.type || 'application/octet-stream', {
+  // Idempotency: identical bytes → identical hash → return the existing record.
+  const { data: existing } = await supabase
+    .from('portfolio_documents')
+    .select('manifest_cid, manifest_uri, size_bytes')
+    .eq('document_hash', documentHash)
+    .maybeSingle();
+  if (existing) {
+    return NextResponse.json({
       documentHash,
-      cedant: auth.address,
+      metadataURI: existing.manifest_uri,
+      cid: existing.manifest_cid,
+      size: existing.size_bytes,
+      confidential: true,
+      deduplicated: true,
     });
+  }
+
+  const fileName = file.name || 'portfolio-document';
+  const contentType = file.type || 'application/octet-stream';
+  const storagePath = `${documentHash}/${crypto.randomUUID()}-${fileName}`;
+
+  const up = await supabase.storage.from(BUCKET).upload(storagePath, bytes, { contentType, upsert: false });
+  if (up.error) {
+    logApiError('portfolio/pin', 'storage_upload_error', { code: up.error.name });
+    return NextResponse.json({ error: 'document storage error' }, { status: 502 });
+  }
+
+  try {
+    const manifest = buildDocumentManifest({
+      documentHash,
+      fileName,
+      contentType,
+      sizeBytes: bytes.length,
+      uploader: auth.address,
+      uploadedAt: new Date(),
+    });
+    const pinned = await pinJsonToIpfs(manifest, `portfolio-manifest-${documentHash.slice(0, 10)}`);
+
+    const { error: insErr } = await supabase.from('portfolio_documents').insert({
+      document_hash: documentHash,
+      storage_path: storagePath,
+      file_name: fileName,
+      content_type: contentType,
+      size_bytes: bytes.length,
+      uploader_addr: auth.address.toLowerCase(),
+      manifest_cid: pinned.cid,
+      manifest_uri: pinned.uri,
+    });
+    if (insErr) {
+      logApiError('portfolio/pin', 'metadata_insert_error', { code: insErr.code ?? 'unknown' });
+      return NextResponse.json({ error: 'document metadata error' }, { status: 502 });
+    }
+
     return NextResponse.json({
       documentHash,
       metadataURI: pinned.uri,
       cid: pinned.cid,
       gatewayUrl: pinned.gatewayUrl,
-      size: pinned.size,
+      size: bytes.length,
+      confidential: true,
     });
   } catch (err) {
-    logApiError('portfolio/pin', 'pin_failed', { code: err instanceof Error ? err.name : 'unknown' });
-    return NextResponse.json({ error: 'pinning failed' }, { status: 502 });
+    // Manifest pin failed: remove the orphaned object so a retry starts clean.
+    try {
+      await supabase.storage.from(BUCKET).remove([storagePath]);
+    } catch {
+      // best-effort cleanup only
+    }
+    logApiError('portfolio/pin', 'manifest_pin_failed', { code: err instanceof Error ? err.name : 'unknown' });
+    return NextResponse.json({ error: 'manifest pinning failed' }, { status: 502 });
   }
 }

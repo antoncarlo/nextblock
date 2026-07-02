@@ -279,7 +279,8 @@ function SubmitPortfolioForm({ actions }: { actions: Actions }) {
         <label className="text-[11px] text-gray-500">Expiry<input type="date" className={`${input} mt-1 block w-full`} value={form.expiryDate} onChange={e => set('expiryDate', e.target.value)} /></label>
         <div className="md:col-span-2">
           <label className="text-[11px] text-gray-500">
-            Portfolio document (SOV / treaty / bordereau) — pinned to IPFS; its keccak256 becomes the on-chain documentHash
+            Portfolio document (SOV / treaty / bordereau) — kept CONFIDENTIAL in private storage; a public integrity
+            manifest is pinned to IPFS and the file&apos;s keccak256 becomes the on-chain documentHash
             <input
               type="file"
               className={`${input} mt-1 block w-full`}
@@ -287,10 +288,12 @@ function SubmitPortfolioForm({ actions }: { actions: Actions }) {
               disabled={pin.kind === 'pinning'}
             />
           </label>
-          {pin.kind === 'pinning' && <p className="mt-1 text-[11px] text-gray-500">Sign to pin — uploading to IPFS…</p>}
+          {pin.kind === 'pinning' && (
+            <p className="mt-1 text-[11px] text-gray-500">Sign to commit — storing privately + pinning manifest…</p>
+          )}
           {pin.kind === 'done' && (
             <p className="mt-1 break-all text-[11px] text-emerald-700">
-              Pinned ✓ {form.metadataURI} — documentHash {form.pinnedDocumentHash?.slice(0, 10)}…
+              Stored privately ✓ manifest {form.metadataURI} — documentHash {form.pinnedDocumentHash?.slice(0, 10)}…
             </p>
           )}
           {pin.kind === 'error' && <p className="mt-1 text-[11px] text-red-700">Pin failed: {pin.msg}</p>}
@@ -373,6 +376,40 @@ function PortfolioRow({
   const pending = actions.isPending || actions.isConfirming;
   const curator = showCurator && access.isCurator;
 
+  // Confidential-document retrieval: the reviewer signs a hash-bound message;
+  // the server checks Curator/Owner (or uploader) and returns a 60s signed URL.
+  const { address } = useAccount();
+  const { signMessageAsync } = useSignMessage();
+  const [docState, setDocState] = useState<'idle' | 'fetching' | 'error'>('idle');
+  const hasDocument =
+    p.documentHash && p.documentHash !== `0x${'0'.repeat(64)}`;
+
+  const downloadDocument = async () => {
+    if (!address) return;
+    setDocState('fetching');
+    try {
+      const hash = p.documentHash.toLowerCase();
+      const timestamp = Math.floor(Date.now() / 1000);
+      const signature = await signMessageAsync({
+        message: cedantAuthMessage(`portfolio:download:${hash}`, timestamp),
+      });
+      const res = await fetch('/api/portfolio/document', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ documentHash: hash, address, timestamp, signature }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || typeof data.url !== 'string') {
+        setDocState('error');
+        return;
+      }
+      window.open(data.url, '_blank', 'noopener');
+      setDocState('idle');
+    } catch {
+      setDocState('error');
+    }
+  };
+
   return (
     <div className="rounded-lg border border-gray-100 p-4">
       <div className="flex items-center justify-between">
@@ -395,6 +432,19 @@ function PortfolioRow({
         <span>Expiry: {formatDate(p.expiryTime)}</span>
         <span>Expected loss: {p.expectedLossBps} bps</span>
       </div>
+
+      {hasDocument && (curator || access.isCedant) && (
+        <div className="mt-2 flex items-center gap-2">
+          <ActionButton
+            label={docState === 'fetching' ? 'Signing…' : 'Download document (confidential)'}
+            onClick={downloadDocument}
+            disabled={docState === 'fetching' || !address}
+          />
+          {docState === 'error' && (
+            <span className="text-[11px] text-red-700">Not authorized or document not on file.</span>
+          )}
+        </div>
+      )}
 
       {curator && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
