@@ -45,7 +45,9 @@ contract PolicyRegistry is Ownable, ProtocolRoleConstants {
     /// @notice Central protocol access manager (on-chain RBAC).
     ProtocolRoles public immutable protocolRoles;
 
+    /// @notice Monotonic id of the next policy.
     uint256 public nextPolicyId;
+    /// @notice Policy data by id.
     mapping(uint256 => Policy) public policies;
 
     /// @notice Time offset for the (optional) virtual clock. Single source of
@@ -60,16 +62,23 @@ contract PolicyRegistry is Ownable, ProtocolRoleConstants {
     bool public clockLocked;
 
     // --- Events ---
+    /// @notice Emitted when a cedant registers a policy.
     event PolicyRegistered(uint256 indexed policyId, string name, VerificationType verificationType);
+    /// @notice Emitted when the curator activates a policy (startTime set).
     event PolicyActivated(uint256 indexed policyId, uint256 startTime);
+    /// @notice Emitted when the demo virtual clock advances.
     event TimeAdvanced(uint256 newTimestamp, uint256 secondsAdded);
     /// @notice Emitted once when the virtual clock is permanently locked to real time.
     event RealTimeLocked(uint256 at);
 
     // --- Errors ---
+    /// @notice No policy under this id.
     error PolicyRegistry__PolicyNotFound(uint256 policyId);
+    /// @notice Policy is not in the status required by this transition.
     error PolicyRegistry__InvalidStatus(uint256 policyId, PolicyStatus current, PolicyStatus expected);
+    /// @notice Zero address/value or otherwise malformed parameters.
     error PolicyRegistry__InvalidParams();
+    /// @notice Caller lacks the required ProtocolRoles role.
     error PolicyRegistry__UnauthorizedRole(address caller, bytes32 role);
     /// @notice Time-travel is disabled because real time has been locked in.
     error PolicyRegistry__ClockLocked();

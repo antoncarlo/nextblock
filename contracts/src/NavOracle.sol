@@ -28,6 +28,7 @@ import {PortfolioRegistry} from "./PortfolioRegistry.sol";
 ///           feed. The Sentinel never publishes data itself (role separation).
 contract NavOracle is ProtocolRoleConstants {
     // --- Constants (documented guard bounds; no magic numbers) ---
+    /// @notice Basis-points denominator (100% = 10_000).
     uint256 public constant MAX_BPS = 10_000;
 
     /// @notice Default staleness window: NAV older than 1 day is unusable.
@@ -35,6 +36,7 @@ contract NavOracle is ProtocolRoleConstants {
 
     /// @notice Hard bounds for the staleness window configuration.
     uint64 public constant STALENESS_FLOOR = 15 minutes;
+    /// @notice Hard upper bound for the staleness guard.
     uint64 public constant STALENESS_CEILING = 30 days;
 
     /// @notice Default max NAV deviation between consecutive publishes: 20%.
@@ -68,8 +70,11 @@ contract NavOracle is ProtocolRoleConstants {
     /// @notice Institutional portfolio registry (attested ids must exist).
     PortfolioRegistry public immutable portfolioRegistry;
 
+    /// @notice Max age (seconds) before an attestation is considered stale.
     uint64 public maxStaleness;
+    /// @notice Max NAV jump (bps) before the anomaly auto-pause trips.
     uint256 public maxDeviationBps;
+    /// @notice Minimum publisher confidence accepted.
     uint16 public minConfidenceBps;
 
     mapping(address => NavAttestation) private _vaultNav;
@@ -85,27 +90,43 @@ contract NavOracle is ProtocolRoleConstants {
     mapping(address => bool) public deviationWaiver;
 
     // --- Events ---
+    /// @notice Emitted when a NAV attestation is published for a vault.
     event NavPublished(address indexed vault, uint256 nav, uint16 confidenceBps, bytes32 sourceHash);
+    /// @notice Emitted when a portfolio risk score is published.
     event PortfolioRiskPublished(
         uint256 indexed portfolioId, uint16 riskScoreBps, uint16 confidenceBps, bytes32 sourceHash
     );
+    /// @notice Emitted when a NAV jump exceeds the deviation guard (feed auto-paused).
     event NavAnomalyDetected(
         address indexed vault, uint256 attemptedNav, uint256 lastAcceptedNav, uint256 deviationBps
     );
+    /// @notice Emitted when a vault feed is paused.
     event FeedPaused(address indexed vault, address indexed by);
+    /// @notice Emitted when a vault feed is unpaused.
     event FeedUnpaused(address indexed vault, address indexed by);
+    /// @notice Emitted when the Sentinel acknowledges an anomaly.
     event DeviationAcknowledged(address indexed vault, address indexed sentinel);
+    /// @notice Emitted when the staleness/deviation/confidence guards change.
     event GuardsUpdated(uint64 maxStaleness, uint256 maxDeviationBps, uint16 minConfidenceBps);
 
     // --- Errors ---
+    /// @notice Caller lacks the required ProtocolRoles role.
     error NavOracle__UnauthorizedRole(address caller, bytes32 role);
+    /// @notice Zero address/value or otherwise malformed parameters.
     error NavOracle__InvalidParams();
+    /// @notice Vault feed is paused.
     error NavOracle__FeedPaused(address vault);
+    /// @notice No NAV attestation for this vault.
     error NavOracle__NoAttestation(address vault);
+    /// @notice NAV attestation is older than maxStaleness.
     error NavOracle__StaleNav(address vault, uint64 updatedAt, uint64 maxStaleness);
+    /// @notice No risk attestation for this portfolio.
     error NavOracle__NoRiskAttestation(uint256 portfolioId);
+    /// @notice Risk attestation is older than maxStaleness.
     error NavOracle__StaleRisk(uint256 portfolioId, uint64 updatedAt, uint64 maxStaleness);
+    /// @notice Publisher confidence is below the minimum.
     error NavOracle__ConfidenceTooLow(uint16 confidenceBps, uint16 minConfidenceBps);
+    /// @notice A bps score exceeds MAX_BPS.
     error NavOracle__ScoreOutOfBounds(uint256 value);
 
     // --- Modifiers ---
@@ -117,6 +138,7 @@ contract NavOracle is ProtocolRoleConstants {
         _;
     }
 
+    /// @notice Wires ProtocolRoles and the PortfolioRegistry.
     constructor(address protocolRoles_, address portfolioRegistry_) {
         if (protocolRoles_ == address(0) || portfolioRegistry_ == address(0)) {
             revert NavOracle__InvalidParams();

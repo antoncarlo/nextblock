@@ -30,6 +30,7 @@ import {NavOracle} from "./NavOracle.sol";
 ///           is the legal SPV, not an on-chain shortcut.
 contract VaultAllocator is ProtocolRoleConstants {
     // --- Constants (documented parameters; no magic numbers) ---
+    /// @notice Basis-points denominator (100% = 10_000).
     uint256 public constant BASIS_POINTS = 10_000;
 
     /// @notice Default proposal time-to-live: 1 day.
@@ -37,6 +38,7 @@ contract VaultAllocator is ProtocolRoleConstants {
 
     /// @notice Hard bounds for the proposal TTL configuration.
     uint64 public constant PROPOSAL_TTL_FLOOR = 1 hours;
+    /// @notice Hard upper bound for the proposal TTL.
     uint64 public constant PROPOSAL_TTL_CEILING = 7 days;
 
     /// @notice Default per-portfolio concentration limit: 40% of the vault's
@@ -77,14 +79,19 @@ contract VaultAllocator is ProtocolRoleConstants {
     ///         (documented MVP configuration; set via OWNER_ROLE).
     NavOracle public navOracle;
 
+    /// @notice Current proposal time-to-live (seconds).
     uint64 public proposalTtl;
+    /// @notice Per-portfolio concentration limit (bps of the investable base).
     uint256 public maxPortfolioConcentrationBps;
+    /// @notice Per-cedant concentration limit (bps of the investable base).
     uint256 public maxCedantConcentrationBps;
 
+    /// @notice Monotonic id of the next proposal.
     uint256 public nextProposalId;
     mapping(uint256 => AllocationProposal) private _proposals;
 
     // --- Events ---
+    /// @notice Emitted when an allocation/deallocation proposal is stored.
     event AllocationProposed(
         uint256 indexed proposalId,
         address indexed vault,
@@ -94,25 +101,43 @@ contract VaultAllocator is ProtocolRoleConstants {
         address proposer,
         uint64 expiresAt
     );
+    /// @notice Emitted when a proposal executes against the vault.
     event AllocationExecuted(uint256 indexed proposalId, address indexed executor);
+    /// @notice Emitted when a proposal is cancelled.
     event AllocationCancelled(uint256 indexed proposalId, address indexed by);
+    /// @notice Emitted when a proposal is marked expired.
     event AllocationExpired(uint256 indexed proposalId);
+    /// @notice Emitted when the concentration limits change.
     event ConcentrationLimitsUpdated(uint256 maxPortfolioBps, uint256 maxCedantBps);
+    /// @notice Emitted when the advisory NAV oracle is set or disabled.
     event NavOracleSet(address indexed navOracle);
+    /// @notice Emitted when the proposal TTL changes.
     event ProposalTtlUpdated(uint64 ttl);
 
     // --- Errors ---
+    /// @notice Caller lacks the required ProtocolRoles role.
     error VaultAllocator__UnauthorizedRole(address caller, bytes32 role);
+    /// @notice Caller may not cancel this proposal.
     error VaultAllocator__UnauthorizedCanceller(address caller);
+    /// @notice Zero address/value or otherwise malformed parameters.
     error VaultAllocator__InvalidParams();
+    /// @notice No proposal under this id.
     error VaultAllocator__ProposalNotFound(uint256 proposalId);
+    /// @notice Proposal is not pending.
     error VaultAllocator__ProposalNotPending(uint256 proposalId, ProposalStatus status);
+    /// @notice Proposal is past its TTL.
     error VaultAllocator__ProposalExpired(uint256 proposalId, uint64 expiresAt);
+    /// @notice Proposal has not expired yet.
     error VaultAllocator__ProposalNotExpired(uint256 proposalId, uint64 expiresAt);
+    /// @notice Portfolio is not in an allocatable status.
     error VaultAllocator__PortfolioNotAllocatable(uint256 portfolioId);
+    /// @notice Allocation would exceed the per-portfolio concentration limit.
     error VaultAllocator__PortfolioConcentrationExceeded(uint256 portfolioId, uint256 wouldBe, uint256 limit);
+    /// @notice Allocation would exceed the per-cedant concentration limit.
     error VaultAllocator__CedantConcentrationExceeded(address cedant, uint256 wouldBe, uint256 limit);
+    /// @notice The advisory oracle guard blocks new allocations for this vault.
     error VaultAllocator__OracleBlocked(address vault);
+    /// @notice Split weights must sum to BASIS_POINTS.
     error VaultAllocator__WeightsMismatch();
 
     // --- Modifiers ---
@@ -124,6 +149,7 @@ contract VaultAllocator is ProtocolRoleConstants {
         _;
     }
 
+    /// @notice Wires roles, the portfolio registry and the optional advisory oracle.
     constructor(address protocolRoles_, address portfolioRegistry_, address navOracle_) {
         if (protocolRoles_ == address(0) || portfolioRegistry_ == address(0)) {
             revert VaultAllocator__InvalidParams();
@@ -284,12 +310,14 @@ contract VaultAllocator is ProtocolRoleConstants {
 
     // --- Views ---
 
+    /// @notice Full proposal record (reverts when unknown).
     function getProposal(uint256 proposalId) external view returns (AllocationProposal memory) {
         AllocationProposal memory p = _proposals[proposalId];
         if (p.proposer == address(0)) revert VaultAllocator__ProposalNotFound(proposalId);
         return p;
     }
 
+    /// @notice Number of proposals ever stored.
     function getProposalCount() external view returns (uint256) {
         return nextProposalId;
     }

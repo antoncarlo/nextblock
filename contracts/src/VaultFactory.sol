@@ -20,9 +20,13 @@ import {VaultDeployer} from "./VaultDeployer.sol";
 ///      gated by onlyOwner.
 contract VaultFactory is Ownable, ProtocolRoleConstants {
     // --- Immutables ---
+    /// @notice Settlement asset for every vault (staging MockUSDC).
     address public immutable asset; // MockUSDC
+    /// @notice Policy registry wired into every vault.
     address public immutable policyRegistry;
+    /// @notice Legacy demo oracle wired into every vault.
     address public immutable oracle;
+    /// @notice Claim receipt NFT wired into every vault.
     address public immutable claimReceiptAddr;
 
     /// @notice Central protocol access manager (on-chain RBAC).
@@ -39,10 +43,13 @@ contract VaultFactory is Ownable, ProtocolRoleConstants {
     VaultDeployer public immutable vaultDeployer;
 
     // --- State ---
+    /// @notice All vaults deployed by this factory.
     address[] public deployedVaults;
+    /// @notice Factory-deployed vault flag.
     mapping(address => bool) public isVault;
 
     // --- Events ---
+    /// @notice Emitted when a new vault is deployed.
     event VaultCreated(
         address indexed vault,
         string name,
@@ -54,8 +61,11 @@ contract VaultFactory is Ownable, ProtocolRoleConstants {
     );
 
     // --- Errors ---
+    /// @notice Zero address/value or otherwise malformed parameters.
     error VaultFactory__InvalidParams();
+    /// @notice Caller lacks the required ProtocolRoles role.
     error VaultFactory__UnauthorizedRole(address caller, bytes32 role);
+    /// @notice The vault manager must hold the curator role.
     error VaultFactory__ManagerNotCurator(address manager);
 
     // --- Modifiers ---
@@ -67,6 +77,7 @@ contract VaultFactory is Ownable, ProtocolRoleConstants {
         _;
     }
 
+    /// @notice Wires the shared dependencies for all future vaults.
     constructor(
         address asset_,
         address policyRegistry_,

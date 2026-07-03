@@ -39,9 +39,11 @@ contract RedemptionQueue is ProtocolRoleConstants, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     // --- Constants ---
+    /// @notice Basis-points denominator (100% = 10_000).
     uint256 public constant MAX_BPS = 10_000;
     /// @notice Notice-period bounds for the redemption window.
     uint64 public constant EPOCH_FLOOR = 1 hours;
+    /// @notice Hard upper bound for the epoch duration.
     uint64 public constant EPOCH_CEILING = 90 days;
 
     // --- Immutables ---
@@ -83,21 +85,35 @@ contract RedemptionQueue is ProtocolRoleConstants, ReentrancyGuard {
     uint256 public escrowedShares;
 
     // --- Events ---
+    /// @notice Emitted when an LP escrows shares into the current epoch.
     event RedemptionRequested(uint256 indexed epochId, address indexed lp, uint256 shares);
+    /// @notice Emitted when a matured epoch settles (pro-rata ratio recorded).
     event EpochSettled(uint256 indexed epochId, uint256 settledShares, uint256 settledAssets, uint256 ratioBps);
+    /// @notice Emitted when an LP claims settled assets (plus unsettled shares back).
     event RedemptionClaimed(uint256 indexed epochId, address indexed lp, uint256 assetsPaid, uint256 sharesReturned);
+    /// @notice Emitted when the epoch duration is reconfigured.
     event EpochDurationUpdated(uint64 oldDuration, uint64 newDuration);
+    /// @notice Emitted when the Sentinel toggles the queue pause.
     event PausedSet(bool paused);
 
     // --- Errors ---
+    /// @notice Requested shares must be non-zero.
     error RQ__ZeroShares();
+    /// @notice Queue is paused.
     error RQ__QueuePaused();
+    /// @notice Settlement attempted before epoch maturity.
     error RQ__EpochNotMatured(uint64 nowTs, uint64 maturesAt);
+    /// @notice Epoch already settled.
     error RQ__AlreadySettled(uint256 epochId);
+    /// @notice Claim attempted on an unsettled epoch.
     error RQ__NotSettled(uint256 epochId);
+    /// @notice Caller has no request in this epoch.
     error RQ__NothingToClaim();
+    /// @notice Epoch request already claimed.
     error RQ__AlreadyClaimed(uint256 epochId);
+    /// @notice Epoch duration outside the allowed bounds.
     error RQ__BadEpochDuration(uint64 provided);
+    /// @notice Caller lacks the required ProtocolRoles role.
     error RQ__Unauthorized(bytes32 role, address caller);
 
     modifier onlyRole(bytes32 role) {
@@ -105,6 +121,7 @@ contract RedemptionQueue is ProtocolRoleConstants, ReentrancyGuard {
         _;
     }
 
+    /// @notice Wires roles and the vault, and sets the (bounded) epoch duration.
     constructor(address protocolRoles_, address vault_, uint64 epochDuration_) {
         if (epochDuration_ < EPOCH_FLOOR || epochDuration_ > EPOCH_CEILING) {
             revert RQ__BadEpochDuration(epochDuration_);

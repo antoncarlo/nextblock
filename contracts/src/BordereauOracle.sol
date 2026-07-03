@@ -29,6 +29,7 @@ contract BordereauOracle is ProtocolRoleConstants {
 
     /// @notice Hard bounds for the liveness configuration.
     uint64 public constant LIVENESS_FLOOR = 1 hours;
+    /// @notice Hard upper bound for the liveness window.
     uint64 public constant LIVENESS_CEILING = 30 days;
 
     // --- Enums / Structs ---
@@ -67,8 +68,10 @@ contract BordereauOracle is ProtocolRoleConstants {
     /// @notice Institutional portfolio registry (asserted ids must exist).
     PortfolioRegistry public immutable portfolioRegistry;
 
+    /// @notice Current liveness window (seconds) a proposed assertion must survive.
     uint64 public liveness;
 
+    /// @notice Monotonic id of the next assertion.
     uint256 public nextAssertionId;
     mapping(uint256 => Assertion) private _assertions;
 
@@ -77,6 +80,7 @@ contract BordereauOracle is ProtocolRoleConstants {
     mapping(uint256 => mapping(AssertionType => bool)) private _hasFinalized;
 
     // --- Events ---
+    /// @notice Emitted when a bordereau assertion enters its liveness window.
     event AssertionProposed(
         uint256 indexed assertionId,
         uint256 indexed portfolioId,
@@ -86,20 +90,33 @@ contract BordereauOracle is ProtocolRoleConstants {
         address proposer,
         uint64 livenessDeadline
     );
+    /// @notice Emitted when the Sentinel disputes an assertion during liveness.
     event AssertionDisputed(uint256 indexed assertionId, address indexed sentinel, string reason);
+    /// @notice Emitted when the Committee resolves a dispute (upheld or not).
     event AssertionDisputeResolved(uint256 indexed assertionId, address indexed committee, bool upheld);
+    /// @notice Emitted when an assertion survives liveness or is committee-verified.
     event AssertionFinalized(uint256 indexed assertionId, uint256 indexed portfolioId, AssertionType assertionType);
+    /// @notice Emitted when a disputed assertion is rejected.
     event AssertionRejected(uint256 indexed assertionId);
+    /// @notice Emitted when the liveness window is reconfigured.
     event LivenessUpdated(uint64 liveness);
 
     // --- Errors ---
+    /// @notice Caller lacks the required ProtocolRoles role.
     error BordereauOracle__UnauthorizedRole(address caller, bytes32 role);
+    /// @notice Caller is not an authorized bordereau proposer.
     error BordereauOracle__UnauthorizedProposer(address caller);
+    /// @notice Zero address/value or otherwise malformed parameters.
     error BordereauOracle__InvalidParams();
+    /// @notice No assertion under this id.
     error BordereauOracle__AssertionNotFound(uint256 assertionId);
+    /// @notice Assertion is not in the status required by this transition.
     error BordereauOracle__InvalidStatus(uint256 assertionId, AssertionStatus status);
+    /// @notice Action requires the liveness window to have elapsed.
     error BordereauOracle__LivenessActive(uint256 assertionId, uint64 livenessDeadline);
+    /// @notice Action requires the liveness window to still be open.
     error BordereauOracle__LivenessElapsed(uint256 assertionId, uint64 livenessDeadline);
+    /// @notice No FINALIZED assertion for this portfolio and type.
     error BordereauOracle__NoFinalizedAssertion(uint256 portfolioId, AssertionType assertionType);
 
     // --- Modifiers ---
@@ -110,6 +127,7 @@ contract BordereauOracle is ProtocolRoleConstants {
         _;
     }
 
+    /// @notice Wires ProtocolRoles and the PortfolioRegistry (asserted ids must exist).
     constructor(address protocolRoles_, address portfolioRegistry_) {
         if (protocolRoles_ == address(0) || portfolioRegistry_ == address(0)) {
             revert BordereauOracle__InvalidParams();
@@ -227,16 +245,19 @@ contract BordereauOracle is ProtocolRoleConstants {
 
     // --- Views ---
 
+    /// @notice Full assertion record (reverts when unknown).
     function getAssertion(uint256 assertionId) external view returns (Assertion memory) {
         Assertion memory a = _assertions[assertionId];
         if (a.proposer == address(0)) revert BordereauOracle__AssertionNotFound(assertionId);
         return a;
     }
 
+    /// @notice Number of assertions ever proposed.
     function getAssertionCount() external view returns (uint256) {
         return nextAssertionId;
     }
 
+    /// @notice True when the assertion reached FINALIZED.
     function isFinalized(uint256 assertionId) external view returns (bool) {
         return _assertions[assertionId].status == AssertionStatus.FINALIZED;
     }

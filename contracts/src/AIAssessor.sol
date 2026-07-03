@@ -15,6 +15,7 @@ import {ProtocolRoles, ProtocolRoleConstants} from "./ProtocolRoles.sol";
 ///         Claims Committee, payouts exclusively to the vault.
 contract AIAssessor is ProtocolRoleConstants {
     // --- Constants ---
+    /// @notice Basis-points denominator (100% = 10_000).
     uint256 public constant MAX_BPS = 10_000;
 
     /// @notice Default anomaly threshold: an assessment with anomalyScoreBps at or
@@ -45,11 +46,13 @@ contract AIAssessor is ProtocolRoleConstants {
     /// @notice Central protocol access manager (on-chain RBAC).
     ProtocolRoles public immutable protocolRoles;
 
+    /// @notice Anomaly score (bps) at/above which an assessment is flagged for review.
     uint16 public anomalyThresholdBps;
 
     mapping(uint256 => Assessment) private _assessments; // claimId => assessment
 
     // --- Events ---
+    /// @notice Emitted when the oracle publishes an AI claim assessment.
     event AssessmentPublished(
         uint256 indexed claimId,
         uint16 scoreBps,
@@ -59,12 +62,17 @@ contract AIAssessor is ProtocolRoleConstants {
         uint256 recommendedAmount,
         bytes32 sourceHash
     );
+    /// @notice Emitted when the anomaly threshold is reconfigured.
     event AnomalyThresholdUpdated(uint16 thresholdBps);
 
     // --- Errors ---
+    /// @notice Caller lacks the required ProtocolRoles role.
     error AIAssessor__UnauthorizedRole(address caller, bytes32 role);
+    /// @notice Zero address/value or otherwise malformed parameters.
     error AIAssessor__InvalidParams();
+    /// @notice A bps score exceeds MAX_BPS.
     error AIAssessor__ScoreOutOfBounds(uint256 value);
+    /// @notice No assessment stored for this claim.
     error AIAssessor__NoAssessment(uint256 claimId);
 
     // --- Modifiers ---
@@ -75,6 +83,7 @@ contract AIAssessor is ProtocolRoleConstants {
         _;
     }
 
+    /// @notice Wires the central ProtocolRoles access manager.
     constructor(address protocolRoles_) {
         if (protocolRoles_ == address(0)) revert AIAssessor__InvalidParams();
         protocolRoles = ProtocolRoles(protocolRoles_);
@@ -128,10 +137,12 @@ contract AIAssessor is ProtocolRoleConstants {
 
     // --- Views ---
 
+    /// @notice True when an assessment exists for `claimId`.
     function hasAssessment(uint256 claimId) public view returns (bool) {
         return _assessments[claimId].assessedAt != 0;
     }
 
+    /// @notice Stored assessment for `claimId` (reverts when missing).
     function getAssessment(uint256 claimId) external view returns (Assessment memory) {
         Assessment memory a = _assessments[claimId];
         if (a.assessedAt == 0) revert AIAssessor__NoAssessment(claimId);

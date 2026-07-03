@@ -22,6 +22,9 @@ jobs:
       - name: Address book anti-drift check
         run: node scripts/check-addressbook.mjs
 
+      - name: NatSpec coverage gate (contracts public surface)
+        run: node scripts/check-natspec.mjs
+
   frontend:
     name: frontend
     runs-on: ubuntu-latest

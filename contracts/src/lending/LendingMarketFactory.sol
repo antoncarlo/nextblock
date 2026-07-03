@@ -20,13 +20,19 @@ import {LendingMarket} from "./LendingMarket.sol";
 ///         a separate, explicitly authorized governance act.
 contract LendingMarketFactory is ProtocolRoleConstants {
     // --- Immutables (shared infrastructure) ---
+    /// @notice Loan asset for every market (USDC).
     address public immutable loanToken; // USDC
+    /// @notice Global NAV attestation store backing per-market share oracles.
     address public immutable navOracle; // global NavOracle attestation store
+    /// @notice Central protocol access manager (on-chain RBAC).
     ProtocolRoles public immutable protocolRoles;
+    /// @notice Compliance registry wired into every market.
     address public immutable compliance; // ComplianceRegistry
 
     // --- State ---
+    /// @notice All markets deployed by this factory.
     address[] public deployedMarkets;
+    /// @notice Factory-deployed market flag.
     mapping(address => bool) public isMarket;
 
     /// @notice Per-market creation parameters (struct to stay stack-safe).
@@ -44,12 +50,15 @@ contract LendingMarketFactory is ProtocolRoleConstants {
     }
 
     // --- Events ---
+    /// @notice Emitted when a new lending market is deployed.
     event MarketCreated(
         address indexed market, address indexed collateralVault, address oracle, address indexed createdBy
     );
 
     // --- Errors ---
+    /// @notice Zero address/value or otherwise malformed parameters.
     error LendingMarketFactory__InvalidParams();
+    /// @notice Caller lacks the required ProtocolRoles role.
     error LendingMarketFactory__UnauthorizedRole(address caller, bytes32 role);
 
     // --- Modifiers ---
@@ -60,6 +69,7 @@ contract LendingMarketFactory is ProtocolRoleConstants {
         _;
     }
 
+    /// @notice Wires the shared dependencies for all future markets.
     constructor(address loanToken_, address navOracle_, address protocolRoles_, address compliance_) {
         if (
             loanToken_ == address(0) || navOracle_ == address(0) || protocolRoles_ == address(0)

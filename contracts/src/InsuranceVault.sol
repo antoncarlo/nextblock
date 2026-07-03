@@ -35,7 +35,9 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
     using Math for uint256;
 
     // --- Constants ---
+    /// @notice Basis-points denominator (100% = 10_000).
     uint256 public constant BASIS_POINTS = 10_000;
+    /// @notice Fee accrual annualization base.
     uint256 public constant SECONDS_PER_YEAR = 365 days;
 
     /// @notice Minimum liquidity buffer ratio: 10% of free capital must stay liquid.
@@ -56,6 +58,7 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
     ///         slot, so a long-lived vault can roll over far more than 64
     ///         policies/portfolios over its lifetime.
     uint256 public constant MAX_ACTIVE_POLICIES = 64;
+    /// @notice Bound on tracked premium portfolios (keeps loops gas-bounded).
     uint256 public constant MAX_PREMIUM_PORTFOLIOS = 64;
 
     // --- Structs ---
@@ -69,24 +72,40 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
     }
 
     // --- State ---
+    /// @notice Legacy demo: policy ids held by the vault.
     uint256[] public policyIds;
+    /// @notice Legacy demo: per-policy data.
     mapping(uint256 => VaultPolicy) public vaultPolicies;
+    /// @notice Legacy demo: policy membership flag.
     mapping(uint256 => bool) public policyAdded;
 
+    /// @notice Legacy demo: sum of policy allocation weights.
     uint256 public totalAllocationWeight;
+    /// @notice USDC reserved for approved-but-unpaid claims.
     uint256 public totalPendingClaims;
+    /// @notice USDC earmarked to active portfolio allocations.
     uint256 public totalDeployedCapital;
+    /// @notice Liquidity buffer ratio in bps (e.g. 2000 = 20%).
     uint256 public bufferRatioBps; // 2000 = 20%, 1500 = 15%
+    /// @notice Annual management fee in bps.
     uint256 public managementFeeBps; // 50 = 0.5%, 100 = 1%
+    /// @notice Management fees accrued and not yet collected.
     uint256 public accumulatedFees;
+    /// @notice Timestamp of the last fee accrual.
     uint256 public lastFeeTimestamp;
+    /// @notice Human-readable vault display name.
     string public vaultName;
+    /// @notice Syndicate manager address (operational owner).
     address public vaultManager;
+    /// @notice Addresses allowed to push premiums (the distributor).
     mapping(address => bool) public authorizedPremiumDepositors;
 
     // --- References ---
+    /// @notice Policy registry + protocol clock source.
     PolicyRegistry public registry;
+    /// @notice Legacy demo mock oracle (BTC/flight feeds).
     MockOracle public oracle;
+    /// @notice Soulbound receipt NFT used on the claim payout path.
     ClaimReceipt public claimReceipt;
 
     /// @notice Central protocol access manager (on-chain RBAC).
@@ -149,39 +168,69 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
     address public vaultAllocator;
 
     // --- Events ---
+    /// @notice Legacy demo: policy added to the vault.
     event PolicyAdded(uint256 indexed policyId, uint256 allocationWeight);
+    /// @notice Legacy demo: premium credited for a policy.
     event PremiumDeposited(uint256 indexed policyId, uint256 amount);
+    /// @notice Legacy demo: policy expired.
     event PolicyExpired(uint256 indexed policyId);
+    /// @notice Emitted when accrued management fees are collected.
     event FeesCollected(address indexed recipient, uint256 amount);
+    /// @notice Emitted when a premium depositor is authorized or revoked.
     event PremiumDepositorUpdated(address indexed depositor, bool authorized);
+    /// @notice Emitted when the deposit cap changes.
     event DepositCapUpdated(uint256 newCap);
+    /// @notice Emitted when capital is earmarked to a portfolio.
     event PortfolioAllocated(uint256 indexed portfolioId, uint256 amount, uint256 totalForPortfolio);
+    /// @notice Emitted when a portfolio earmark is released.
     event PortfolioDeallocated(uint256 indexed portfolioId, uint256 amount, uint256 totalForPortfolio);
+    /// @notice Emitted when ceded premium lands for a portfolio (starts UPR).
     event PortfolioPremiumRecorded(uint256 indexed portfolioId, address indexed from, uint256 amount);
+    /// @notice Emitted when the sole claim-payout path is bound.
     event ClaimManagerUpdated(address indexed claimManager);
+    /// @notice Emitted when the sole allocation path is bound.
     event VaultAllocatorUpdated(address indexed vaultAllocator);
+    /// @notice Emitted when funds are reserved for an approved claim.
     event PortfolioClaimReserved(
         uint256 indexed claimId, uint256 indexed portfolioId, uint256 amount, uint256 allocationReleased
     );
+    /// @notice Emitted when a claim reserve is released without payment.
     event PortfolioClaimReserveReleased(uint256 indexed claimId, uint256 indexed portfolioId, uint256 amount);
+    /// @notice Emitted when a reserved claim is paid out.
     event PortfolioClaimPaid(uint256 indexed claimId, uint256 indexed portfolioId, address indexed to, uint256 amount);
 
     // --- Errors ---
+    /// @notice Legacy demo: policy is not ACTIVE.
     error InsuranceVault__PolicyNotActive(uint256 policyId);
+    /// @notice Legacy demo: policy already in the vault.
     error InsuranceVault__PolicyAlreadyAdded(uint256 policyId);
+    /// @notice Legacy demo: policy not held by the vault.
     error InsuranceVault__PolicyNotInVault(uint256 policyId);
+    /// @notice Withdrawal exceeds the available liquidity buffer.
     error InsuranceVault__InsufficientBuffer(uint256 requested, uint256 available);
+    /// @notice Caller not authorized for this action.
     error InsuranceVault__UnauthorizedCaller(address caller);
+    /// @notice Zero address/value or otherwise malformed parameters.
     error InsuranceVault__InvalidParams();
+    /// @notice No accrued fees to collect.
     error InsuranceVault__NoFeesToClaim();
+    /// @notice Portfolio not in an allocatable status.
     error InsuranceVault__PortfolioNotAllocatable(uint256 portfolioId);
+    /// @notice Allocation exceeds free underwriting capacity.
     error InsuranceVault__AllocationExceedsCapacity(uint256 requested, uint256 capacity);
+    /// @notice Allocation would exceed the portfolio coverage limit.
     error InsuranceVault__AllocationExceedsCoverage(uint256 portfolioId, uint256 requested, uint256 coverageLimit);
+    /// @notice Deallocation exceeds the current earmark.
     error InsuranceVault__DeallocationExceedsAllocation(uint256 portfolioId, uint256 requested, uint256 allocated);
+    /// @notice Caller is not the bound ClaimManager.
     error InsuranceVault__NotClaimManager(address caller);
+    /// @notice Caller is not the bound VaultAllocator.
     error InsuranceVault__NotVaultAllocator(address caller);
+    /// @notice Reserve request exceeds free (unreserved) funds.
     error InsuranceVault__ClaimReserveInsufficientFunds(uint256 requested, uint256 freeFunds);
+    /// @notice Release/payment exceeds the reserved amount.
     error InsuranceVault__ClaimReserveUnderflow(uint256 requested, uint256 reserved);
+    /// @notice Premium portfolio tracking is at MAX_PREMIUM_PORTFOLIOS.
     error InsuranceVault__PremiumQueueFull(uint256 maxItems);
 
     // --- Modifiers ---
@@ -240,6 +289,7 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
         address portfolioRegistry;
     }
 
+    /// @notice Deploys the vault from packed init params (EIP-170-friendly) and wires registries, compliance and roles.
     constructor(VaultInitParams memory p) ERC4626(p.asset) ERC20(p.name, p.symbol) Ownable(p.owner) {
         if (p.protocolRoles == address(0)) revert InsuranceVault__InvalidParams();
         // Compliance and portfolio registries are mandatory: RWA shares cannot be ungated.

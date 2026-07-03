@@ -63,20 +63,31 @@ contract AdapterRegistry is ProtocolRoleConstants {
     bytes32[] private _adapterIds;
 
     // --- Events ---
+    /// @notice Emitted when an external risk-pool adapter is registered (status PENDING).
     event AdapterRegistered(
         bytes32 indexed adapterId, address indexed adapter, string name, bytes32 metadataHash, uint256 exposureCap
     );
+    /// @notice Emitted when governance activates an adapter for future allocator use.
     event AdapterActivated(bytes32 indexed adapterId, address indexed by);
+    /// @notice Emitted when the Sentinel/governance disables an adapter (reversible).
     event AdapterDisabled(bytes32 indexed adapterId, address indexed by);
+    /// @notice Emitted on terminal deprecation of an adapter.
     event AdapterDeprecated(bytes32 indexed adapterId, address indexed by);
+    /// @notice Emitted when an adapter exposure cap is updated.
     event AdapterExposureCapUpdated(bytes32 indexed adapterId, uint256 exposureCap);
+    /// @notice Emitted when an adapter due-diligence metadata hash is updated.
     event AdapterMetadataUpdated(bytes32 indexed adapterId, bytes32 metadataHash);
 
     // --- Errors ---
+    /// @notice Caller lacks the required ProtocolRoles role.
     error AdapterRegistry__UnauthorizedRole(address caller, bytes32 role);
+    /// @notice Zero address/value or otherwise malformed parameters.
     error AdapterRegistry__InvalidParams();
+    /// @notice No adapter registered under this id.
     error AdapterRegistry__AdapterNotFound(bytes32 adapterId);
+    /// @notice An adapter with this id is already registered.
     error AdapterRegistry__DuplicateAdapter(bytes32 adapterId);
+    /// @notice Adapter is not in the status required by this transition.
     error AdapterRegistry__InvalidStatus(bytes32 adapterId, AdapterStatus status);
 
     // --- Modifiers ---
@@ -87,6 +98,7 @@ contract AdapterRegistry is ProtocolRoleConstants {
         _;
     }
 
+    /// @notice Wires the central ProtocolRoles access manager.
     constructor(address protocolRoles_) {
         if (protocolRoles_ == address(0)) revert AdapterRegistry__InvalidParams();
         protocolRoles = ProtocolRoles(protocolRoles_);
@@ -186,16 +198,19 @@ contract AdapterRegistry is ProtocolRoleConstants {
         return _adapters[adapterId].status == AdapterStatus.ACTIVE;
     }
 
+    /// @notice Full adapter record for `adapterId` (reverts when unknown).
     function getAdapter(bytes32 adapterId) external view returns (Adapter memory) {
         Adapter memory a = _adapters[adapterId];
         if (a.adapter == address(0)) revert AdapterRegistry__AdapterNotFound(adapterId);
         return a;
     }
 
+    /// @notice All registered adapter ids.
     function getAdapterIds() external view returns (bytes32[] memory) {
         return _adapterIds;
     }
 
+    /// @notice Number of registered adapters.
     function getAdapterCount() external view returns (uint256) {
         return _adapterIds.length;
     }

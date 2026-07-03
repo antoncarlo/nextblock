@@ -23,8 +23,11 @@ contract ProtocolTimelock is TimelockController {
     uint256 public constant MIN_ENFORCED_DELAY = 1 hours;
 
     // --- Errors ---
+    /// @notice Configured delay is below the enforced minimum.
     error ProtocolTimelock__DelayTooShort(uint256 provided, uint256 minimum);
+    /// @notice At least one proposer is required.
     error ProtocolTimelock__EmptyProposers();
+    /// @notice At least one executor is required.
     error ProtocolTimelock__EmptyExecutors();
 
     /// @param minDelay Seconds every operation must wait between schedule and execute.

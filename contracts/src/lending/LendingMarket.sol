@@ -60,75 +60,126 @@ contract LendingMarket is ProtocolRoleConstants, ReentrancyGuard {
     }
 
     // --- Immutables ---
+    /// @notice Loan asset (USDC).
     IERC20 public immutable loanToken;
+    /// @notice Collateral asset (restricted nbUSDC vault shares).
     IERC20 public immutable collateralToken;
+    /// @notice NAV-per-share attestation source used to value collateral.
     NavShareOracle public immutable oracle;
+    /// @notice Central protocol access manager (on-chain RBAC).
     ProtocolRoles public immutable protocolRoles;
+    /// @notice Compliance registry gating every participant.
     IComplianceRegistry public immutable compliance;
 
     // --- Risk parameters ---
+    /// @notice Max loan-to-value at borrow time (bps).
     uint256 public lltvBps;
+    /// @notice LTV at/above which a position becomes liquidatable (bps).
     uint256 public liqLtvBps;
+    /// @notice Liquidator bonus on seized collateral (bps).
     uint256 public liqIncentiveBps;
+    /// @notice Share of accrued interest taken as protocol fee (bps).
     uint256 public protocolFeeBps;
+    /// @notice Max total supplied loan assets.
     uint256 public supplyCap;
+    /// @notice Max total borrowed assets.
     uint256 public borrowCap;
+    /// @notice Recipient of protocol fee shares.
     address public feeRecipient;
+    /// @notice Interest model: base rate per second (WAD).
     uint256 public baseRatePerSecondWad;
+    /// @notice Interest model: utilization slope per second (WAD).
     uint256 public slopePerSecondWad;
 
     // --- Supply book ---
+    /// @notice Total loan assets supplied (incl. accrued interest).
     uint256 public totalSupplyAssets;
+    /// @notice Total supply shares outstanding.
     uint256 public totalSupplyShares;
+    /// @notice Supply shares per lender.
     mapping(address => uint256) public supplyShares;
 
     // --- Collateral book ---
     /// @notice nbUSDC collateral shares posted per borrower.
     mapping(address => uint256) public collateralOf;
+    /// @notice Total collateral shares deposited.
     uint256 public totalCollateral;
 
     // --- Borrow book ---
+    /// @notice Total borrowed assets (incl. accrued interest).
     uint256 public totalBorrowAssets;
+    /// @notice Total borrow shares outstanding.
     uint256 public totalBorrowShares;
+    /// @notice Borrow shares per borrower.
     mapping(address => uint256) public borrowShares;
 
     // --- Accrual ---
+    /// @notice Timestamp of the last interest accrual.
     uint64 public lastAccrued;
 
     // --- Emergency ---
+    /// @notice Sentinel circuit breaker: blocks state-changing entrypoints.
     bool public paused;
 
     // --- Events ---
+    /// @notice Emitted on lender supply.
     event Supply(address indexed lender, uint256 assets, uint256 shares);
+    /// @notice Emitted on lender withdrawal.
     event Withdraw(address indexed lender, address indexed to, uint256 assets, uint256 shares);
+    /// @notice Emitted when a borrower deposits collateral.
     event CollateralDeposited(address indexed borrower, uint256 shares);
+    /// @notice Emitted when a borrower withdraws collateral.
     event CollateralWithdrawn(address indexed borrower, address indexed to, uint256 shares);
+    /// @notice Emitted on borrow.
     event Borrow(address indexed borrower, address indexed to, uint256 assets, uint256 shares);
+    /// @notice Emitted on repay.
     event Repay(address indexed borrower, uint256 assets, uint256 shares);
+    /// @notice Emitted on interest accrual (incl. protocol fee shares).
     event AccrueInterest(uint256 interest, uint256 feeShares);
+    /// @notice Emitted on liquidation (debt repaid, collateral seized).
     event Liquidate(address indexed liquidator, address indexed borrower, uint256 repaid, uint256 seized);
+    /// @notice Emitted when residual debt is socialized after full seizure.
     event BadDebtRealized(address indexed borrower, uint256 assets);
+    /// @notice Emitted when the Sentinel pauses the market.
     event Paused(address indexed by);
+    /// @notice Emitted when the Sentinel unpauses the market.
     event Unpaused(address indexed by);
+    /// @notice Emitted when risk parameters are updated.
     event RiskParamsUpdated(uint256 lltvBps, uint256 liqLtvBps, uint256 liqIncentiveBps);
+    /// @notice Emitted when supply/borrow caps are updated.
     event CapsUpdated(uint256 supplyCap, uint256 borrowCap);
+    /// @notice Emitted when the protocol fee is updated.
     event ProtocolFeeUpdated(uint256 protocolFeeBps);
 
     // --- Errors ---
+    /// @notice Zero address/value or otherwise malformed parameters.
     error LendingMarket__InvalidParams();
+    /// @notice Amount must be non-zero.
     error LendingMarket__ZeroAmount();
+    /// @notice Account fails the compliance gate.
     error LendingMarket__NotWhitelisted(address account);
+    /// @notice Supply would exceed the cap.
     error LendingMarket__SupplyCapExceeded(uint256 cap);
+    /// @notice Caller holds fewer shares than requested.
     error LendingMarket__InsufficientShares();
+    /// @notice Collateral balance too low for the request.
     error LendingMarket__InsufficientCollateral();
+    /// @notice Action would leave the position undercollateralized.
     error LendingMarket__HealthFactorTooLow();
+    /// @notice Not enough idle liquidity in the market.
     error LendingMarket__InsufficientLiquidity();
+    /// @notice Borrow would exceed the cap.
     error LendingMarket__BorrowCapExceeded(uint256 cap);
+    /// @notice Position has no debt.
     error LendingMarket__NoDebt();
+    /// @notice Liquidation attempted on a healthy position.
     error LendingMarket__PositionHealthy();
+    /// @notice Caller lacks the required ProtocolRoles role.
     error LendingMarket__Unauthorized(address caller, bytes32 role);
+    /// @notice Market is paused.
     error LendingMarket__Paused();
 
+    /// @notice Deploys an isolated market from explicit packed parameters.
     constructor(MarketParams memory p) {
         if (
             p.loanToken == address(0) || p.collateralToken == address(0) || p.oracle == address(0)
@@ -182,6 +233,7 @@ contract LendingMarket is ProtocolRoleConstants, ReentrancyGuard {
         emit Paused(msg.sender);
     }
 
+    /// @notice Sentinel lifts the circuit breaker set by pause().
     function unpause() external onlyProtocolRole(SENTINEL_ROLE) {
         paused = false;
         emit Unpaused(msg.sender);

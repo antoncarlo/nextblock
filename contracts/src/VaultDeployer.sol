@@ -28,14 +28,21 @@ contract VaultDeployer {
     /// @notice The only address allowed to call deploy() after binding.
     address public factory;
 
+    /// @notice Emitted when the factory is bound (one-time).
     event FactoryBound(address indexed factory);
+    /// @notice Emitted when a vault is deployed for the bound factory.
     event VaultDeployed(address indexed vault, address indexed factory);
 
+    /// @notice Zero address/value or otherwise malformed parameters.
     error VaultDeployer__InvalidParams();
+    /// @notice The factory binding is one-time.
     error VaultDeployer__AlreadyBound();
+    /// @notice Caller is not the binding admin.
     error VaultDeployer__NotAdmin(address caller);
+    /// @notice Caller is not the bound factory.
     error VaultDeployer__NotFactory(address caller);
 
+    /// @notice Records the deployer as the one-time binding admin.
     constructor() {
         admin = msg.sender;
     }

@@ -20,27 +20,42 @@ contract ClaimReceipt is ERC721, Ownable {
     }
 
     // --- State ---
+    /// @notice Monotonic id of the next receipt.
     uint256 public nextReceiptId;
+    /// @notice Receipt data by id.
     mapping(uint256 => Receipt) public receipts;
+    /// @notice Vaults/managers allowed to mint receipts.
     mapping(address => bool) public authorizedMinters;
+    /// @notice Address allowed to authorize new minters (cannot revoke existing ones).
     address public registrar; // Can add minters (but not revoke)
 
     // --- Events ---
+    /// @notice Emitted when a claim receipt is minted at approval.
     event ReceiptMinted(
         uint256 indexed receiptId, address indexed insurer, uint256 policyId, uint256 claimAmount, address vault
     );
+    /// @notice Emitted when a receipt is exercised (burned) at payout.
     event ReceiptExercised(uint256 indexed receiptId);
+    /// @notice Emitted when a minter is authorized or de-authorized.
     event MinterUpdated(address indexed minter, bool authorized);
+    /// @notice Emitted when the registrar is replaced.
     event RegistrarUpdated(address indexed registrar);
 
     // --- Errors ---
+    /// @notice Caller is not an authorized minter.
     error ClaimReceipt__UnauthorizedMinter(address caller);
+    /// @notice Receipts are soulbound: transfers are disabled.
     error ClaimReceipt__NonTransferable();
+    /// @notice Receipt was already exercised.
     error ClaimReceipt__AlreadyExercised(uint256 receiptId);
+    /// @notice No receipt under this id.
     error ClaimReceipt__ReceiptNotFound(uint256 receiptId);
+    /// @notice Only the issuing vault may exercise the receipt.
     error ClaimReceipt__OnlyIssuingVault(uint256 receiptId, address caller, address vault);
+    /// @notice Caller is not the registrar.
     error ClaimReceipt__UnauthorizedRegistrar(address caller);
 
+    /// @notice Deploys the soulbound ERC-721 with the deployer as initial owner.
     constructor() ERC721("NextBlock Claim Receipt", "NXBCR") Ownable(msg.sender) {}
 
     // --- Admin ---
