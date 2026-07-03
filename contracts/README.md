@@ -6,9 +6,14 @@ compliance, UPR accounting, committee-gated claims and UMA-style bordereau
 attestations.
 
 **Author:** Anton Carlo Santoro — NextBlock Group Ltd.
-**Status:** MVP, Phases 1-12 (end-to-end demo flow) complete. Internal checks
-passed (357 Foundry tests, 10 stateful invariants). No external audit yet.
-See `CHANGELOG.md` for ABI-breaking changes and security assumptions.
+**Status:** MVP phases 1-12 complete, plus the post-MVP institutional
+workstreams (RedemptionQueue live on staging, permissioned lending market,
+one-way real-time lock, governance timelock). Internal checks passed
+(**558 Foundry tests across 42 suites**, stateful invariants included). No
+external audit yet. See `CHANGELOG.md` for ABI-breaking changes,
+`REDEPLOY_RUNBOOK.md` for the fresh-generation deploy path, and
+[`../docs/PROJECT_STATUS.md`](../docs/PROJECT_STATUS.md) for the maintained
+real-vs-advisory map.
 
 ---
 
@@ -23,7 +28,14 @@ See `CHANGELOG.md` for ABI-breaking changes and security assumptions.
 
 ## 2. Library installation (exact versions)
 
-`lib/` is **not versioned** (see section 8). Reconstruct it deterministically:
+`lib/` is populated via **pinned git submodules** (`.gitmodules` at the repo
+root — this is what CI uses):
+
+```bash
+git submodule update --init --recursive
+```
+
+Fallback without submodules (identical pins):
 
 ```bash
 cd contracts
@@ -60,9 +72,9 @@ parameter lists.
 forge test -vvv
 ```
 
-Expected baseline (2026-06-10, post Phase 12): **357 tests passed,
-0 failed** across 21 suites — unit, revert, fuzz, integration (`test/integration/FullFlow.t.sol`)
-and stateful invariants.
+Expected baseline (2026-07-03): **558 tests passed, 0 failed** (8 skipped
+fork tests without RPC) across 42 suites — unit, revert, fuzz, integration
+(`test/integration/FullFlow.t.sol`), governance, fork and stateful invariants.
 
 ### Invariant / integration subsets
 
@@ -78,7 +90,7 @@ forge test --match-path 'test/integration/*' -vvv
 Invariant runs/depth are set per-file via inline `forge-config` comments in
 `test/invariant/VaultInvariant.t.sol` (64 runs x 48 depth, fail-on-revert).
 
-## 5. Module map (16 contracts in `src/`)
+## 5. Module map (23 modules in `src/`)
 
 | Contract | Responsibility |
 |---|---|
@@ -90,19 +102,29 @@ Invariant runs/depth are set per-file via inline `forge-config` comments in
 | `InsuranceVault.sol` | ERC-4626 USDC vault (nbUSDC shares): compliance hooks, deposit cap, UPR accounting, liquidity buffer, portfolio allocations (bound VaultAllocator only), claim reserve/payout path (bound ClaimManager only). Final solvency enforcer. Legacy demo claim triggers REMOVED in 9.5. |
 | `PremiumDistributor.sol` | Receives ceded premiums; documented parametric split (protocol fee 1.5% default, underwriting fee 10% default, LP quota -> vault UPR). Exact conservation. |
 | `NavOracle.sol` | Attestation layer for Braino.ai/WAVENURE NAV & risk scores: staleness guard, deviation guard with anomaly auto-pause, Sentinel review cycle. Advisory only — moves no funds. |
-| `VaultAllocator.sol` | Strategy/controller layer: allocation proposals with TTL, portfolio/cedant concentration limits, advisory oracle guard, parametric split (70/30 demo). Non-custodial. |
+| `VaultAllocator.sol` | Strategy/controller layer: allocation proposals with TTL, portfolio/cedant concentration limits, advisory oracle guard, fully curator-parametrized splits (`proposeSplitAllocation`; the hardcoded demo split was removed). Non-custodial. |
 | `ClaimManager.sol` | Canonical claim lifecycle: cedant submission, AI gate, mandatory dispute window (>= 24h) for non-parametric claims, Committee-only approval, Sentinel freeze/dispute, payout exclusively via the vault. |
 | `AIAssessor.sol` | Advisory mock store for AI claim assessments (score, anomaly, recommendation, sourceHash). Structurally unable to approve or pay. |
 | `BordereauOracle.sol` | UMA-style optimistic attestations for premium/policy/claims bordereaux: liveness, Sentinel dispute, Committee resolution, finalization. No economic effects. |
 | `AdapterRegistry.sol` | Non-custodial allowlist of optional external risk-pool adapters (Ensuro/OnRe/Nexus-class) + `IRiskPoolAdapter` interface. No call forwarding, no core bypass. |
 | `NextBlockLens.sol` | Phase 10 | Canonical READ MODEL: 9 never-reverting dashboards (protocol, vault, LP, portfolio, premium, claim, oracle, bordereau, adapter) + strict `raw*` twins for auditors. Read-only, non-custodial, no duplicated accounting; module address book settable by OWNER_ROLE for gradual Base Sepolia rollout. |
 | `ClaimReceipt.sol` | Soulbound ERC-721 claim receipts (minted at approval, burned at payout). |
-| `PolicyRegistry.sol` | LEGACY demo policy registry (virtual clock, BTC/flight/fire policies). Kept for the legacy demo flows; superseded by `PortfolioRegistry` for the institutional model. |
-| `MockUSDC.sol` / `MockOracle.sol` | Test/demo mocks (USDC 6 decimals; BTC/flight feeds for the legacy demo). |
+| `PolicyRegistry.sol` | Policy registry + protocol clock. Carries the demo virtual clock AND the one-way **`lockRealTime()`** switch: once flipped by OWNER, `currentTime()` is provably `block.timestamp` forever and `advanceTime()` is dead — the truthful-test switch (premium/UPR/fee accrual on the real clock). |
+| `ProtocolTimelock.sol` | OpenZeppelin TimelockController wrapper for governance phase 1/2 (Safe as proposer; see `../docs/OPERATIONS.md`). |
+| `RedemptionQueue.sol` | Periodic-window, pro-rata LP exit queue: request → epoch settle (buffer-bounded) → claim, with escrowed nbUSDC and exact dust-safe accounting. Live on staging with a keeper workflow + Goldsky subgraph. |
+| `lending/LendingMarket.sol` + `lending/LendingMarketFactory.sol` | Permissioned lending market using nbUSDC as collateral (isolated-market grammar, explicit parameters). |
+| `lending/NavShareOracle.sol` | Guarded NAV-per-share attestation source for the lending market (advisory-fed). |
+| `MockUSDC.sol` / `MockOracle.sol` | Test/staging mocks (USDC 6 decimals; BTC/flight feeds for the legacy demo). |
 
-Scripts: `script/DemoSetup.s.sol` (full local demo deployment with role
-grants and KYC onboarding), `script/Keeper.s.sol` (RETIRED in 9.5 —
-notice stub; the legacy triggers it drove no longer exist).
+Scripts (`script/`): `DeployStack.s.sol` (fresh full-stack generation,
+chain-guarded), `DeployRedemptionQueue.s.sol` (**runs DeployStack internally
+— the one-command redeploy**, see `REDEPLOY_RUNBOOK.md`),
+`DeployLendingMarket.s.sol`, `GovernanceMigration.s.sol` +
+`GovernanceCheck.s.sol` (Safe/timelock handover + verification),
+`RedemptionKeeper.s.sol` (epoch settlement, driven by the GitHub Actions
+keeper), `SanityCheck.s.sol` (read-only post-deploy checks),
+`DemoSetup.s.sol` / `DemoFlow.s.sol` (legacy walkthrough), `Keeper.s.sol`
+(RETIRED in 9.5 — notice stub).
 
 ## 6. Target environments
 
@@ -225,11 +247,10 @@ are needed.
 ## 10. Verification checklist (auditor quick-start)
 
 ```bash
+git submodule update --init --recursive
 cd contracts
-git clone --depth 1 --branch v1.9.7 https://github.com/foundry-rs/forge-std lib/forge-std
-git clone --depth 1 --branch v5.4.0 https://github.com/OpenZeppelin/openzeppelin-contracts lib/openzeppelin-contracts
 forge build          # Compiler run successful
-forge test -vvv      # 357 passed, 0 failed (21 suites, 10 invariants)
+forge test -vvv      # 558 passed, 0 failed, 8 skipped (42 suites)
 ```
 
 If those two outputs match, the environment is faithfully reconstructed.
