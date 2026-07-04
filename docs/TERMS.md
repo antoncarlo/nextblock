@@ -1,6 +1,7 @@
 # NextBlock Terms of Service
 
 Last updated: 2026-06-13
+Live version: https://www.nextblock.finance/terms
 Status: applies to the Base Sepolia STAGING deployment. This document is
 maintained in the public repository and is subject to review by qualified
 counsel before any mainnet release; material changes take effect when

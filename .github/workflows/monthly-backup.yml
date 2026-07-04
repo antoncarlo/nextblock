@@ -1,0 +1,77 @@
+# Monthly snapshot backup — code tag + optional DB dump artifact.
+#
+# 1. Tags main as backup-YYYY-MM (immutable point-in-time reference; the git
+#    history itself is the code backup).
+# 2. If the repo secret SUPABASE_DB_URL is set (Postgres connection string
+#    from Supabase → Project Settings → Database), runs pg_dump of the public
+#    schema and uploads it as a workflow artifact (90-day retention).
+#    Fail-soft: without the secret the dump step is skipped with a notice —
+#    the tag still lands.
+#
+# OWNER-GATED activation for the dump: add secret SUPABASE_DB_URL once.
+
+name: monthly-backup
+
+on:
+  schedule:
+    - cron: '15 3 1 * *' # 1st of the month, 03:15 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: write # needed to push the backup tag
+
+concurrency:
+  group: monthly-backup
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Tag snapshot (backup-YYYY-MM)
+        run: |
+          TAG="backup-$(date -u +%Y-%m)"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists — skipping (idempotent rerun)."
+            exit 0
+          fi
+          git config user.name "nextblock-backup-bot"
+          git config user.email "backup-bot@users.noreply.github.com"
+          git tag -a "$TAG" -m "Automated monthly snapshot ($(date -u +%F))"
+          git push origin "$TAG"
+          echo "Pushed $TAG"
+
+      - name: Install PostgreSQL 17 client (matches Supabase server major)
+        if: ${{ secrets.SUPABASE_DB_URL != '' }}
+        run: |
+          sudo sh -c 'echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client-17
+
+      - name: Dump database (public schema)
+        if: ${{ secrets.SUPABASE_DB_URL != '' }}
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          pg_dump "$SUPABASE_DB_URL" --schema=public --no-owner --no-privileges \
+            -f "nextblock-db-$(date -u +%Y-%m).sql"
+          ls -lh nextblock-db-*.sql
+
+      - name: Upload dump artifact (90-day retention)
+        if: ${{ secrets.SUPABASE_DB_URL != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: nextblock-db-backup
+          path: nextblock-db-*.sql
+          retention-days: 90
+
+      - name: Notice when DB dump is unarmed
+        if: ${{ secrets.SUPABASE_DB_URL == '' }}
+        run: echo "::notice::SUPABASE_DB_URL secret not set — code tag created, DB dump skipped. Arm it once to include monthly DB dumps."
