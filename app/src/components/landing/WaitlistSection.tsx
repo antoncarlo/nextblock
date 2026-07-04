@@ -50,7 +50,7 @@ const WaitlistSection = () => {
   };
 
   return (
-    <section 
+    <section data-track-section="waitlist_roles" 
       id="waitlist" 
       className="relative overflow-hidden"
       style={{ 

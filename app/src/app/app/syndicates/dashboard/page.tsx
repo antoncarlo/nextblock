@@ -197,7 +197,7 @@ export default function CuratorDashboardPage() {
   ];
 
   return (
-    <div style={{ backgroundColor: '#FAFAF8', minHeight: '100vh' }}>
+    <div data-track-section="syndicate_dashboard" style={{ backgroundColor: '#FAFAF8', minHeight: '100vh' }}>
 
       {/* Hero */}
       <div style={{ background: 'linear-gradient(135deg, #1B3A6B 0%, #0F2447 100%)', padding: '56px 40px 48px', position: 'relative', overflow: 'hidden' }}>

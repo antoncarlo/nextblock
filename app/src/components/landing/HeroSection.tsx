@@ -1,7 +1,7 @@
 "use client";
 import { motion } from "framer-motion";
 const HeroSection = () => {
-  return <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+  return <section data-track-section="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background Video */}
       <div className="absolute inset-0 z-0">
         <video autoPlay muted loop playsInline className="w-full h-full object-cover">
