@@ -11,6 +11,7 @@
     "build": "npm --prefix app run build",
     "codegen:addressbook": "node scripts/generate-addressbook.mjs",
     "check:addressbook": "node scripts/check-addressbook.mjs",
+    "check:natspec": "node scripts/check-natspec.mjs",
     "ci:frontend:install": "npm ci",
     "ci:frontend:lint": "npm --prefix app run lint",
     "ci:frontend:typecheck": "node node_modules/typescript/bin/tsc -p app/tsconfig.json --noEmit",

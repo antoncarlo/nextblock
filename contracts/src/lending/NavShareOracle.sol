@@ -31,9 +31,12 @@ contract NavShareOracle {
     /// @notice One whole share unit (nbUSDC is 18-dec).
     uint256 public constant SHARE_UNIT = 1e18;
 
+    /// @notice Zero address/value or otherwise malformed parameters.
     error NavShareOracle__InvalidParams();
+    /// @notice Vault has zero share supply - NAV per share is undefined.
     error NavShareOracle__NoSupply();
 
+    /// @notice Binds the NAV attestation store and the vault whose shares are priced.
     constructor(address navOracle_, address vault_) {
         if (navOracle_ == address(0) || vault_ == address(0)) revert NavShareOracle__InvalidParams();
         navOracle = NavOracle(navOracle_);

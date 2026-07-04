@@ -75,17 +75,24 @@ contract ClaimManager is ProtocolRoleConstants, ReentrancyGuard {
     }
 
     // --- State ---
+    /// @notice Central protocol access manager (on-chain RBAC).
     ProtocolRoles public immutable protocolRoles;
+    /// @notice Institutional portfolio registry (claims are per-portfolio).
     PortfolioRegistry public immutable portfolioRegistry;
+    /// @notice Advisory AI assessment store (structurally unable to approve or pay).
     AIAssessor public immutable aiAssessor;
+    /// @notice Soulbound receipt minted at approval, exercised at payout.
     ClaimReceipt public immutable claimReceipt;
 
+    /// @notice Mandatory dispute window (seconds) for non-parametric claims.
     uint64 public disputeWindow;
 
+    /// @notice Monotonic id of the next claim.
     uint256 public nextClaimId;
     mapping(uint256 => Claim) private _claims;
 
     // --- Events ---
+    /// @notice Emitted when a cedant submits a claim.
     event ClaimSubmitted(
         uint256 indexed claimId,
         uint256 indexed portfolioId,
@@ -96,6 +103,7 @@ contract ClaimManager is ProtocolRoleConstants, ReentrancyGuard {
         bytes32 evidenceHash,
         uint64 challengeDeadline
     );
+    /// @notice Emitted when the advisory AI assessment is recorded on a claim.
     event ClaimAssessed(
         uint256 indexed claimId,
         AIAssessor.Recommendation recommendation,
@@ -103,27 +111,47 @@ contract ClaimManager is ProtocolRoleConstants, ReentrancyGuard {
         uint16 anomalyScoreBps,
         bytes32 sourceHash
     );
+    /// @notice Emitted when the AI anomaly score crosses the review threshold.
     event ClaimAnomalyFlagged(uint256 indexed claimId, uint16 anomalyScoreBps);
+    /// @notice Emitted when the Sentinel disputes a claim.
     event ClaimDisputed(uint256 indexed claimId, address indexed sentinel, string reason);
+    /// @notice Emitted when the Committee resolves a claim dispute.
     event ClaimDisputeResolved(uint256 indexed claimId, address indexed committee, bool upheld);
+    /// @notice Emitted when the Sentinel freezes a claim.
     event ClaimFrozen(uint256 indexed claimId, address indexed sentinel);
+    /// @notice Emitted when the Sentinel lifts a freeze.
     event ClaimUnfrozen(uint256 indexed claimId, address indexed sentinel);
+    /// @notice Emitted on Committee approval (receipt minted for approvedAmount).
     event ClaimApproved(uint256 indexed claimId, address indexed committee, uint256 approvedAmount, uint256 receiptId);
+    /// @notice Emitted on Committee rejection.
     event ClaimRejected(uint256 indexed claimId, address indexed committee, string reason);
+    /// @notice Emitted when the vault pays an approved claim.
     event ClaimPaid(uint256 indexed claimId, address indexed to, uint256 amount, uint256 receiptId);
+    /// @notice Emitted when the dispute window is reconfigured.
     event DisputeWindowUpdated(uint64 window);
 
     // --- Errors ---
+    /// @notice Caller lacks the required ProtocolRoles role.
     error ClaimManager__UnauthorizedRole(address caller, bytes32 role);
+    /// @notice Zero address/value or otherwise malformed parameters.
     error ClaimManager__InvalidParams();
+    /// @notice No claim under this id.
     error ClaimManager__ClaimNotFound(uint256 claimId);
+    /// @notice Claim is not in the status required by this transition.
     error ClaimManager__InvalidStatus(uint256 claimId, ClaimStatus status);
+    /// @notice Caller is not the cedant of the claimed portfolio.
     error ClaimManager__NotPortfolioCedant(uint256 portfolioId, address caller);
+    /// @notice Portfolio is not in a claimable lifecycle status.
     error ClaimManager__PortfolioNotClaimable(uint256 portfolioId);
+    /// @notice Requested amount exceeds the portfolio coverage limit.
     error ClaimManager__AmountExceedsCoverage(uint256 requested, uint256 coverageLimit);
+    /// @notice Approval requires a stored AI assessment.
     error ClaimManager__AssessmentMissing(uint256 claimId);
+    /// @notice Approval attempted before the dispute window elapsed.
     error ClaimManager__DisputeWindowActive(uint256 claimId, uint64 challengeDeadline);
+    /// @notice Claim is frozen by the Sentinel.
     error ClaimManager__ClaimFrozenError(uint256 claimId);
+    /// @notice Approved amount is zero or exceeds the requested amount.
     error ClaimManager__ApprovedAmountInvalid(uint256 approvedAmount, uint256 requestedAmount);
 
     // --- Modifiers ---
@@ -134,6 +162,7 @@ contract ClaimManager is ProtocolRoleConstants, ReentrancyGuard {
         _;
     }
 
+    /// @notice Wires roles, portfolio registry, advisory assessor and the receipt NFT.
     constructor(address protocolRoles_, address portfolioRegistry_, address aiAssessor_, address claimReceipt_) {
         if (
             protocolRoles_ == address(0) || portfolioRegistry_ == address(0) || aiAssessor_ == address(0)
@@ -368,12 +397,14 @@ contract ClaimManager is ProtocolRoleConstants, ReentrancyGuard {
 
     // --- Views ---
 
+    /// @notice Full claim record (reverts when unknown).
     function getClaim(uint256 claimId) external view returns (Claim memory) {
         Claim memory c = _claims[claimId];
         if (c.claimant == address(0)) revert ClaimManager__ClaimNotFound(claimId);
         return c;
     }
 
+    /// @notice Number of claims ever submitted.
     function getClaimCount() external view returns (uint256) {
         return nextClaimId;
     }

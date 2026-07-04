@@ -221,10 +221,13 @@ contract NextBlockLens is ProtocolRoleConstants {
     ModuleAddresses public modules;
 
     // --- Events ---
+    /// @notice Emitted when the module address book is updated.
     event ModulesUpdated(ModuleAddresses modules);
 
     // --- Errors ---
+    /// @notice Caller lacks the required ProtocolRoles role.
     error NextBlockLens__UnauthorizedRole(address caller, bytes32 role);
+    /// @notice Zero address/value or otherwise malformed parameters.
     error NextBlockLens__InvalidParams();
 
     // --- Modifiers ---
@@ -235,6 +238,7 @@ contract NextBlockLens is ProtocolRoleConstants {
         _;
     }
 
+    /// @notice Wires roles and the initial module address book.
     constructor(address protocolRoles_, ModuleAddresses memory modules_) {
         if (protocolRoles_ == address(0)) revert NextBlockLens__InvalidParams();
         protocolRoles = ProtocolRoles(protocolRoles_);

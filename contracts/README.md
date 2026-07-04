@@ -148,6 +148,10 @@ zero until deployed; the UI renders "Unavailable" by design.
 - Claims: AI is advisory-only; the Committee approves; the vault pays; double
   payout and ungated payout are impossible by construction (tested).
 - Conservation: USDC in/out reconciles exactly (stateful invariants).
+- NatSpec: 100% coverage of the public surface (contracts, external/public
+  functions, events, errors, public state) is enforced by
+  `node scripts/check-natspec.mjs` in CI — a new declaration without NatSpec
+  fails the build.
 
 ## 8. Regenerable artifacts (not versioned)
 

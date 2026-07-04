@@ -8,16 +8,23 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 /// @dev Prices use 8 decimals (Chainlink convention). Flight status is a simple boolean.
 contract MockOracle is Ownable {
     // --- State ---
+    /// @notice Mock BTC price feed value (legacy demo).
     int256 public btcPrice;
+    /// @notice Mock flight-delay flag (legacy demo).
     bool public flightDelayed;
+    /// @notice Timestamp of the last BTC price update.
     uint256 public lastBtcUpdate;
+    /// @notice Timestamp of the last flight status update.
     uint256 public lastFlightUpdate;
 
     // --- Events ---
+    /// @notice Emitted on mock BTC price update.
     event BtcPriceUpdated(int256 price, uint256 timestamp);
+    /// @notice Emitted on mock flight status update.
     event FlightStatusUpdated(bool delayed, uint256 timestamp);
 
     // --- Errors ---
+    /// @notice Price must be positive.
     error MockOracle__InvalidPrice();
 
     /// @notice Initializes BTC price to $85,000 and flight status to false.

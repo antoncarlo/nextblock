@@ -15,8 +15,10 @@ contract MockUSDC is ERC20 {
     /// @notice Deployer (uncapped mint for demo seeding).
     address public immutable deployer;
 
+    /// @notice Faucet request exceeds the per-call cap.
     error MockUSDC__FaucetCapExceeded(uint256 requested, uint256 cap);
 
+    /// @notice Deploys the 6-decimals staging USDC mock.
     constructor() ERC20("Mock USDC", "USDC") {
         deployer = msg.sender;
     }

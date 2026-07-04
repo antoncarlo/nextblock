@@ -30,6 +30,7 @@ contract PremiumDistributor is ProtocolRoleConstants, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     // --- Constants (documented split bounds; no magic numbers) ---
+    /// @notice Basis-points denominator (100% = 10_000).
     uint256 public constant BASIS_POINTS = 10_000;
 
     /// @notice Hard cap for the protocol fee: 5%.
@@ -45,12 +46,17 @@ contract PremiumDistributor is ProtocolRoleConstants, ReentrancyGuard {
     uint256 public constant DEFAULT_UNDERWRITING_FEE_BPS = 1_000;
 
     // --- References ---
+    /// @notice Settlement asset.
     IERC20 public immutable usdc;
+    /// @notice Central protocol access manager (on-chain RBAC).
     ProtocolRoles public immutable protocolRoles;
+    /// @notice Portfolio registry (premiums are per-portfolio).
     PortfolioRegistry public immutable portfolioRegistry;
 
     // --- Split configuration ---
+    /// @notice Protocol fee share of gross premium (bps).
     uint256 public protocolFeeBps;
+    /// @notice Underwriting fee share of gross premium (bps).
     uint256 public underwritingFeeBps;
 
     // --- Routing ---
@@ -65,30 +71,50 @@ contract PremiumDistributor is ProtocolRoleConstants, ReentrancyGuard {
         uint256 underwritingFees; // accrued underwriting fees
     }
 
+    /// @notice Per-portfolio premium split accounting.
     mapping(uint256 => PremiumAccounting) public premiumAccounting;
 
+    /// @notice Protocol fees accrued and not yet claimed.
     uint256 public accruedProtocolFees;
+    /// @notice Underwriting fees accrued and not yet claimed.
     uint256 public accruedUnderwritingFees;
+    /// @notice Lifetime gross premium received.
     uint256 public totalGrossReceived;
 
     // --- Events ---
+    /// @notice Emitted when gross premium lands for a portfolio.
     event PremiumReceived(uint256 indexed portfolioId, address indexed from, uint256 grossAmount);
+    /// @notice Emitted when the LP quota is pushed to the vault (starts UPR).
     event PremiumAllocated(uint256 indexed portfolioId, address indexed vault, uint256 lpQuota);
+    /// @notice Emitted when protocol fee accrues on a receipt.
     event ProtocolFeeAccrued(uint256 indexed portfolioId, uint256 amount);
+    /// @notice Emitted when underwriting fee accrues on a receipt.
     event UnderwritingFeeAccrued(uint256 indexed portfolioId, uint256 amount);
+    /// @notice Emitted when protocol fees are claimed.
     event ProtocolFeesClaimed(address indexed recipient, uint256 amount);
+    /// @notice Emitted when underwriting fees are claimed.
     event UnderwritingFeesClaimed(address indexed recipient, uint256 amount);
+    /// @notice Emitted when the fee split is reconfigured.
     event PremiumSplitUpdated(uint256 protocolFeeBps, uint256 underwritingFeeBps);
+    /// @notice Emitted when a portfolio is bound to its funded vault.
     event PortfolioVaultSet(uint256 indexed portfolioId, address indexed vault);
 
     // --- Errors ---
+    /// @notice Caller lacks the required ProtocolRoles role.
     error PremiumDistributor__UnauthorizedRole(address caller, bytes32 role);
+    /// @notice Caller may not push premiums.
     error PremiumDistributor__UnauthorizedPremiumSource(address caller);
+    /// @notice Zero address/value or otherwise malformed parameters.
     error PremiumDistributor__InvalidParams();
+    /// @notice Requested fee exceeds the documented maximum.
     error PremiumDistributor__FeeAboveMax(uint256 requestedBps, uint256 maxBps);
+    /// @notice Portfolio has no bound vault.
     error PremiumDistributor__VaultNotSet(uint256 portfolioId);
+    /// @notice Portfolio is not in a fundable status.
     error PremiumDistributor__PortfolioNotAllocatable(uint256 portfolioId);
+    /// @notice The vault binding is immutable once funded.
     error PremiumDistributor__VaultChangeAfterFunding(uint256 portfolioId);
+    /// @notice No accrued fees for the caller.
     error PremiumDistributor__NothingToClaim();
 
     // --- Modifiers ---
@@ -100,6 +126,7 @@ contract PremiumDistributor is ProtocolRoleConstants, ReentrancyGuard {
         _;
     }
 
+    /// @notice Wires USDC, roles and the portfolio registry.
     constructor(address usdc_, address protocolRoles_, address portfolioRegistry_) {
         if (usdc_ == address(0) || protocolRoles_ == address(0) || portfolioRegistry_ == address(0)) {
             revert PremiumDistributor__InvalidParams();

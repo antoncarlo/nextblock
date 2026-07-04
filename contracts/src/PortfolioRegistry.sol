@@ -77,11 +77,13 @@ contract PortfolioRegistry is ProtocolRoleConstants {
     /// @notice Central protocol access manager (on-chain RBAC).
     ProtocolRoles public immutable protocolRoles;
 
+    /// @notice Monotonic id of the next portfolio.
     uint256 public nextPortfolioId;
     mapping(uint256 => Portfolio) private _portfolios;
     mapping(address => uint256[]) private _portfoliosByCedant;
 
     // --- Events ---
+    /// @notice Emitted when a cedant submits a portfolio.
     event PortfolioSubmitted(
         uint256 indexed portfolioId,
         address indexed cedant,
@@ -91,22 +93,37 @@ contract PortfolioRegistry is ProtocolRoleConstants {
         uint64 inceptionTime,
         uint64 expiryTime
     );
+    /// @notice Emitted when the curator starts review.
     event PortfolioReviewStarted(uint256 indexed portfolioId, address indexed curator);
+    /// @notice Emitted on curator approval (expected loss recorded).
     event PortfolioApproved(uint256 indexed portfolioId, address indexed curator, uint16 expectedLossBps);
+    /// @notice Emitted on curator rejection.
     event PortfolioRejected(uint256 indexed portfolioId, address indexed curator, string reason);
+    /// @notice Emitted when an approved portfolio goes ACTIVE.
     event PortfolioActivated(uint256 indexed portfolioId, address indexed curator);
+    /// @notice Emitted when the Sentinel pauses a portfolio.
     event PortfolioPaused(uint256 indexed portfolioId, address indexed sentinel);
+    /// @notice Emitted when the Sentinel unpauses a portfolio.
     event PortfolioUnpaused(uint256 indexed portfolioId, address indexed sentinel);
+    /// @notice Emitted when a portfolio passes its expiry.
     event PortfolioExpired(uint256 indexed portfolioId);
+    /// @notice Emitted when the cedant updates the metadata pointer/hash.
     event PortfolioMetadataUpdated(uint256 indexed portfolioId, string metadataURI, bytes32 documentHash);
 
     // --- Errors ---
+    /// @notice No portfolio under this id.
     error PortfolioRegistry__NotFound(uint256 portfolioId);
+    /// @notice Portfolio is not in the status required by this transition.
     error PortfolioRegistry__InvalidStatus(uint256 portfolioId, PortfolioStatus current);
+    /// @notice Zero address/value or otherwise malformed parameters.
     error PortfolioRegistry__InvalidParams();
+    /// @notice Caller lacks the required ProtocolRoles role.
     error PortfolioRegistry__UnauthorizedRole(address caller, bytes32 role);
+    /// @notice Caller is not the submitting cedant.
     error PortfolioRegistry__NotCedantOfPortfolio(uint256 portfolioId, address caller);
+    /// @notice Expiry transition attempted before expiryTime.
     error PortfolioRegistry__NotYetExpired(uint256 portfolioId, uint64 expiryTime);
+    /// @notice Expected loss must be <= 10_000 bps.
     error PortfolioRegistry__InvalidLossBps(uint16 expectedLossBps);
 
     // --- Modifiers ---

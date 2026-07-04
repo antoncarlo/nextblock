@@ -7,12 +7,19 @@ import {ProtocolRoles, ProtocolRoleConstants} from "./ProtocolRoles.sol";
 /// @notice Stable interface consumed by InsuranceVault (Phase 3) for nbUSDC
 ///         transfer hooks, deposit gating and redemption gating.
 interface IComplianceRegistry {
+    /// @notice True when `user` may receive restricted shares.
     function canReceive(address user) external view returns (bool);
+    /// @notice True when a transfer from `from` to `to` is compliant.
     function canTransfer(address from, address to, uint256 amount) external view returns (bool);
+    /// @notice Reverts unless `user` may receive restricted shares.
     function requireCanReceive(address user) external view;
+    /// @notice Reverts unless the transfer is compliant.
     function requireCanTransfer(address from, address to, uint256 amount) external view;
+    /// @notice True when `user` is block-flagged.
     function isBlocked(address user) external view returns (bool);
+    /// @notice Per-investor deposit limit (0 = unlimited).
     function investorLimit(address user) external view returns (uint256);
+    /// @notice True when `venue` is an approved custody venue (may hold shares without a whitelist entry).
     function approvedVenue(address venue) external view returns (bool);
 }
 
@@ -58,18 +65,29 @@ contract ComplianceRegistry is ProtocolRoleConstants, IComplianceRegistry {
     mapping(address => bool) public approvedVenue;
 
     // --- Events ---
+    /// @notice Emitted when a wallet is whitelisted or de-whitelisted.
     event WhitelistUpdated(address indexed user, bool allowed);
+    /// @notice Emitted when a wallet block flag changes.
     event BlockedStatusUpdated(address indexed user, bool blocked);
+    /// @notice Emitted when a wallet jurisdiction code is set.
     event JurisdictionUpdated(address indexed user, uint16 code);
+    /// @notice Emitted when a wallet KYC expiry is set.
     event KycExpiryUpdated(address indexed user, uint64 expiry);
+    /// @notice Emitted when a wallet investor limit is set.
     event InvestorLimitUpdated(address indexed user, uint256 limit);
+    /// @notice Emitted when a custody venue is approved or revoked.
     event ApprovedVenueUpdated(address indexed venue, bool approved);
 
     // --- Errors ---
+    /// @notice Caller lacks the required ProtocolRoles role.
     error ComplianceRegistry__UnauthorizedRole(address caller, bytes32 role);
+    /// @notice Zero address/value or otherwise malformed parameters.
     error ComplianceRegistry__InvalidParams();
+    /// @notice Receiver is neither whitelisted nor an approved venue.
     error ComplianceRegistry__ReceiverNotWhitelisted(address user);
+    /// @notice Address is block-flagged.
     error ComplianceRegistry__AddressBlocked(address user);
+    /// @notice Wallet KYC attestation has expired.
     error ComplianceRegistry__KycExpired(address user, uint64 expiry);
 
     // --- Modifiers ---

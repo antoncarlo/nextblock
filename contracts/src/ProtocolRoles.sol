@@ -55,6 +55,7 @@ abstract contract ProtocolRoleConstants {
 ///      owner can grant/revoke without holding DEFAULT_ADMIN_ROLE day-to-day.
 contract ProtocolRoles is ProtocolRoleConstants, AccessControl {
     // --- Errors ---
+    /// @notice Zero address is not a valid role holder/admin.
     error ProtocolRoles__ZeroAddress();
 
     /// @param initialOwner Receives DEFAULT_ADMIN_ROLE and OWNER_ROLE.
