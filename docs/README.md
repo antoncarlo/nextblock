@@ -59,6 +59,7 @@ needing the source walked through for you.
 | Doc | Content |
 |---|---|
 | [../contracts/docs/integrations/real-providers.md](../contracts/docs/integrations/real-providers.md) | Wiring real data vendors (Braino NAV/risk, UMA, KYC) behind the existing adapters |
+| [../contracts/docs/integrations/braino-oracle-spec.md](../contracts/docs/integrations/braino-oracle-spec.md) | **Braino v2 spec (send to the Braino team)**: the 5 AI services (NAV, underwriting, claims, agentic allocator, analytics), API contract, sourceHash evidence protocol, SLA, acceptance phases |
 | [../contracts/docs/superpowers/specs/2026-06-30-institutional-grade-roadmap.md](../contracts/docs/superpowers/specs/2026-06-30-institutional-grade-roadmap.md) | Institutional-grade roadmap (8 phases, progress log) |
 | [superpowers/specs/](superpowers/specs/) · [plans/](plans/) · [reports/](reports/) | Design specs, implementation plans and delivery reports for shipped workstreams (claims control room, money flow, lending market, evidence management, KYB durable state, hybrid RBAC) |
 
