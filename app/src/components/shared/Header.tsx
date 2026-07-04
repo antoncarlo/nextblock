@@ -77,8 +77,11 @@ export function Header() {
         borderBottom: '1px solid rgba(0,0,0,0.06)',
       }}
     >
+      {/* flex-wrap is MOBILE-ONLY (the nav strip drops to its own row);
+          desktop must stay a single fixed-height row, otherwise the pill
+          wraps under the logo and overlaps the page content. */}
       <div
-        className="mx-auto flex flex-wrap items-center justify-between px-4 sm:px-8 sm:h-20"
+        className="mx-auto flex flex-wrap items-center justify-between px-4 sm:h-20 sm:flex-nowrap sm:px-8"
         style={{ maxWidth: '1280px' }}
       >
         {/* Logo */}
