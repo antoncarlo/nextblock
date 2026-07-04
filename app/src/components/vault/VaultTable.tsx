@@ -8,10 +8,12 @@ interface VaultTableProps {
 export function VaultTable({ vaultAddresses }: VaultTableProps) {
   return (
     <div
-      className="card-institutional overflow-hidden"
-      style={{ borderRadius: '12px', overflow: 'hidden' }}
+      className="card-institutional overflow-x-auto"
+      style={{ borderRadius: '12px', WebkitOverflowScrolling: 'touch' }}
     >
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      {/* min-width keeps the row layout intact on phones: the card scrolls
+          horizontally instead of clipping columns. */}
+      <table style={{ width: '100%', minWidth: '760px', borderCollapse: 'collapse' }}>
         <thead>
           <tr
             style={{

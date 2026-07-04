@@ -106,7 +106,7 @@ const IntroExperience = ({ onComplete }: IntroExperienceProps) => {
                 <img
                   src={logoLeftWhite}
                   alt="Next"
-                  className="h-48 md:h-64 lg:h-96 w-auto"
+                  className="h-24 sm:h-40 md:h-64 lg:h-96 w-auto"
                   style={{
                     filter: phase === "split" ? "none" : "invert(1)",
                     transition: "filter 0.8s ease-out"
@@ -116,7 +116,7 @@ const IntroExperience = ({ onComplete }: IntroExperienceProps) => {
 
               {/* Right half - BLOCK */}
               <motion.div
-                className="flex items-center justify-start -ml-12 md:-ml-16 lg:-ml-24"
+                className="flex items-center justify-start -ml-6 sm:-ml-10 md:-ml-16 lg:-ml-24"
                 initial={{ opacity: 0 }}
                 animate={{
                   opacity: 1,
@@ -130,7 +130,7 @@ const IntroExperience = ({ onComplete }: IntroExperienceProps) => {
                 <img
                   src={logoRightWhite}
                   alt="Block"
-                  className="h-48 md:h-64 lg:h-96 w-auto"
+                  className="h-24 sm:h-40 md:h-64 lg:h-96 w-auto"
                   style={{
                     filter: phase === "split" ? "none" : "invert(1)",
                     transition: "filter 0.8s ease-out"
