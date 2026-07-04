@@ -258,7 +258,7 @@ export default function CuratorDashboardPage() {
               <span style={{ fontSize: '12px', color: '#8A8A8A', fontWeight: 600 }}>Curator overview (NextBlockLens)</span>
               <DataSourceBadge source={lensHasData ? 'onchain' : 'unavailable'} />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '16px', marginBottom: '32px' }}>
               {[
                 { label: 'Total AUM', value: lensHasData ? `${formatUSDC(totalAum)}` : '--', delta: 'USDC, canonical accounting', color: '#1B3A6B' },
                 { label: 'Active Vaults', value: lensHasData ? myVaults.length.toString() : '--', delta: 'managed by this address', color: '#1B3A6B' },
@@ -318,7 +318,7 @@ export default function CuratorDashboardPage() {
             </div>
 
             {/* Quick actions */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '16px' }}>
               {[
                 { icon: Plus, title: 'Create New Strategy', desc: 'Deploy a new insurance vault with a custom or template-based strategy.', action: () => setActiveTab('new-strategy'), cta: 'Start' },
                 { icon: FileText, title: 'Register Policy', desc: 'Add a new insurance policy to the PolicyRegistry and allocate it to a vault.', action: () => setActiveTab('policies'), cta: 'Register' },
@@ -421,7 +421,7 @@ export default function CuratorDashboardPage() {
             {/* STEP 1: Choose Template */}
             {strategyStep === 1 && (
               <div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '16px' }}>
                   {STRATEGY_TEMPLATES.map(tmpl => {
                     const Icon = tmpl.icon;
                     const isSelected = selectedTemplate === tmpl.id;
@@ -441,7 +441,7 @@ export default function CuratorDashboardPage() {
                         </div>
                         <div style={{ fontSize: '15px', fontWeight: 700, color: '#1B3A6B', fontFamily: '"Playfair Display", Georgia, serif', marginBottom: '6px' }}>{tmpl.name}</div>
                         <div style={{ fontSize: '12px', color: '#5A5A5A', lineHeight: '1.5', marginBottom: '16px' }}>{tmpl.description}</div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '8px', marginBottom: '12px' }}>
                           {[
                             { label: 'Buffer', value: tmpl.bufferRange },
                             { label: 'Fee', value: tmpl.feeRange },
@@ -497,7 +497,7 @@ export default function CuratorDashboardPage() {
                     </div>
                   ))}
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '20px' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#1B3A6B', marginBottom: '6px', letterSpacing: '0.03em', textTransform: 'uppercase' }}>Buffer Ratio (bps)</label>
                       <input
@@ -675,7 +675,7 @@ export default function CuratorDashboardPage() {
               <h2 style={{ fontFamily: '"Playfair Display", Georgia, serif', fontSize: '24px', color: '#1B3A6B', margin: 0 }}>Performance Analytics</h2>
               <DataSourceBadge source={lensHasData ? 'onchain' : 'unavailable'} />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '16px', marginBottom: '24px' }}>
               {[
                 { label: 'Unearned Premiums', value: lensHasData ? `${formatUSDC(totalUpr)} USDC` : '--', sub: 'UPR across managed vaults' },
                 { label: 'Claim Reserves', value: lensHasData ? `${formatUSDC(totalReserves)} USDC` : '--', sub: 'Reserved for pending claims' },

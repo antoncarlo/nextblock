@@ -48,7 +48,7 @@ function CompanyVaultCard({ address }: { address: string }) {
         </span>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px' }}>
         {[
           { label: 'TVL', value: `$${tvl}` },
           { label: 'Policies', value: data?.[9] != null ? String(data[9]) : '—' },

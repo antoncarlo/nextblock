@@ -294,7 +294,7 @@ export default function CreateVaultPage() {
                 />
               </InputField>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px' }}>
                 <InputField label="ERC-20 Token Name" hint="Full name of the vault share token">
                   <input
                     type="text"
@@ -365,7 +365,7 @@ export default function CreateVaultPage() {
 
             <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E8E4DC', borderRadius: '12px', padding: '32px', marginBottom: '20px' }}>
               <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#1B3A6B', marginBottom: '16px' }}>Risk Profile Preset</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '24px' }}>
                 {RISK_PRESETS.map(preset => (
                   <button
                     key={preset.id}
@@ -381,7 +381,7 @@ export default function CreateVaultPage() {
                 ))}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px' }}>
                 <InputField label="Buffer Ratio (bps)" hint="Liquidity buffer as basis points. 2000 = 20% of TVL reserved for claims.">
                   <input
                     type="number"
@@ -453,7 +453,7 @@ export default function CreateVaultPage() {
                 <span style={{ backgroundColor: '#F5F0E8', color: '#6B5B3E', fontSize: '12px', fontWeight: 600, padding: '4px 12px', borderRadius: '20px' }}>ERC-4626 Vault</span>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px', marginBottom: '24px' }}>
                 {[
                   { label: 'Token Name', value: form.tokenName },
                   { label: 'Token Symbol', value: form.tokenSymbol },

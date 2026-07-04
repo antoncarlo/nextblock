@@ -210,7 +210,7 @@ export default function CuratorsPage() {
                   <div style={{ fontSize:'11px', color:'#8A8A8A', marginBottom:'14px' }}>
                     Manager: <code>{d.manager.slice(0, 6)}...{d.manager.slice(-4)}</code>
                   </div>
-                  <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'12px', backgroundColor:'#FAFAF8', borderRadius:'8px', padding:'14px' }}>
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(130px, 1fr))', gap:'12px', backgroundColor:'#FAFAF8', borderRadius:'8px', padding:'14px' }}>
                     {[
                       { label: 'TVL', value: `${formatUSDC(d.totalAssets)}` },
                       { label: 'UPR', value: `${formatUSDC(d.unearnedPremiums)}` },
