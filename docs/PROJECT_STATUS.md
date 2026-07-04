@@ -71,7 +71,7 @@ to trust, and what to build next.
 1. Fresh-generation redeploy + `lockRealTime()` + governance phase 2 — [runbook](../contracts/REDEPLOY_RUNBOOK.md). The deployed staging generation predates the real-spine code.
 
 **Bucket B — external vendors (blocked on accounts/keys, adapters ready):**
-2. Braino/WAVENURE NAV + risk feed → `NavOracle`/`AIAssessor` ([integration doc](../contracts/docs/integrations/real-providers.md))
+2. Braino/WAVENURE integration → `NavOracle`/`AIAssessor`/`VaultAllocator` — **formal v2 spec ready to send to the Braino team**: [braino-oracle-spec.md](../contracts/docs/integrations/braino-oracle-spec.md) (5 services incl. agentic allocator; see also [real-providers.md](../contracts/docs/integrations/real-providers.md))
 3. Real UMA OOv3 bordereau assertions with bonds → `BordereauOracle`
 4. Licensed KYC/KYB provider → in front of `ComplianceRegistry`
 
