@@ -30,6 +30,13 @@ const IntroExperience = ({ onComplete }: IntroExperienceProps) => {
     }
   }, [phase, onComplete]);
 
+  // Client-only star field: rendering it before hydration caused SSR/client
+  // mismatches (framer-motion styles), so it appears one frame after mount.
+  const [starsReady, setStarsReady] = useState(false);
+  useEffect(() => {
+    // eslint-disable-next-line -- intentional mount flag: skip SSR render of the star field
+    setStarsReady(true);
+  }, []);
   // Deterministic pseudo-random star field: pure during render (react lint),
   // visually equivalent to the previous Math.random scatter.
   const stars = useMemo(() => {
@@ -72,7 +79,7 @@ const IntroExperience = ({ onComplete }: IntroExperienceProps) => {
               transition: "opacity 1s ease-out"
             }}
           >
-            {stars.map((star) => (
+            {starsReady && stars.map((star) => (
               <div
                 key={star.id}
                 className="absolute rounded-full bg-white"
