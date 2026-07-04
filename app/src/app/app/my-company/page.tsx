@@ -144,7 +144,7 @@ export default function MyCompanyPage() {
   const displayName = userName ?? 'Cedant / Reinsurer';
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#FAFAF8' }}>
+    <div data-track-section="company_overview" style={{ minHeight: '100vh', backgroundColor: '#FAFAF8' }}>
       {/* Hero banner */}
       <div
         style={{
@@ -299,7 +299,7 @@ export default function MyCompanyPage() {
         )}
 
         {/* Portfolio onboarding (cedant submit and tracking; role-aware) */}
-        <div style={{ paddingBottom: '32px' }}>
+        <div data-track-section="portfolio_onboarding" style={{ paddingBottom: '32px' }}>
           <div style={{ marginBottom: '12px' }}>
             <CedantPathSteps active={3} />
           </div>

@@ -142,7 +142,7 @@ export function PremiumPaymentPanel({ vaultAddress }: { vaultAddress: `0x${strin
     depositReceipt.isLoading;
 
   return (
-    <section className="rounded-lg border border-gray-200 bg-white p-4">
+    <section data-track-section="premium_payment" className="rounded-lg border border-gray-200 bg-white p-4">
       <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
         Pay premium
       </h2>

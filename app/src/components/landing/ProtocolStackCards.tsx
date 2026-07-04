@@ -20,7 +20,7 @@ const correlationData: CorrelationData[] = [
 
 const ProtocolStackCards = () => {
   return (
-    <section 
+    <section data-track-section="protocol_stack" 
       id="how-it-works" 
       className="relative overflow-hidden"
       style={{ 

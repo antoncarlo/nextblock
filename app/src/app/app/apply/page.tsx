@@ -348,7 +348,7 @@ export default function ApplyPage() {
         </div>
       )}
       {/* Hero */}
-      <div
+      <div data-track-section="apply_hero"
         style={{
           background: 'linear-gradient(135deg, #0F1218 0%, #1B3A6B 100%)',
           padding: '48px 32px 56px',
@@ -424,7 +424,7 @@ export default function ApplyPage() {
               Choose the type of access you are applying for. Each role has different requirements and capabilities.
             </p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px', marginBottom: '32px' }}>
+            <div data-track-section="apply_role_cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px', marginBottom: '32px' }}>
               {/* Insurance Company Card */}
               <button
                 onClick={() => { setRole('insurance'); setStep('form'); }}
@@ -565,7 +565,7 @@ export default function ApplyPage() {
 
         {/* ── STEP: Insurance Company Form ── */}
         {step === 'form' && role === 'insurance' && (
-          <form onSubmit={handleInsSubmit}>
+          <form data-track-section="apply_form_reinsurer" onSubmit={handleInsSubmit}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px' }}>
               <button type="button" onClick={() => setStep('choose')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', fontFamily: "'Inter', sans-serif", fontSize: '13px' }}>
                 ← Back
@@ -724,7 +724,7 @@ export default function ApplyPage() {
 
         {/* ── STEP: Syndicate Manager Form ── */}
         {step === 'form' && role === 'syndicate manager' && (
-          <form onSubmit={handleCurSubmit}>
+          <form data-track-section="apply_form_curator" onSubmit={handleCurSubmit}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px' }}>
               <button type="button" onClick={() => setStep('choose')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', fontFamily: "'Inter', sans-serif", fontSize: '13px' }}>
                 ← Back
@@ -870,7 +870,7 @@ export default function ApplyPage() {
 
         {/* ── STEP: Institutional LP Form ── */}
         {step === 'form' && role === 'lp' && (
-          <form onSubmit={handleLpSubmit}>
+          <form data-track-section="apply_form_lp" onSubmit={handleLpSubmit}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px' }}>
               <button type="button" onClick={() => setStep('choose')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', fontFamily: "'Inter', sans-serif", fontSize: '13px' }}>
                 ← Back

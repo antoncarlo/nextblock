@@ -42,7 +42,7 @@ const techBadges = [
 
 const KeyBenefitsSection = () => {
   return (
-    <section 
+    <section data-track-section="key_benefits" 
       className="py-12 overflow-hidden"
       style={{
         backgroundColor: '#FAFAF8',

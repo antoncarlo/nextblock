@@ -17,7 +17,7 @@ export default function MoneyFlowPage() {
   const vault = (vaults as readonly `0x${string}`[] | undefined)?.[0];
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
+    <div data-track-section="money_flow" className="mx-auto max-w-3xl px-4 py-8">
       <h1 className="mb-1 text-2xl font-semibold text-gray-900">Money Flow</h1>
       <p className="mb-6 text-sm text-gray-500">
         Unified economic view of the vault — SPV calculation, buffer, protocol take, investor vault,

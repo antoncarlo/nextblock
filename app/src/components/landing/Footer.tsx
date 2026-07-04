@@ -51,7 +51,7 @@ const Footer = () => {
   };
 
   return (
-    <div className="relative">
+    <div data-track-section="footer" className="relative">
       {/* Waitlist Section */}
       <div className="relative z-10">
         <WaitlistSection />

@@ -42,7 +42,7 @@ const FeaturesSection = () => {
   const handleNext = () => {
     setActiveIndex(prev => prev === solutionCards.length - 1 ? 0 : prev + 1);
   };
-  return <section className="relative" style={{
+  return <section data-track-section="how_it_works" className="relative" style={{
     zIndex: 1
   }}>
       {/* From Silos to Liquid Marketplace Section */}

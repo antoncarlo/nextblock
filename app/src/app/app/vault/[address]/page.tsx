@@ -95,7 +95,7 @@ export default function VaultDetailPage({ params }: { params: Promise<{ address:
     const fallbackDisplay = getVaultDisplay(fallbackName);
     return (
       <div style={{ minHeight: "100vh", backgroundColor: "#FAFAF8" }}>
-        <div className="relative overflow-hidden" style={{ background: "linear-gradient(135deg, #0F1218 0%, #1B3A6B 100%)", padding: "40px 32px 48px" }}>
+        <div data-track-section="vault_detail" className="relative overflow-hidden" style={{ background: "linear-gradient(135deg, #0F1218 0%, #1B3A6B 100%)", padding: "40px 32px 48px" }}>
           <div className="absolute inset-0" style={{ background: "linear-gradient(to right, rgba(15,18,24,0.95) 0%, rgba(27,58,107,0.65) 100%)" }} />
           <div className="relative z-10 mx-auto" style={{ maxWidth: "1200px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "24px" }}>
