@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { Providers } from '@/components/shared/Providers';
+import { TrackerScript } from '@/components/analytics/TrackerScript';
 
 export const metadata: Metadata = {
   title: 'NextBlock | Tokenized Insurance Vaults',
@@ -19,6 +20,8 @@ export default function RootLayout({
         <Providers>
           {children}
         </Providers>
+        {/* Internal analytics (renders nothing; sendBeacon fire-and-forget). */}
+        <TrackerScript />
       </body>
     </html>
   );

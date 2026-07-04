@@ -68,7 +68,7 @@ function Hero({ label, title, subtitle, stats, ctas }: {
   ctas: { label: string; href: string; primary?: boolean }[];
 }) {
   return (
-    <div className="relative overflow-hidden" style={{ background: "linear-gradient(135deg, #0F1218 0%, #1B3A6B 100%)", padding: "64px 32px 72px" }}>
+    <div data-track-section="app_hero" className="relative overflow-hidden" style={{ background: "linear-gradient(135deg, #0F1218 0%, #1B3A6B 100%)", padding: "64px 32px 72px" }}>
       <div className="absolute inset-0" style={{ backgroundImage: "url('/ships-illustration.jpg')", backgroundSize: "cover", backgroundPosition: "center 40%", opacity: 0.12 }} />
       <div className="absolute inset-0" style={{ background: "linear-gradient(to right, rgba(15,18,24,0.95) 0%, rgba(27,58,107,0.7) 100%)" }} />
       <div className="relative z-10 mx-auto" style={{ maxWidth: "1200px" }}>
@@ -226,7 +226,7 @@ function InvestorView() {
         ctas={[]}
       />
       {/* How It Works */}
-      <div style={{ backgroundColor: "#F2F1EE", borderBottom: "1px solid rgba(0,0,0,0.06)", padding: "40px 32px" }}>
+      <div data-track-section="app_how_it_works" style={{ backgroundColor: "#F2F1EE", borderBottom: "1px solid rgba(0,0,0,0.06)", padding: "40px 32px" }}>
         <div className="mx-auto grid grid-cols-1 md:grid-cols-3 gap-6" style={{ maxWidth: "1200px" }}>
           {[
             { step: "01", title: "Tokenized Policies", body: "Insurance policies are tokenized on-chain with transparent terms, coverage amounts, and three verification paths." },
@@ -242,7 +242,7 @@ function InvestorView() {
         </div>
       </div>
       {/* Vault Table */}
-      <div className="mx-auto" style={{ maxWidth: "1200px", padding: "40px 32px 64px" }}>
+      <div data-track-section="vaults_table" className="mx-auto" style={{ maxWidth: "1200px", padding: "40px 32px 64px" }}>
         <div className="flex flex-wrap items-end justify-between gap-4" style={{ marginBottom: "24px" }}>
           <div>
             <p className="section-label" style={{ marginBottom: "4px" }}>Active Vaults</p>
@@ -257,7 +257,7 @@ function InvestorView() {
         <VaultList />
       </div>
       {/* CTA Apply */}
-      <div style={{ backgroundColor: "#F2F1EE", borderTop: "1px solid rgba(0,0,0,0.06)", padding: "48px 32px", textAlign: "center" }}>
+      <div data-track-section="insurer_cta" style={{ backgroundColor: "#F2F1EE", borderTop: "1px solid rgba(0,0,0,0.06)", padding: "48px 32px", textAlign: "center" }}>
         <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "22px", color: "#1B3A6B", marginBottom: "8px" }}>Are you an insurer or asset manager?</p>
         <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "14px", color: "#6B7280", marginBottom: "24px" }}>Apply to become a Syndicate Manager or list your insurance portfolio on NextBlock.</p>
         <Link href="/app/apply" style={{ display: "inline-block", padding: "12px 32px", background: "#1B3A6B", color: "#FFFFFF", borderRadius: "50px", fontFamily: "'Inter', sans-serif", fontSize: "14px", fontWeight: 600, textDecoration: "none" }}>

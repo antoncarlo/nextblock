@@ -23,10 +23,10 @@ const Footer = () => {
   ];
 
   const legalLinks = [
-    { label: "Terms of Service", href: "https://github.com/antoncarlo/nextblock/blob/main/docs/TERMS.md" },
-    { label: "Privacy Policy", href: "https://github.com/antoncarlo/nextblock/blob/main/docs/PRIVACY.md" },
-    { label: "Cookie Policy", href: "#" },
-    { label: "Risk Disclaimer", href: "#" },
+    { label: "Terms of Service", href: "/terms" },
+    { label: "Privacy Policy", href: "/privacy" },
+    { label: "Cookie Policy", href: "/privacy#cookies" },
+    { label: "Risk Disclaimer", href: "https://github.com/antoncarlo/nextblock/blob/main/docs/legal/03-risk-disclosure.md" },
   ];
 
   const socialLinks = [
@@ -51,7 +51,7 @@ const Footer = () => {
   };
 
   return (
-    <div className="relative">
+    <div data-track-section="footer" className="relative">
       {/* Waitlist Section */}
       <div className="relative z-10">
         <WaitlistSection />

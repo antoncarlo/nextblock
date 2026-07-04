@@ -96,16 +96,19 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 function Table({ head, children }: { head: string[]; children: React.ReactNode }) {
   return (
-    <table className="w-full text-xs">
-      <thead>
-        <tr className="text-left text-gray-400">
-          {head.map((h) => (
-            <th key={h} className="pb-1 font-normal">{h}</th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>{children}</tbody>
-    </table>
+    // Horizontal scroll on phones instead of crushing the columns.
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[420px] text-xs">
+        <thead>
+          <tr className="text-left text-gray-400">
+            {head.map((h) => (
+              <th key={h} className="pb-1 font-normal">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>{children}</tbody>
+      </table>
+    </div>
   );
 }
 function Td({ children }: { children: React.ReactNode }) {

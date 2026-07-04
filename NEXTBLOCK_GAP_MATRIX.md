@@ -1,5 +1,10 @@
 # NEXTBLOCK_GAP_MATRIX
 
+> **SUPERSEDED (2026-07-03).** This is the historical 2026-06-11 baseline,
+> kept for traceability. The maintained "where is the project" document is
+> **[docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md)** — module map, real vs
+> advisory, shipped workstreams and open scope.
+
 Baseline dei gap tra lo stato attuale del repository e lo "standard NextBlock" (protocollo istituzionale di tokenizzazione riassicurativa, Base-only, USDC settlement).
 
 - **Data snapshot:** 2026-06-11

@@ -30,6 +30,13 @@ const IntroExperience = ({ onComplete }: IntroExperienceProps) => {
     }
   }, [phase, onComplete]);
 
+  // Client-only star field: rendering it before hydration caused SSR/client
+  // mismatches (framer-motion styles), so it appears one frame after mount.
+  const [starsReady, setStarsReady] = useState(false);
+  useEffect(() => {
+    // eslint-disable-next-line -- intentional mount flag: skip SSR render of the star field
+    setStarsReady(true);
+  }, []);
   // Deterministic pseudo-random star field: pure during render (react lint),
   // visually equivalent to the previous Math.random scatter.
   const stars = useMemo(() => {
@@ -72,7 +79,7 @@ const IntroExperience = ({ onComplete }: IntroExperienceProps) => {
               transition: "opacity 1s ease-out"
             }}
           >
-            {stars.map((star) => (
+            {starsReady && stars.map((star) => (
               <div
                 key={star.id}
                 className="absolute rounded-full bg-white"
@@ -106,7 +113,7 @@ const IntroExperience = ({ onComplete }: IntroExperienceProps) => {
                 <img
                   src={logoLeftWhite}
                   alt="Next"
-                  className="h-48 md:h-64 lg:h-96 w-auto"
+                  className="h-24 sm:h-40 md:h-64 lg:h-96 w-auto"
                   style={{
                     filter: phase === "split" ? "none" : "invert(1)",
                     transition: "filter 0.8s ease-out"
@@ -116,7 +123,7 @@ const IntroExperience = ({ onComplete }: IntroExperienceProps) => {
 
               {/* Right half - BLOCK */}
               <motion.div
-                className="flex items-center justify-start -ml-12 md:-ml-16 lg:-ml-24"
+                className="flex items-center justify-start -ml-6 sm:-ml-10 md:-ml-16 lg:-ml-24"
                 initial={{ opacity: 0 }}
                 animate={{
                   opacity: 1,
@@ -130,7 +137,7 @@ const IntroExperience = ({ onComplete }: IntroExperienceProps) => {
                 <img
                   src={logoRightWhite}
                   alt="Block"
-                  className="h-48 md:h-64 lg:h-96 w-auto"
+                  className="h-24 sm:h-40 md:h-64 lg:h-96 w-auto"
                   style={{
                     filter: phase === "split" ? "none" : "invert(1)",
                     transition: "filter 0.8s ease-out"

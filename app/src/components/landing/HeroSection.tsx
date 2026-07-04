@@ -1,7 +1,7 @@
 "use client";
 import { motion } from "framer-motion";
 const HeroSection = () => {
-  return <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+  return <section data-track-section="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background Video */}
       <div className="absolute inset-0 z-0">
         <video autoPlay muted loop playsInline className="w-full h-full object-cover">
@@ -10,10 +10,7 @@ const HeroSection = () => {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 w-full max-w-7xl px-6 md:px-12 lg:px-24 text-left" style={{
-      paddingTop: '160px',
-      paddingBottom: '120px'
-    }}>
+      <div className="relative z-10 w-full max-w-7xl px-5 md:px-12 lg:px-24 text-left pt-24 pb-16 md:pt-40 md:pb-28">
         <motion.div initial={{
         opacity: 0,
         y: 40

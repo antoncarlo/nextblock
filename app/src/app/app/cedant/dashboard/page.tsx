@@ -279,7 +279,7 @@ function StatusRow({
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div>
+    <div data-track-section="cedant_dashboard">
       <div className="text-[10px] uppercase tracking-wide text-gray-400">{label}</div>
       <div className="text-sm font-medium text-gray-900">{value}</div>
     </div>

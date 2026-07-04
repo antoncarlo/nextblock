@@ -77,9 +77,12 @@ export function Header() {
         borderBottom: '1px solid rgba(0,0,0,0.06)',
       }}
     >
+      {/* flex-wrap is MOBILE-ONLY (the nav strip drops to its own row);
+          desktop must stay a single fixed-height row, otherwise the pill
+          wraps under the logo and overlaps the page content. */}
       <div
-        className="mx-auto flex items-center justify-between"
-        style={{ maxWidth: '1280px', padding: '0 32px', height: '80px' }}
+        className="mx-auto flex flex-wrap items-center justify-between px-4 sm:h-20 sm:flex-nowrap sm:px-8"
+        style={{ maxWidth: '1280px' }}
       >
         {/* Logo */}
         <Link href="/app" className="flex items-center" style={{ textDecoration: 'none' }}>
@@ -87,19 +90,22 @@ export function Header() {
           <img
             src="/assets/logo-black.svg"
             alt="NextBlock"
-            style={{ height: '160px', width: 'auto' }}
+            className="h-20 w-auto sm:h-40"
           />
         </Link>
 
-        {/* Nav pill — center */}
+        {/* Nav pill — centered on desktop; full-width swipeable strip on mobile
+            (the links are role-aware, so we reuse the SAME element instead of
+            duplicating the gating logic in a separate mobile menu). */}
         <nav
-          className="hidden sm:flex items-center gap-1"
+          className="order-3 -mx-1 mb-2 flex w-full items-center gap-1 overflow-x-auto sm:order-none sm:mx-0 sm:mb-0 sm:w-auto sm:overflow-visible"
           style={{
             background: 'rgba(255,255,255,0.85)',
             border: '1px solid rgba(0,0,0,0.06)',
             borderRadius: '50px',
             padding: '4px 6px',
             backdropFilter: 'blur(20px)',
+            scrollbarWidth: 'none',
           }}
         >
           {/* Vaults — sempre visibile */}
@@ -221,7 +227,7 @@ export function Header() {
                     position: 'absolute', top: 'calc(100% + 16px)', left: '50%',
                     transform: 'translateX(-50%)', zIndex: 999,
                     backgroundColor: '#FFFFFF', border: '1px solid #E8E4DC',
-                    borderRadius: '14px', padding: '22px 26px', width: '360px',
+                    borderRadius: '14px', padding: '22px 26px', width: 'min(360px, calc(100vw - 24px))',
                     boxShadow: '0 12px 40px rgba(27,58,107,0.16)',
                   }}>
                     <div style={{ position: 'absolute', top: '-7px', left: '50%', transform: 'translateX(-50%) rotate(45deg)', width: '12px', height: '12px', backgroundColor: '#FFFFFF', border: '1px solid #E8E4DC', borderBottom: 'none', borderRight: 'none' }} />

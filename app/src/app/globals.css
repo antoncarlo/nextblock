@@ -163,6 +163,12 @@ body {
     color: #FFFFFF;
     border-radius: 6px;
     transition: all 0.3s ease;
+    /* Buttons are often <a> tags with fixed paddings: force flex centering
+       so the label is always centered regardless of element type. */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
   }
   
   .btn-primary:hover {
@@ -175,6 +181,10 @@ body {
     color: var(--text-heading-secondary);
     border-radius: 6px;
     transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
   }
   
   .btn-secondary:hover {

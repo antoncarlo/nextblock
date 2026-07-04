@@ -6,7 +6,7 @@ import DecorativeGrid from "./DecorativeGrid";
 
 const OurVisionSection = () => {
   return (
-    <section
+    <section data-track-section="our_vision"
       id="protocol-stack"
       className="relative"
       style={{

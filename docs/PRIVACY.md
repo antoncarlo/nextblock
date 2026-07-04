@@ -1,6 +1,7 @@
 # NextBlock Privacy Policy
 
-Last updated: 2026-06-13
+Last updated: 2026-07-04
+Live version: https://www.nextblock.finance/privacy
 Status: applies to the Base Sepolia STAGING deployment. Subject to review
 by qualified counsel before any mainnet release.
 
@@ -17,9 +18,19 @@ aspirational.
 | KYB company data: company name, legal entity type, jurisdiction, license number, declared portfolio figure, website, free-text description | When you submit a KYB application | Institutional onboarding review (KYB / KYC / AML screening) |
 | KYB contact data: contact name, contact email | When you submit a KYB application | Reaching the applicant during review |
 | Review audit trail: reviewer wallet address, status transitions, review notes | When an operator reviews an application | Accountability of compliance decisions (append-only record) |
+| Visit data: IP address, coarse geolocation (country/city/region from CDN headers), referrer, user agent, page path | On each page load of the public site | First-party, self-hosted usage analytics (traffic and product improvement) |
+| Behavioral events: clicks on interface elements, time spent on page sections, scroll depth — keyed to a random session id, never to a name | While browsing | Understanding which parts of the product are used; no advertising, no profiling across sites |
 
-We do not use analytics trackers, advertising identifiers, fingerprinting
-or cookies beyond what the wallet-connection libraries strictly require.
+<a id="cookies"></a>
+**Cookies and analytics.** We run a first-party, self-hosted analytics
+system (no Google Analytics, no advertising or third-party trackers, no
+fingerprinting). It uses a single httpOnly cookie, `nb_sid`: a random
+session identifier with a rolling 30-minute lifetime, used only to group
+page views and interactions of the same visit. It contains no personal
+data and is not readable by page scripts. Analytics data is stored solely
+in our own database (see section 3), is visible only to the operator on a
+password-protected internal dashboard, and is never shared or sold.
+Wallet-connection libraries may set their own strictly functional storage.
 Server logs are structured and deliberately PII-free (route name, error
 kind and code only).
 
@@ -51,6 +62,10 @@ applicant-requested withdrawal (recorded as a rejection in the current
 state machine) - plus 90 days, after which they are eligible for deletion.
 Independently of this schedule, the staging database may be wiped at any
 time as part of staging resets.
+
+Analytics visit and event records are retained for at most 13 months and
+then deleted by an automated monthly job; ephemeral operational rows
+(rate-limit windows, one-time operator nonces) are purged within days.
 
 ## 5. Deletion and access requests
 

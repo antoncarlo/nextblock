@@ -20,7 +20,7 @@ const AboutSection = () => {
   ];
 
   return (
-    <section 
+    <section data-track-section="market_opportunity" 
       id="about" 
       className="relative px-6 overflow-hidden"
       style={{ 
