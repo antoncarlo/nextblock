@@ -62,9 +62,16 @@ export async function POST(request: NextRequest) {
     return new NextResponse(null, { status: 204 });
   }
 
+  // Geo from the beacon request itself (it rides through Vercel like any
+  // request) — "where do people click from" without a session join.
+  const country = request.headers.get('x-vercel-ip-country');
+  const city = request.headers.get('x-vercel-ip-city');
+
   const rows = events.map((e) => ({
     session_id: sessionId,
     path: e.path,
+    country: country ?? null,
+    city: city ? decodeURIComponent(city) : null,
     event_type: e.eventType,
     section: e.section ?? null,
     element_text: e.elementText ?? null,

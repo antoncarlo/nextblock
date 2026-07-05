@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Providers } from '@/components/shared/Providers';
 import { TrackerScript } from '@/components/analytics/TrackerScript';
+import { Analytics } from '@vercel/analytics/react';
 
 export const metadata: Metadata = {
   title: 'NextBlock | Tokenized Insurance Vaults',
@@ -22,6 +23,9 @@ export default function RootLayout({
         </Providers>
         {/* Internal analytics (renders nothing; sendBeacon fire-and-forget). */}
         <TrackerScript />
+        {/* Vercel Web Analytics (owner-requested; complements the internal
+            system with Vercel's own dashboard — enable it in the Vercel UI). */}
+        <Analytics />
       </body>
     </html>
   );
