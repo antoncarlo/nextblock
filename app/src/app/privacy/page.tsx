@@ -34,7 +34,7 @@ export default function PrivacyPage() {
           body: [
             'We run a first-party, self-hosted analytics system: no Google Analytics, no advertising or third-party trackers, no fingerprinting.',
             'It uses a single httpOnly cookie, nb_sid: a random session identifier with a rolling 30-minute lifetime, used only to group the page views and interactions of the same visit. It contains no personal data and is not readable by page scripts.',
-            'Analytics data is stored solely in our own database, is visible only to the operator on a password-protected internal dashboard, and is never shared or sold. Wallet-connection libraries may set their own strictly functional storage.',
+            'Analytics data is stored solely in our own database, is visible only to the operator on a password-protected internal dashboard, and is never shared or sold. In addition, Vercel Web Analytics (a service of our hosting processor, Vercel) collects aggregated, cookie-less visit statistics on its own dashboard. Wallet-connection libraries may set their own strictly functional storage.',
             'Server logs are structured and deliberately PII-free (route name, error kind and code only).',
           ],
         },

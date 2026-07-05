@@ -74,6 +74,8 @@ interface EventRow {
   section: string | null;
   element_text: string | null;
   value_numeric: number | null;
+  country?: string | null;
+  city?: string | null;
 }
 
 function topN(counts: Map<string, number>, n: number): [string, number][] {
@@ -145,22 +147,25 @@ export default async function AnalyticsPage() {
   const since7 = iso(now - 7 * dayMs);
   const todayStart = new Date().toISOString().slice(0, 10) + 'T00:00:00.000Z';
 
-  const [vToday, vWeek, vMonth, visitsQ, eventsQ] = await Promise.all([
+  const [vToday, vWeek, vMonth, vAll, firstQ, visitsQ, eventsQ] = await Promise.all([
     supabase.from('site_visits').select('id', { count: 'exact', head: true }).gte('created_at', todayStart),
     supabase.from('site_visits').select('id', { count: 'exact', head: true }).gte('created_at', since7),
     supabase.from('site_visits').select('id', { count: 'exact', head: true }).gte('created_at', since30),
+    supabase.from('site_visits').select('id', { count: 'exact', head: true }),
+    supabase.from('site_visits').select('created_at').order('created_at', { ascending: true }).limit(1),
+    // Full history since launch (charts/top lists are all-time; 50k cap is
+    // ample at current scale — revisit with sampling when traffic grows).
     supabase
       .from('site_visits')
       .select('created_at, country, referrer, path, session_id, ip, city, user_agent')
-      .gte('created_at', since30)
       .order('created_at', { ascending: false })
-      .limit(20000),
+      .limit(50000),
     supabase
       .from('site_events')
-      .select('session_id, path, event_type, section, element_text, value_numeric')
-      .gte('created_at', since30)
-      .limit(20000),
+      .select('session_id, path, event_type, section, element_text, value_numeric, country, city')
+      .limit(50000),
   ]);
+  const onlineSince = (firstQ.data?.[0]?.created_at as string | undefined)?.slice(0, 10) ?? null;
 
   const visits = (visitsQ.data ?? []) as VisitRow[];
   const events = (eventsQ.data ?? []) as EventRow[];
@@ -173,10 +178,13 @@ export default async function AnalyticsPage() {
   const countries = new Map<string, number>();
   const referrers = new Map<string, number>();
   const pages = new Map<string, number>();
+  const cities = new Map<string, number>();
+  const clicksByCountry = new Map<string, number>();
 
   for (const v of visits) {
     bump(daily, v.created_at.slice(0, 10));
     bump(countries, v.country || 'Unknown');
+    if (v.city) bump(cities, `${v.city}${v.country ? ', ' + v.country : ''}`);
     bump(pages, v.path);
     if (v.referrer) {
       let host = v.referrer;
@@ -202,6 +210,7 @@ export default async function AnalyticsPage() {
       sectionTimeByPath.set(e.path, per);
     } else if (e.event_type === 'click') {
       bump(clicks, `${e.section ?? '—'} · ${e.element_text ?? '(no text)'}`);
+      bump(clicksByCountry, e.city ? `${e.city}${e.country ? ', ' + e.country : ''}` : e.country || 'Unknown');
     } else if (e.event_type === 'scroll' && e.value_numeric) {
       const key = `${e.session_id}|${e.path}`;
       scrollMaxBySessionPath.set(key, Math.max(scrollMaxBySessionPath.get(key) ?? 0, e.value_numeric));
@@ -214,9 +223,12 @@ export default async function AnalyticsPage() {
   const bounces7 = [...viewsPerSession7.values()].filter((n) => n === 1).length;
   const bounceRate = sessions7 ? Math.round((bounces7 / sessions7) * 100) : 0;
 
-  // Daily series, oldest → newest, zero-filled.
+  // Daily series since launch, oldest → newest, zero-filled (capped at the
+  // most recent 180 days once the site has been live longer than that).
+  const firstDayMs = onlineSince ? Date.parse(onlineSince + 'T00:00:00Z') : now - 29 * dayMs;
+  const spanDays = Math.min(180, Math.max(1, Math.floor((now - firstDayMs) / dayMs) + 1));
   const series: { day: string; n: number }[] = [];
-  for (let i = 29; i >= 0; i--) {
+  for (let i = spanDays - 1; i >= 0; i--) {
     const day = new Date(now - i * dayMs).toISOString().slice(0, 10);
     series.push({ day, n: daily.get(day) ?? 0 });
   }
@@ -277,10 +289,11 @@ export default async function AnalyticsPage() {
         <Kpi label="Visits 30 days" value={fmt(vMonth.count ?? 0)} />
         <Kpi label="Avg session time" value={`${avgSessionSec}s`} note="sum of section dwell / session" />
         <Kpi label="Bounce rate (7d)" value={`${bounceRate}%`} note={`${bounces7}/${sessions7} single-view sessions`} />
+        <Kpi label="Visits all time" value={fmt(vAll.count ?? 0)} note={onlineSince ? `tracking since ${onlineSince}` : 'no data yet'} />
       </div>
 
       {/* Daily visits bar chart */}
-      <Card title="Daily visits — last 30 days">
+      <Card title={`Daily visits — since launch${onlineSince ? ` (${onlineSince})` : ''}`}>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 140 }}>
           {series.map((s) => (
             <div
@@ -298,8 +311,11 @@ export default async function AnalyticsPage() {
       </Card>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
-        <Card title="Top 10 countries">
+        <Card title="Top 10 countries (all time)">
           <Bars data={topN(countries, 10)} />
+        </Card>
+        <Card title="Top 10 cities (all time)">
+          <Bars data={topN(cities, 10)} empty="No city data yet" />
         </Card>
         <Card title="Top 10 referrers">
           <Bars data={topN(referrers, 10)} empty="No external referrers yet" />
@@ -309,6 +325,9 @@ export default async function AnalyticsPage() {
         </Card>
         <Card title="Top 10 clicked elements">
           <Bars data={topN(clicks, 10)} empty="No clicks captured yet" />
+        </Card>
+        <Card title="Clicks by location">
+          <Bars data={topN(clicksByCountry, 10)} empty="No geolocated clicks yet" />
         </Card>
       </div>
 
