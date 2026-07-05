@@ -50,9 +50,8 @@ export async function POST(request: NextRequest) {
     );
     if (!limited.allowed) return new NextResponse(null, { status: 204 });
   } catch {
-    // Rate-limit storage hiccup: drop the sample rather than fail loudly —
-    // analytics ingestion must stay harmless.
-    return new NextResponse(null, { status: 204 });
+    // Rate-limit storage hiccup: FAIL-OPEN and record anyway — losing real
+    // visitors is worse than an occasional duplicate row.
   }
 
   const { error } = await supabase.from('site_visits').insert({

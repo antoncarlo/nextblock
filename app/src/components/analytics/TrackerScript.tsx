@@ -19,10 +19,11 @@ import { usePathname } from 'next/navigation';
 
 interface TrackEvent {
   path: string;
-  eventType: 'click' | 'section_time' | 'scroll';
+  eventType: 'pageview' | 'click' | 'section_time' | 'scroll';
   section?: string | null;
   elementText?: string | null;
   valueNumeric?: number | null;
+  referrer?: string | null;
 }
 
 const ENDPOINT = '/api/track/event';
@@ -59,6 +60,14 @@ export function TrackerScript() {
     pathRef.current = path;
     dwell.current = new Map();
     milestones.current = new Set();
+
+    // PAGEVIEW FALLBACK (belt-and-suspenders): the middleware records page
+    // views server-side, but that hop is fire-and-forget and was observed to
+    // drop some real visitors (events without a visit row). The client sends
+    // its own pageview; the shared 1-per-2s-per-session rate limit on the
+    // server deduplicates when the middleware already landed it. Also counts
+    // SPA route changes, which the middleware never saw.
+    send([{ path, eventType: 'pageview', referrer: document.referrer || null }]);
 
     // --- SECTION DWELL TIME -------------------------------------------------
     const io = new IntersectionObserver(
