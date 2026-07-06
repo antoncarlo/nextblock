@@ -131,10 +131,11 @@ jobs:
         run: forge coverage --report lcov --no-match-coverage "(test|script)"
 
       # Ratchet floor — raise when coverage improves, never lower.
-      # Baseline 2026-06-13 was 75.61% lines (see
-      # NEXTBLOCK_STATIC_ANALYSIS_COVERAGE_BASELINE_2026-06-13.md).
+      # Measured 2026-07-06: 97.45% lines on contracts/src (1718/1763).
+      # 95 leaves room for a new module landing at good-but-not-total
+      # coverage without ever letting the suite decay.
       - name: Line-coverage floor (contracts/src)
-        run: node scripts/check-coverage.mjs contracts/lcov.info 75
+        run: node scripts/check-coverage.mjs contracts/lcov.info 95
 
   slither:
     name: slither
