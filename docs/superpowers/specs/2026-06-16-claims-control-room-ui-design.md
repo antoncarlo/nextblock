@@ -4,7 +4,7 @@
 - **Date:** 2026-06-16
 - **Status:** Draft — pending owner review
 - **Branch:** `feat/claims-control-room-ui`
-- **Maps to:** Figma module 05 — Claims Processing (Manus roadmap Phase 3).
+- **Maps to:** Figma module 05 — Claims Processing (product roadmap Phase 3).
 
 ## 1. Context & decomposition
 

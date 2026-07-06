@@ -4,7 +4,7 @@
 - **Date:** 2026-06-18
 - **Status:** Draft — pending owner review (security-sensitive)
 - **Branch:** `feat/claims-evidence-management`
-- **Maps to:** Figma module 05 — Claims Processing (Manus roadmap Phase 3), evidence layer.
+- **Maps to:** Figma module 05 — Claims Processing (product roadmap Phase 3), evidence layer.
 
 ## 1. Goal
 
