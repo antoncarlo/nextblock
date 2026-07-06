@@ -1,16 +1,21 @@
-# Redemption settlement keeper — scheduled cron.
+# Protocol keepers — scheduled cron (redemption settlement + claims finalization).
 #
-# Calls RedemptionKeeper.settleIfDue against the live RedemptionQueue: it settles
-# the current epoch only when matured + non-empty, and no-ops otherwise (so a
-# frequent schedule never reverts, double-settles, or wastes a settlement).
+# Job `settle`: RedemptionKeeper.settleIfDue against the live RedemptionQueue —
+# settles the current epoch only when matured + non-empty, no-ops otherwise.
+# Job `claims`: ClaimsKeeper.sweep — pays committee-APPROVED unfrozen claims
+# (executeClaim) and finalizes liveness-elapsed bordereau assertions
+# (finalizeAssertion). Both entrypoints are permissionless: authority was
+# exercised on-chain (committee / liveness); the keeper only supplies gas.
 #
 # OWNER-GATED activation (one-time): set these repo secrets/variables —
-#   secret  KEEPER_PRIVATE_KEY        key that holds ALLOCATOR_ROLE on the live generation
+#   secret  KEEPER_PRIVATE_KEY        settle: must hold ALLOCATOR_ROLE; claims: any funded key
 #   secret  BASE_SEPOLIA_RPC_URL      Base Sepolia RPC endpoint
 #   var     REDEMPTION_QUEUE_ADDRESS  0x243205af6C2a89C33c67f967901415C06F2a9cc0 (live queue)
+#   (claims addresses default to the staging deployment record; override with
+#    vars CLAIM_MANAGER_ADDRESS / BORDEREAU_ORACLE_ADDRESS after a redeploy)
 #
-# The keeper key should be a DEDICATED allocator key (granted ALLOCATOR_ROLE via
-# the Safe/timelock), not the deployer EOA.
+# The keeper key should be a DEDICATED key (granted via the Safe/timelock),
+# not the deployer EOA.
 
 name: redemption-keeper
 
@@ -47,4 +52,28 @@ jobs:
           REDEMPTION_QUEUE_ADDRESS: ${{ vars.REDEMPTION_QUEUE_ADDRESS }}
         run: |
           forge script script/RedemptionKeeper.s.sol:RedemptionKeeper \
+            --rpc-url base_sepolia --broadcast --skip-simulation
+
+  claims:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: contracts
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Pay approved claims + finalize elapsed assertions (no-op if none due)
+        env:
+          PRIVATE_KEY: ${{ secrets.KEEPER_PRIVATE_KEY }}
+          BASE_SEPOLIA_RPC_URL: ${{ secrets.BASE_SEPOLIA_RPC_URL }}
+          # Staging deployment record defaults; vars override after a redeploy.
+          CLAIM_MANAGER_ADDRESS: ${{ vars.CLAIM_MANAGER_ADDRESS || '0x504d99e92FCD13040AbAf1Ba9165871DDE3Ddd48' }}
+          BORDEREAU_ORACLE_ADDRESS: ${{ vars.BORDEREAU_ORACLE_ADDRESS || '0xaB074a28b474312E75b89A6822537f31f8fA7Ed0' }}
+        run: |
+          forge script script/ClaimsKeeper.s.sol:ClaimsKeeper \
             --rpc-url base_sepolia --broadcast --skip-simulation
