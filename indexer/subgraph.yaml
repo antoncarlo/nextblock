@@ -1,13 +1,22 @@
-# NextBlock RedemptionQueue subgraph manifest (Goldsky / The Graph compatible).
+# NextBlock protocol subgraph manifest (Goldsky / The Graph compatible).
+#
+# Full protocol event indexing: vault lifecycle (factory template — every
+# vault ever created is picked up automatically), portfolios, policies,
+# claims, compliance, premium flows, NAV/risk oracle, bordereau assertions,
+# allocation proposals, adapters, and the LP redemption queue.
 #
 # Deploy (owner-gated — needs a Goldsky or Graph Studio account):
 #   cd indexer
 #   npm install
 #   npm run codegen && npm run build
-#   goldsky subgraph deploy nextblock-redemption/v1 --path .
-#     (or: graph deploy --studio nextblock-redemption)
+#   goldsky subgraph deploy nextblock-protocol/v1 --path .
+#     (or: graph deploy --studio nextblock-protocol)
 #
-# Base Sepolia (chain id 84532). startBlock is just before the live queue deploy.
+# Base Sepolia (chain id 84532). Core startBlock 42670443 = just before the
+# staging-stack deploy (record timestamp 1781110174 → block 42670943, found
+# by RPC binary search). RedemptionQueue keeps its own later startBlock.
+# NOTE: LendingMarket deploys per-venue and has no live address yet — add its
+# dataSource (ABI already in abis/) when the first venue is deployed.
 specVersion: 0.0.5
 schema:
   file: ./schema.graphql
@@ -42,3 +51,379 @@ dataSources:
         - event: PausedSet(bool)
           handler: handlePausedSet
       file: ./src/redemption-queue.ts
+
+  - kind: ethereum
+    name: VaultFactory
+    network: base-sepolia
+    source:
+      address: "0x7C56F056e94bE52C3B35d4C488a5962313Ab5f69"
+      abi: VaultFactory
+      startBlock: 42670443
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Vault
+        - ProtocolEvent
+      abis:
+        - name: VaultFactory
+          file: ./abis/VaultFactory.json
+      eventHandlers:
+        - event: VaultCreated(indexed address,string,string,string,indexed address,uint256,uint256)
+          handler: handleVaultCreated
+      file: ./src/vault-factory.ts
+
+  - kind: ethereum
+    name: PortfolioRegistry
+    network: base-sepolia
+    source:
+      address: "0x91Eb412f16bFd44bE2DBBB20C07B967B6E8AaB2E"
+      abi: PortfolioRegistry
+      startBlock: 42670443
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Portfolio
+        - ProtocolEvent
+      abis:
+        - name: PortfolioRegistry
+          file: ./abis/PortfolioRegistry.json
+      eventHandlers:
+        - event: PortfolioSubmitted(indexed uint256,indexed address,uint8,uint256,uint256,uint64,uint64)
+          handler: handlePortfolioSubmitted
+        - event: PortfolioReviewStarted(indexed uint256,indexed address)
+          handler: handlePortfolioReviewStarted
+        - event: PortfolioApproved(indexed uint256,indexed address,uint16)
+          handler: handlePortfolioApproved
+        - event: PortfolioRejected(indexed uint256,indexed address,string)
+          handler: handlePortfolioRejected
+        - event: PortfolioActivated(indexed uint256,indexed address)
+          handler: handlePortfolioActivated
+        - event: PortfolioPaused(indexed uint256,indexed address)
+          handler: handlePortfolioPaused
+        - event: PortfolioUnpaused(indexed uint256,indexed address)
+          handler: handlePortfolioUnpaused
+        - event: PortfolioExpired(indexed uint256)
+          handler: handlePortfolioExpired
+        - event: PortfolioMetadataUpdated(indexed uint256,string,bytes32)
+          handler: handlePortfolioMetadataUpdated
+      file: ./src/portfolio-registry.ts
+
+  - kind: ethereum
+    name: PolicyRegistry
+    network: base-sepolia
+    source:
+      address: "0x2Bf155ac5e09E045803f56A35f6E9f562788f1a2"
+      abi: PolicyRegistry
+      startBlock: 42670443
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Policy
+        - ProtocolEvent
+      abis:
+        - name: PolicyRegistry
+          file: ./abis/PolicyRegistry.json
+      eventHandlers:
+        - event: PolicyRegistered(indexed uint256,string,uint8)
+          handler: handlePolicyRegistered
+        - event: PolicyActivated(indexed uint256,uint256)
+          handler: handlePolicyActivated
+        - event: RealTimeLocked(uint256)
+          handler: handleRealTimeLocked
+      file: ./src/policy-registry.ts
+
+  - kind: ethereum
+    name: ClaimManager
+    network: base-sepolia
+    source:
+      address: "0x504d99e92FCD13040AbAf1Ba9165871DDE3Ddd48"
+      abi: ClaimManager
+      startBlock: 42670443
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Claim
+        - ProtocolEvent
+      abis:
+        - name: ClaimManager
+          file: ./abis/ClaimManager.json
+      eventHandlers:
+        - event: ClaimSubmitted(indexed uint256,indexed uint256,indexed address,address,uint256,uint8,bytes32,uint64)
+          handler: handleClaimSubmitted
+        - event: ClaimAssessed(indexed uint256,uint8,uint16,uint16,bytes32)
+          handler: handleClaimAssessed
+        - event: ClaimAnomalyFlagged(indexed uint256,uint16)
+          handler: handleClaimAnomalyFlagged
+        - event: ClaimDisputed(indexed uint256,indexed address,string)
+          handler: handleClaimDisputed
+        - event: ClaimDisputeResolved(indexed uint256,indexed address,bool)
+          handler: handleClaimDisputeResolved
+        - event: ClaimFrozen(indexed uint256,indexed address)
+          handler: handleClaimFrozen
+        - event: ClaimUnfrozen(indexed uint256,indexed address)
+          handler: handleClaimUnfrozen
+        - event: ClaimApproved(indexed uint256,indexed address,uint256,uint256)
+          handler: handleClaimApproved
+        - event: ClaimRejected(indexed uint256,indexed address,string)
+          handler: handleClaimRejected
+        - event: ClaimPaid(indexed uint256,indexed address,uint256,uint256)
+          handler: handleClaimPaid
+      file: ./src/claim-manager.ts
+
+  - kind: ethereum
+    name: ComplianceRegistry
+    network: base-sepolia
+    source:
+      address: "0x6A77634c65D0Fe5d9b925C73d6e09d7ADC365eB9"
+      abi: ComplianceRegistry
+      startBlock: 42670443
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - ComplianceAccount
+        - ProtocolEvent
+      abis:
+        - name: ComplianceRegistry
+          file: ./abis/ComplianceRegistry.json
+      eventHandlers:
+        - event: WhitelistUpdated(indexed address,bool)
+          handler: handleWhitelistUpdated
+        - event: BlockedStatusUpdated(indexed address,bool)
+          handler: handleBlockedStatusUpdated
+        - event: JurisdictionUpdated(indexed address,uint16)
+          handler: handleJurisdictionUpdated
+        - event: KycExpiryUpdated(indexed address,uint64)
+          handler: handleKycExpiryUpdated
+        - event: InvestorLimitUpdated(indexed address,uint256)
+          handler: handleInvestorLimitUpdated
+        - event: ApprovedVenueUpdated(indexed address,bool)
+          handler: handleApprovedVenueUpdated
+      file: ./src/compliance-registry.ts
+
+  - kind: ethereum
+    name: PremiumDistributor
+    network: base-sepolia
+    source:
+      address: "0xa65F60Bbcf0286fc0a8D9B1560EA3e1B3e0830C9"
+      abi: PremiumDistributor
+      startBlock: 42670443
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - PremiumFlow
+        - Portfolio
+        - ProtocolEvent
+      abis:
+        - name: PremiumDistributor
+          file: ./abis/PremiumDistributor.json
+      eventHandlers:
+        - event: PremiumReceived(indexed uint256,indexed address,uint256)
+          handler: handlePremiumReceived
+        - event: PremiumAllocated(indexed uint256,indexed address,uint256)
+          handler: handlePremiumAllocated
+        - event: ProtocolFeeAccrued(indexed uint256,uint256)
+          handler: handleProtocolFeeAccrued
+        - event: UnderwritingFeeAccrued(indexed uint256,uint256)
+          handler: handleUnderwritingFeeAccrued
+        - event: ProtocolFeesClaimed(indexed address,uint256)
+          handler: handleProtocolFeesClaimed
+        - event: UnderwritingFeesClaimed(indexed address,uint256)
+          handler: handleUnderwritingFeesClaimed
+        - event: PortfolioVaultSet(indexed uint256,indexed address)
+          handler: handlePortfolioVaultSet
+      file: ./src/premium-distributor.ts
+
+  - kind: ethereum
+    name: NavOracle
+    network: base-sepolia
+    source:
+      address: "0x53a3e4f21460de7CeC34Ac2318342E5e42Ec1701"
+      abi: NavOracle
+      startBlock: 42670443
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - NavFeed
+        - NavPoint
+        - PortfolioRiskPoint
+        - ProtocolEvent
+      abis:
+        - name: NavOracle
+          file: ./abis/NavOracle.json
+      eventHandlers:
+        - event: NavPublished(indexed address,uint256,uint16,bytes32)
+          handler: handleNavPublished
+        - event: NavAnomalyDetected(indexed address,uint256,uint256,uint256)
+          handler: handleNavAnomalyDetected
+        - event: PortfolioRiskPublished(indexed uint256,uint16,uint16,bytes32)
+          handler: handlePortfolioRiskPublished
+        - event: FeedPaused(indexed address,indexed address)
+          handler: handleFeedPaused
+        - event: FeedUnpaused(indexed address,indexed address)
+          handler: handleFeedUnpaused
+      file: ./src/nav-oracle.ts
+
+  - kind: ethereum
+    name: BordereauOracle
+    network: base-sepolia
+    source:
+      address: "0xaB074a28b474312E75b89A6822537f31f8fA7Ed0"
+      abi: BordereauOracle
+      startBlock: 42670443
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Assertion
+        - ProtocolEvent
+      abis:
+        - name: BordereauOracle
+          file: ./abis/BordereauOracle.json
+      eventHandlers:
+        - event: AssertionProposed(indexed uint256,indexed uint256,uint8,bytes32,uint256,address,uint64)
+          handler: handleAssertionProposed
+        - event: AssertionDisputed(indexed uint256,indexed address,string)
+          handler: handleAssertionDisputed
+        - event: AssertionDisputeResolved(indexed uint256,indexed address,bool)
+          handler: handleAssertionDisputeResolved
+        - event: AssertionFinalized(indexed uint256,indexed uint256,uint8)
+          handler: handleAssertionFinalized
+        - event: AssertionRejected(indexed uint256)
+          handler: handleAssertionRejected
+      file: ./src/bordereau-oracle.ts
+
+  - kind: ethereum
+    name: VaultAllocator
+    network: base-sepolia
+    source:
+      address: "0xa6356AfA399f9Bf5088aAc2987f7C372A7701e03"
+      abi: VaultAllocator
+      startBlock: 42670443
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - AllocationProposal
+        - ProtocolEvent
+      abis:
+        - name: VaultAllocator
+          file: ./abis/VaultAllocator.json
+      eventHandlers:
+        - event: AllocationProposed(indexed uint256,indexed address,indexed uint256,uint256,bool,address,uint64)
+          handler: handleAllocationProposed
+        - event: AllocationExecuted(indexed uint256,indexed address)
+          handler: handleAllocationExecuted
+        - event: AllocationCancelled(indexed uint256,indexed address)
+          handler: handleAllocationCancelled
+        - event: AllocationExpired(indexed uint256)
+          handler: handleAllocationExpired
+      file: ./src/vault-allocator.ts
+
+  - kind: ethereum
+    name: AIAssessor
+    network: base-sepolia
+    source:
+      address: "0xC663f0C80BF1cbCAEfB48603BB8d2be5D161B502"
+      abi: AIAssessor
+      startBlock: 42670443
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Assessment
+        - ProtocolEvent
+      abis:
+        - name: AIAssessor
+          file: ./abis/AIAssessor.json
+      eventHandlers:
+        - event: AssessmentPublished(indexed uint256,uint16,uint16,uint16,uint8,uint256,bytes32)
+          handler: handleAssessmentPublished
+      file: ./src/ai-assessor.ts
+
+  - kind: ethereum
+    name: AdapterRegistry
+    network: base-sepolia
+    source:
+      address: "0x947f8d2f0961129C5E3e54194d4097f2941BFcD2"
+      abi: AdapterRegistry
+      startBlock: 42670443
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Adapter
+        - ProtocolEvent
+      abis:
+        - name: AdapterRegistry
+          file: ./abis/AdapterRegistry.json
+      eventHandlers:
+        - event: AdapterRegistered(indexed bytes32,indexed address,string,bytes32,uint256)
+          handler: handleAdapterRegistered
+        - event: AdapterActivated(indexed bytes32,indexed address)
+          handler: handleAdapterActivated
+        - event: AdapterDisabled(indexed bytes32,indexed address)
+          handler: handleAdapterDisabled
+        - event: AdapterDeprecated(indexed bytes32,indexed address)
+          handler: handleAdapterDeprecated
+        - event: AdapterExposureCapUpdated(indexed bytes32,uint256)
+          handler: handleAdapterExposureCapUpdated
+      file: ./src/adapter-registry.ts
+
+templates:
+  - kind: ethereum
+    name: InsuranceVault
+    network: base-sepolia
+    source:
+      abi: InsuranceVault
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Vault
+        - VaultDeposit
+        - VaultWithdrawal
+        - Claim
+        - Portfolio
+        - ProtocolEvent
+      abis:
+        - name: InsuranceVault
+          file: ./abis/InsuranceVault.json
+      eventHandlers:
+        - event: Deposit(indexed address,indexed address,uint256,uint256)
+          handler: handleDeposit
+        - event: Withdraw(indexed address,indexed address,indexed address,uint256,uint256)
+          handler: handleWithdraw
+        - event: PortfolioAllocated(indexed uint256,uint256,uint256)
+          handler: handlePortfolioAllocated
+        - event: PortfolioDeallocated(indexed uint256,uint256,uint256)
+          handler: handlePortfolioDeallocated
+        - event: PortfolioPremiumRecorded(indexed uint256,indexed address,uint256)
+          handler: handlePortfolioPremiumRecorded
+        - event: PortfolioClaimReserved(indexed uint256,indexed uint256,uint256,uint256)
+          handler: handlePortfolioClaimReserved
+        - event: PortfolioClaimReserveReleased(indexed uint256,indexed uint256,uint256)
+          handler: handlePortfolioClaimReserveReleased
+        - event: PortfolioClaimPaid(indexed uint256,indexed uint256,indexed address,uint256)
+          handler: handlePortfolioClaimPaid
+        - event: FeesCollected(indexed address,uint256)
+          handler: handleFeesCollected
+      file: ./src/insurance-vault.ts

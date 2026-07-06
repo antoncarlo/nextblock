@@ -62,3 +62,258 @@ type ProtocolStat @entity {
   epochsSettled: Int!
   paused: Boolean!
 }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Protocol-wide entities (full event indexing: vaults, portfolios, claims,
+# compliance, oracles, allocation). Statuses are UPPER_SNAKE strings — the
+# typed SDK in app/src/lib/subgraph maps them to TS unions.
+# ─────────────────────────────────────────────────────────────────────────────
+
+type Vault @entity {
+  "vault address"
+  id: ID!
+  name: String!
+  symbol: String!
+  displayName: String!
+  manager: Bytes!
+  bufferRatioBps: BigInt!
+  managementFeeBps: BigInt!
+  createdAt: BigInt!
+  createdAtBlock: BigInt!
+  depositCount: Int!
+  withdrawCount: Int!
+  totalDeposited: BigInt!
+  totalWithdrawn: BigInt!
+  premiumsRecorded: BigInt!
+  claimsReserved: BigInt!
+  claimsPaid: BigInt!
+  feesCollected: BigInt!
+  deposits: [VaultDeposit!]! @derivedFrom(field: "vault")
+  withdrawals: [VaultWithdrawal!]! @derivedFrom(field: "vault")
+}
+
+type VaultDeposit @entity(immutable: true) {
+  "txHash-logIndex"
+  id: ID!
+  vault: Vault!
+  sender: Bytes!
+  owner: Bytes!
+  assets: BigInt!
+  shares: BigInt!
+  timestamp: BigInt!
+  blockNumber: BigInt!
+  txHash: Bytes!
+}
+
+type VaultWithdrawal @entity(immutable: true) {
+  "txHash-logIndex"
+  id: ID!
+  vault: Vault!
+  sender: Bytes!
+  receiver: Bytes!
+  owner: Bytes!
+  assets: BigInt!
+  shares: BigInt!
+  timestamp: BigInt!
+  blockNumber: BigInt!
+  txHash: Bytes!
+}
+
+type Portfolio @entity {
+  "portfolioId"
+  id: ID!
+  cedant: Bytes!
+  structureType: Int!
+  coverageLimit: BigInt!
+  cededPremium: BigInt!
+  inceptionTime: BigInt!
+  expiryTime: BigInt!
+  "SUBMITTED | IN_REVIEW | APPROVED | REJECTED | ACTIVE | PAUSED | EXPIRED"
+  status: String!
+  "0 until approved"
+  expectedLossBps: Int!
+  rejectReason: String
+  metadataURI: String
+  documentHash: Bytes
+  vault: Bytes
+  "net vault allocation accumulated from allocation/deallocation events"
+  allocated: BigInt!
+  premiumsReceivedGross: BigInt!
+  submittedAt: BigInt!
+  approvedAt: BigInt
+  activatedAt: BigInt
+  updatedAt: BigInt!
+}
+
+type Policy @entity {
+  "policyId"
+  id: ID!
+  name: String!
+  verificationType: Int!
+  registeredAt: BigInt!
+  activated: Boolean!
+  startTime: BigInt
+}
+
+type Claim @entity {
+  "claimId"
+  id: ID!
+  portfolioId: BigInt!
+  vault: Bytes!
+  claimant: Bytes!
+  requestedAmount: BigInt!
+  claimType: Int!
+  evidenceHash: Bytes!
+  challengeDeadline: BigInt!
+  "SUBMITTED | ASSESSED | DISPUTED | FROZEN | APPROVED | REJECTED | PAID"
+  status: String!
+  "0 until assessed"
+  recommendation: Int!
+  scoreBps: Int!
+  anomalyScoreBps: Int!
+  anomalyFlagged: Boolean!
+  disputeReason: String
+  "meaningful only after a dispute resolution"
+  disputeUpheld: Boolean!
+  approvedAmount: BigInt
+  paidAmount: BigInt
+  paidTo: Bytes
+  receiptId: BigInt
+  "USDC currently reserved for this claim (reserve minus releases/payouts)"
+  reserved: BigInt!
+  submittedAt: BigInt!
+  updatedAt: BigInt!
+}
+
+type ComplianceAccount @entity {
+  "user address"
+  id: ID!
+  whitelisted: Boolean!
+  blocked: Boolean!
+  jurisdiction: Int!
+  kycExpiry: BigInt!
+  investorLimit: BigInt!
+  approvedVenue: Boolean!
+  updatedAt: BigInt!
+}
+
+type PremiumFlow @entity(immutable: true) {
+  "txHash-logIndex"
+  id: ID!
+  portfolioId: BigInt!
+  "RECEIVED | ALLOCATED | PROTOCOL_FEE | UNDERWRITING_FEE | PROTOCOL_FEES_CLAIMED | UNDERWRITING_FEES_CLAIMED"
+  kind: String!
+  counterparty: Bytes
+  amount: BigInt!
+  timestamp: BigInt!
+  blockNumber: BigInt!
+  txHash: Bytes!
+}
+
+type NavFeed @entity {
+  "vault address"
+  id: ID!
+  lastNav: BigInt!
+  lastConfidenceBps: Int!
+  lastSourceHash: Bytes!
+  publishedAt: BigInt!
+  paused: Boolean!
+  anomalyCount: Int!
+  pointCount: Int!
+}
+
+type NavPoint @entity(immutable: true) {
+  "txHash-logIndex"
+  id: ID!
+  vault: Bytes!
+  nav: BigInt!
+  confidenceBps: Int!
+  sourceHash: Bytes!
+  timestamp: BigInt!
+  blockNumber: BigInt!
+}
+
+type PortfolioRiskPoint @entity(immutable: true) {
+  "txHash-logIndex"
+  id: ID!
+  portfolioId: BigInt!
+  riskScoreBps: Int!
+  confidenceBps: Int!
+  sourceHash: Bytes!
+  timestamp: BigInt!
+}
+
+type Assertion @entity {
+  "assertionId"
+  id: ID!
+  portfolioId: BigInt!
+  assertionType: Int!
+  dataHash: Bytes!
+  declaredAmount: BigInt!
+  proposer: Bytes!
+  livenessDeadline: BigInt!
+  "PROPOSED | DISPUTED | FINALIZED | REJECTED"
+  status: String!
+  disputeReason: String
+  "meaningful only after a dispute resolution"
+  disputeUpheld: Boolean!
+  proposedAt: BigInt!
+  finalizedAt: BigInt
+  updatedAt: BigInt!
+}
+
+type Assessment @entity(immutable: true) {
+  "txHash-logIndex"
+  id: ID!
+  claimId: BigInt!
+  scoreBps: Int!
+  anomalyScoreBps: Int!
+  confidenceBps: Int!
+  recommendation: Int!
+  recommendedAmount: BigInt!
+  sourceHash: Bytes!
+  timestamp: BigInt!
+}
+
+type AllocationProposal @entity {
+  "proposalId"
+  id: ID!
+  vault: Bytes!
+  portfolioId: BigInt!
+  amount: BigInt!
+  isDeallocation: Boolean!
+  proposer: Bytes!
+  expiresAt: BigInt!
+  "PROPOSED | EXECUTED | CANCELLED | EXPIRED"
+  status: String!
+  executor: Bytes
+  proposedAt: BigInt!
+  resolvedAt: BigInt
+}
+
+type Adapter @entity {
+  "adapterId (bytes32 hex)"
+  id: ID!
+  adapter: Bytes!
+  name: String!
+  metadataHash: Bytes!
+  exposureCap: BigInt!
+  "REGISTERED | ACTIVE | DISABLED | DEPRECATED"
+  status: String!
+  updatedAt: BigInt!
+}
+
+type ProtocolEvent @entity(immutable: true) {
+  "txHash-logIndex — generic activity feed across every indexed module"
+  id: ID!
+  contract: String!
+  name: String!
+  vault: Bytes
+  portfolioId: BigInt
+  claimId: BigInt
+  actor: Bytes
+  amount: BigInt
+  timestamp: BigInt!
+  blockNumber: BigInt!
+  txHash: Bytes!
+}
