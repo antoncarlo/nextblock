@@ -99,15 +99,15 @@ jobs:
       - name: Test
         run: forge test -vvv
 
-      # Gas ratchet on unit/fuzz tests: .gas-snapshot is committed; the fuzz
-      # seed is pinned in foundry.toml so runs reproduce. Invariant campaigns
-      # are multi-threaded (revert counts drift between machines) and fork
-      # tests skip without RPC — both are excluded, they are not gas-tracking
-      # material. 1% tolerance absorbs metering noise. Regenerate with
-      #   forge snapshot --no-match-contract "(Invariant|Fork)"
-      # when gas changes are intentional and commit the diff.
+      # Gas ratchet on CONCRETE unit tests only: fuzz medians drift across
+      # forge versions (the fuzzer RNG is not stable between releases, even
+      # with a pinned seed), invariant campaigns are multi-threaded (revert
+      # counts vary per machine) and fork tests skip without RPC — none of
+      # them is gas-tracking material. 1% tolerance absorbs metering noise.
+      # Regenerate when gas changes are intentional and commit the diff:
+      #   forge snapshot --no-match-contract "(Invariant|Fork)" --no-match-test "testFuzz"
       - name: Gas snapshot check
-        run: forge snapshot --check --tolerance 1 --no-match-contract "(Invariant|Fork)"
+        run: forge snapshot --check --tolerance 1 --no-match-contract "(Invariant|Fork)" --no-match-test "testFuzz"
 
   coverage:
     name: coverage
