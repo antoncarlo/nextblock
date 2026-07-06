@@ -1,6 +1,6 @@
 # Project status — what is real, what is advisory, what remains
 
-**Snapshot: 2026-07-03** (post PR #61). Update this file whenever a
+**Snapshot: 2026-07-06** (post PR #72). Update this file whenever a
 workstream lands or a mock becomes real — it supersedes the historical
 [NEXTBLOCK_GAP_MATRIX](../NEXTBLOCK_GAP_MATRIX.md) (2026-06-11 baseline) as
 the single answer to "where is the project?".
@@ -64,6 +64,13 @@ to trust, and what to build next.
 | Confidential pinning (private bucket + public manifest + reviewer download) | #59 |
 | Ops hardening: scheduled-jobs workflow, redeploy runbook, Bucket C legal spec | #60 |
 | UX frictions: one-click whitelist, next-step CTAs, LP nudge, admin cleanup, cedant path steps | #61 |
+| Institutional documentation suite (docs index, onboarding, this file) + observability (structured logs, health endpoint, error boundary) | #62 |
+| Mobile responsiveness (landing + app nav) and desktop header regression fix | #63, #65 |
+| Internal analytics: pageviews + behavioral events + admin dashboard → v2 (all-time history, cities, click geo, Vercel Analytics) → client pageview fallback | #64, #69, #70 |
+| Braino v2 oracle & AI-services specification (ready for the Braino team) | #66 |
+| Site polish: legal pages (privacy/terms), SEO (robots/sitemap), data-retention purge, monthly backup workflow | #67 |
+| 100% NatSpec coverage of the contracts public surface + CI gate | #68 |
+| Docs author-attribution cleanup | #72 |
 
 ## 4. Open scope (what to build next)
 
@@ -82,7 +89,9 @@ to trust, and what to build next.
 6. Performance fee (business decision) · multi-vault-per-portfolio splits ·
    secondary nbUSDC transfers UX (hook ready) · statement PDF export ·
    fiat on/off-ramp + qualified custody · external security audit + bounty ·
-   mainnet deployment plan (native USDC)
+   mainnet deployment plan (native USDC) · curator-supplied vault offering
+   terms (manager identity, strategy, target return) to replace the
+   presentational `app/src/config/vaultDisplay.ts` demo metadata
 
 ## 5. Update protocol for this file
 

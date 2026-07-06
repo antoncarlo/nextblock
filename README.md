@@ -54,7 +54,7 @@ non-sensitive integrity manifest.
 | Path | Content |
 |---|---|
 | [`contracts/`](contracts/README.md) | Foundry workspace — 23 Solidity modules (`src/`, incl. `lending/`), 550+ unit/fuzz/invariant/fork/integration tests, deployment + ops scripts, [redeploy runbook](contracts/REDEPLOY_RUNBOOK.md), canonical deployment record (`deployments/84532-staging.json`) |
-| [`app/`](app/README.md) | Next.js 15 frontend (wagmi/viem) + server API routes: KYB pipeline, claims evidence, notifications, confidential IPFS pinning, scheduled-job endpoints |
+| [`app/`](app/README.md) | Next.js 16 frontend (wagmi/viem) + server API routes: KYB pipeline, claims evidence, notifications, confidential IPFS pinning, scheduled-job endpoints |
 | [`scripts/`](scripts/) | Address-book codegen from the deployment record, with a byte-for-byte anti-drift check wired into CI |
 | [`supabase/migrations/`](supabase/migrations/) | Versioned SQL — RLS deny-by-default everywhere; documents live in private buckets |
 | [`indexer/`](indexer/README.md) | Goldsky subgraph for redemption-queue events |
