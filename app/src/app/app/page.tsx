@@ -222,7 +222,7 @@ function InvestorView() {
         label="Insurance Tokenization Protocol"
         title="Curated Insurance Vaults"
         subtitle="Deposit capital into syndicate-managed vaults backed by tokenized insurance policies. Earn premiums as yield — uncorrelated to equities, bonds, and crypto."
-        stats={[{ label: "Target APY Range", value: "5–18%" }, { label: "Verification Types", value: "3" }, { label: "Active Syndicates", value: "8" }]}
+        stats={[{ label: "Illustrative APY Range", value: "5–18%" }, { label: "Verification Types", value: "3" }, { label: "Active Syndicates", value: "8" }]}
         ctas={[]}
       />
       {/* How It Works */}
@@ -231,7 +231,7 @@ function InvestorView() {
           {[
             { step: "01", title: "Tokenized Policies", body: "Insurance policies are tokenized on-chain with transparent terms, coverage amounts, and three verification paths." },
             { step: "02", title: "Curated Vaults", body: "Independent vault managers build diversified portfolios of tokenized policies, each with distinct risk/return profiles." },
-            { step: "03", title: "Earn Premiums", body: "Your deposit provides underwriting capacity. Premiums accrue as yield. Withdraw anytime from the liquidity buffer." },
+            { step: "03", title: "Earn Premiums", body: "Your deposit provides underwriting capacity. Premiums accrue as earned yield over each coverage period. Exit through the liquidity buffer, or via the pro-rata redemption queue when demand exceeds it." },
           ].map(item => (
             <div key={item.step} className="card-institutional" style={{ padding: "24px 28px" }}>
               <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "32px", fontWeight: 400, color: "#1B3A6B", opacity: 0.25, lineHeight: 1, marginBottom: "12px" }}>{item.step}</div>
