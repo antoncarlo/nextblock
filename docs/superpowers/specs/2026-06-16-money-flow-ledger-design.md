@@ -4,13 +4,13 @@
 - **Date:** 2026-06-16
 - **Status:** Draft — pending owner review
 - **Branch:** `feat/money-flow-ledger`
-- **Maps to:** Figma module 06 — Money Flow (Manus roadmap Phase 2), current-state scope.
+- **Maps to:** Figma module 06 — Money Flow (product roadmap Phase 2), current-state scope.
 
 ## 1. Goal & context
 
 The protocol already exposes all Money-Flow data on-chain via `NextBlockLens`
 (`VaultDashboardView`, `PremiumDashboardView`, `LPStatusView`). The gap (per the
-Manus roadmap) is that these values are scattered across vault/manage pages and
+product roadmap) is that these values are scattered across vault/manage pages and
 do not form a **coherent Money Flow view** aligned to the Figma cards. This spec
 adds a unified, presentation-layer Money Flow dashboard + a per-LP investor
 statement, derived from the existing canonical read model — **no new on-chain

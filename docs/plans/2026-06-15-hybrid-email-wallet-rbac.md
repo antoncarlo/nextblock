@@ -1,6 +1,5 @@
 # Hybrid Email-Wallet RBAC Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Consentire a un operatore NextBlock di accedere via email e operare nel pannello admin con privilegi applicativi equivalenti a quelli del wallet autorizzato, senza eliminare la fonte di verità on-chain per le transazioni che richiedono firma.
 

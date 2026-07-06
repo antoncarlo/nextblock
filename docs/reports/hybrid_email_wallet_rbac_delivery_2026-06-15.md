@@ -1,6 +1,6 @@
 # Report consegna — Accesso ibrido email-wallet e RBAC NextBlock
 
-**Autore:** Manus AI**Data:** 2026-06-15**Repository:** `/home/ubuntu/nextblock_onchain/nextblock`**Ambito:** app NextBlock, pannello admin, KYB review, RBAC applicativo Supabase, verifica read-only ruoli Base Sepolia.
+**Autore:** Anton Carlo Santoro**Data:** 2026-06-15**Repository:** `/home/ubuntu/nextblock_onchain/nextblock`**Ambito:** app NextBlock, pannello admin, KYB review, RBAC applicativo Supabase, verifica read-only ruoli Base Sepolia.
 
 ## Sintesi esecutiva
 
