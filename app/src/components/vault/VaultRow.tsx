@@ -11,15 +11,17 @@ import {
   formatUSDCCompact,
   shortenAddress,
 } from "@/lib/formatting";
-// Presentational-only metadata (manager persona, illustrative target APY) —
-// NOT on-chain data. See the warning in config/vaultDisplay.ts.
-import { getVaultDisplay } from "@/config/vaultDisplay";
+// Display metadata: curator-supplied offering terms when published (backend,
+// role-gated write), otherwise the illustrative defaults — labeled apart.
+import { resolveVaultDisplay } from "@/config/vaultDisplay";
+import type { OfferingTerms } from "@/lib/offering/terms";
 
 interface VaultRowProps {
   vaultAddress: `0x${string}`;
+  offeringTerms?: OfferingTerms;
 }
 
-export function VaultRow({ vaultAddress }: VaultRowProps) {
+export function VaultRow({ vaultAddress, offeringTerms }: VaultRowProps) {
   const { data: vaultInfo, isLoading, error } = useVaultInfoSafe(vaultAddress);
   const { data: policyIds } = useVaultPolicyIds(vaultAddress);
   const { data: globalPolicies } = useGlobalPoliciesData(policyIds);
@@ -85,8 +87,7 @@ export function VaultRow({ vaultAddress }: VaultRowProps) {
     string, `0x${string}`, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint,
   ];
 
-  const display = getVaultDisplay(name);
-  const managerDisplay = ensName || display.manager;
+  const display = resolveVaultDisplay(name, offeringTerms);
 
   const verificationTypes: Set<number> = new Set();
   if (globalPolicies) {
@@ -161,8 +162,9 @@ export function VaultRow({ vaultAddress }: VaultRowProps) {
               fontSize: "13px",
               color: "#4A4A4A",
             }}
+            title={display.source === "curated" ? `On-chain manager: ${managerAddr}` : undefined}
           >
-            {ensName || shortenAddress(managerAddr!)}
+            {ensName || (display.source === "curated" ? display.manager : shortenAddress(managerAddr!))}
           </span>
         </Link>
       </td>
@@ -211,6 +213,14 @@ export function VaultRow({ vaultAddress }: VaultRowProps) {
           >
             {display.targetApy}
           </span>
+          {display.source === "curated" && (
+            <span
+              title="Curator-published offering terms"
+              style={{ display: "block", marginTop: "3px", fontFamily: "'Inter', sans-serif", fontSize: "9px", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#0E7490" }}
+            >
+              Curated
+            </span>
+          )}
         </Link>
       </td>
     </tr>

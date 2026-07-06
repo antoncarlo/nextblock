@@ -1,11 +1,15 @@
 'use client';
 import { VaultRow } from './VaultRow';
+import { useOfferingTerms } from '@/hooks/useOfferingTerms';
 
 interface VaultTableProps {
   vaultAddresses: readonly `0x${string}`[];
 }
 
 export function VaultTable({ vaultAddresses }: VaultTableProps) {
+  // Curator-supplied offering terms override the illustrative defaults
+  // per-row; one fetch for the whole table.
+  const { terms } = useOfferingTerms();
   return (
     <div
       className="card-institutional overflow-x-auto"
@@ -49,7 +53,11 @@ export function VaultTable({ vaultAddresses }: VaultTableProps) {
         </thead>
         <tbody>
           {vaultAddresses.map((address) => (
-            <VaultRow key={address} vaultAddress={address} />
+            <VaultRow
+              key={address}
+              vaultAddress={address}
+              offeringTerms={terms.get(address.toLowerCase())}
+            />
           ))}
         </tbody>
       </table>

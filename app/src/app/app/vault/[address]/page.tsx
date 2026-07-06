@@ -25,9 +25,11 @@ import {
   getSharePriceNumber,
 } from "@/lib/formatting";
 
-// Presentational-only metadata (manager persona, illustrative target APY) —
-// NOT on-chain data. See the warning in config/vaultDisplay.ts.
-import { getVaultDisplay } from "@/config/vaultDisplay";
+// Display metadata: curator-supplied offering terms when published (backend,
+// role-gated write), otherwise the illustrative defaults — labeled apart.
+import { getVaultDisplay, resolveVaultDisplay } from "@/config/vaultDisplay";
+import { useOfferingTerms } from "@/hooks/useOfferingTerms";
+import { DataSourceBadge } from "@/components/shared/DataSourceBadge";
 
 const EXPLORER_URLS: Record<number, string> = {
   84532: "https://sepolia.basescan.org",
@@ -52,6 +54,7 @@ export default function VaultDetailPage({ params }: { params: Promise<{ address:
   const [tab, setTab] = useState<Tab>("overview");
 
   const { data: vaultInfo, isLoading: vaultLoading } = useVaultInfoSafe(vaultAddress);
+  const { terms: offeringTermsMap } = useOfferingTerms();
   const { policies, isLoading: policiesLoading } = useVaultPolicies(vaultAddress);
   const { data: currentTime } = useCurrentTime();
   const { data: userShares } = useUserShares(vaultAddress, userAddress);
@@ -104,7 +107,7 @@ export default function VaultDetailPage({ params }: { params: Promise<{ address:
   const [name, manager, assets, shares, , bufferBps, feeBps, availableBuffer, deployedCapital, policyCount] =
     vaultInfo as unknown as [string, `0x${string}`, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint];
 
-  const display = getVaultDisplay(name);
+  const display = resolveVaultDisplay(name, offeringTermsMap.get(vaultAddress.toLowerCase()));
   const sharePrice = getSharePriceNumber(assets, shares);
   const hasPosition = userShares !== undefined && userShares > 0n;
   const userValue = hasPosition && userShares ? (Number(userShares) * sharePrice) / 1e18 : 0;
@@ -248,7 +251,17 @@ export default function VaultDetailPage({ params }: { params: Promise<{ address:
               <div className="card-institutional" style={{ padding: "24px 28px" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
                   <div>
-                    <p className="section-label" style={{ marginBottom: "4px" }}>Vault Syndicate Manager</p>
+                    <p className="section-label" style={{ marginBottom: "4px" }}>
+                      Vault Syndicate Manager{" "}
+                      <DataSourceBadge
+                        source={display.source === "curated" ? "backend" : "backend-mock"}
+                        title={
+                          display.source === "curated"
+                            ? "Curator-published offering terms (role-gated write)"
+                            : "Illustrative defaults — the curator has not published offering terms yet"
+                        }
+                      />
+                    </p>
                     <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "18px", fontWeight: 400, color: "#0F1218" }}>
                       {managerEns || display.manager}
                     </p>

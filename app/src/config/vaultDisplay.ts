@@ -11,6 +11,12 @@
  * target return, risk grade) must come from curator-supplied metadata at
  * vault creation (see PROJECT_STATUS §4 open scope), not from this file.
  */
+import {
+  formatApyRangeBps,
+  RISK_GRADE_COLORS,
+  type OfferingTerms,
+} from '@/lib/offering/terms';
+
 export interface VaultDisplayMeta {
   manager: string;
   strategy: string;
@@ -92,4 +98,34 @@ export function getVaultDisplay(name: string): VaultDisplayMeta {
     if (name.includes(key)) return value;
   }
   return FALLBACK;
+}
+
+/** Display meta plus WHERE it came from — the UI must label the difference. */
+export interface ResolvedVaultDisplay extends VaultDisplayMeta {
+  /** 'curated' = curator-supplied offering terms (backend, role-gated write);
+   *  'illustrative' = the static demo defaults above. */
+  source: 'curated' | 'illustrative';
+}
+
+/**
+ * Overlays curator-supplied offering terms (lib/offering/terms.ts) on the
+ * illustrative defaults. Curated terms always win; the fallback keeps the
+ * table renderable for vaults whose curator has not published terms yet.
+ */
+export function resolveVaultDisplay(
+  name: string,
+  curated: OfferingTerms | undefined,
+): ResolvedVaultDisplay {
+  if (curated) {
+    const grade = curated.riskGrade;
+    return {
+      manager: curated.managerName,
+      strategy: curated.strategyStatement,
+      riskLevel: grade.charAt(0) + grade.slice(1).toLowerCase(),
+      riskColor: RISK_GRADE_COLORS[grade],
+      targetApy: formatApyRangeBps(curated.targetApyMinBps, curated.targetApyMaxBps),
+      source: 'curated',
+    };
+  }
+  return { ...getVaultDisplay(name), source: 'illustrative' };
 }
