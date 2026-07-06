@@ -56,7 +56,8 @@ browser-safe).
 | `EMAIL_PROVIDER` (`mock`\|`resend`) + `RESEND_API_KEY` + `EMAIL_FROM` | server | email channel; `mock` (default) logs instead of sending |
 | `KYB_NOTIFY_EMAIL` | server | admin alert recipient for new KYB applications (optional) |
 | `NEXT_PUBLIC_APP_URL` | client | canonical URL in emails (defaults to nextblock.finance) |
-| `NEXT_PUBLIC_SUBGRAPH_URL` | client | Goldsky subgraph for redemption history |
+| `NEXT_PUBLIC_SUBGRAPH_URL` | client | legacy no-code Goldsky subgraph (redemption history UI) |
+| `NEXT_PUBLIC_PROTOCOL_SUBGRAPH_URL` | client | nextblock-protocol subgraph (full event indexing; SDK in `app/src/lib/protocol-subgraph/`) — unset = SDK reports "not deployed", no silent fallback |
 | `NEXT_PUBLIC_REDEMPTION_QUEUE_ADDRESS` | client | live RedemptionQueue address |
 | `NEXT_PUBLIC_LENDING_MARKET_ADDRESS` | client | live LendingMarket address |
 | `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | client | WalletConnect |
