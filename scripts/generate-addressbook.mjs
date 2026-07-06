@@ -63,6 +63,8 @@ const CONTRACT_KEYS = [
   "portfolioRegistry",
   "premiumDistributor",
   "protocolRoles",
+  "protocolTimelock",
+  "safe",
   "usdc",
   "vault",
   "vaultAllocator",
