@@ -98,3 +98,63 @@ jobs:
 
       - name: Test
         run: forge test -vvv
+
+      # Gas ratchet on CONCRETE unit tests only: fuzz medians drift across
+      # forge versions (the fuzzer RNG is not stable between releases, even
+      # with a pinned seed), invariant campaigns are multi-threaded (revert
+      # counts vary per machine) and fork tests skip without RPC — none of
+      # them is gas-tracking material. 1% tolerance absorbs metering noise.
+      # Regenerate when gas changes are intentional and commit the diff:
+      #   forge snapshot --no-match-contract "(Invariant|Fork)" --no-match-test "testFuzz"
+      - name: Gas snapshot check
+        run: forge snapshot --check --tolerance 1 --no-match-contract "(Invariant|Fork)" --no-match-test "testFuzz"
+
+  coverage:
+    name: coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Coverage (lcov)
+        working-directory: contracts
+        run: forge coverage --report lcov --no-match-coverage "(test|script)"
+
+      # Ratchet floor — raise when coverage improves, never lower.
+      # Measured 2026-07-06: 97.45% lines on contracts/src (1718/1763).
+      # 95 leaves room for a new module landing at good-but-not-total
+      # coverage without ever letting the suite decay.
+      - name: Line-coverage floor (contracts/src)
+        run: node scripts/check-coverage.mjs contracts/lcov.info 95
+
+  slither:
+    name: slither
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # Static analysis gate: fails on high-severity findings only; medium and
+      # below are review material, tracked in the audit-prep docs, not build
+      # blockers. Scope is contracts/src (lib/test/script filtered in
+      # contracts/slither.config.json).
+      - name: Slither (fail on high)
+        uses: crytic/slither-action@v0.4.1
+        with:
+          target: contracts/
+          slither-config: contracts/slither.config.json
+          fail-on: high

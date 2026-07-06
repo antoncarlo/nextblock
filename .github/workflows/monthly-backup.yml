@@ -28,6 +28,12 @@ jobs:
   snapshot:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # The secrets context is NOT available in step-level `if` expressions —
+    # referencing it there makes the workflow file invalid and GitHub emits a
+    # failed phantom run on every push. Map the secret to job-level env once
+    # and gate the steps on the env context instead.
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
     steps:
       - name: Checkout main
         uses: actions/checkout@v4
@@ -49,23 +55,21 @@ jobs:
           echo "Pushed $TAG"
 
       - name: Install PostgreSQL 17 client (matches Supabase server major)
-        if: ${{ secrets.SUPABASE_DB_URL != '' }}
+        if: env.SUPABASE_DB_URL != ''
         run: |
           sudo sh -c 'echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
           curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg
           sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client-17
 
       - name: Dump database (public schema)
-        if: ${{ secrets.SUPABASE_DB_URL != '' }}
-        env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        if: env.SUPABASE_DB_URL != ''
         run: |
           pg_dump "$SUPABASE_DB_URL" --schema=public --no-owner --no-privileges \
             -f "nextblock-db-$(date -u +%Y-%m).sql"
           ls -lh nextblock-db-*.sql
 
       - name: Upload dump artifact (90-day retention)
-        if: ${{ secrets.SUPABASE_DB_URL != '' }}
+        if: env.SUPABASE_DB_URL != ''
         uses: actions/upload-artifact@v4
         with:
           name: nextblock-db-backup
@@ -73,5 +77,5 @@ jobs:
           retention-days: 90
 
       - name: Notice when DB dump is unarmed
-        if: ${{ secrets.SUPABASE_DB_URL == '' }}
+        if: env.SUPABASE_DB_URL == ''
         run: echo "::notice::SUPABASE_DB_URL secret not set — code tag created, DB dump skipped. Arm it once to include monthly DB dumps."
