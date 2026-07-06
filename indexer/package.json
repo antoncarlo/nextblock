@@ -1,15 +1,15 @@
 {
-  "name": "nextblock-redemption-indexer",
+  "name": "nextblock-protocol-indexer",
   "version": "0.1.0",
-  "description": "NextBlock RedemptionQueue subgraph (Base Sepolia) — LP exit lifecycle history.",
+  "description": "NextBlock protocol subgraph (Base Sepolia) \u2014 full event indexing: vaults, portfolios, claims, compliance, premium flows, oracles, allocation, redemptions.",
   "author": "Anton Carlo Santoro",
   "license": "MIT",
   "private": true,
   "scripts": {
     "codegen": "graph codegen",
     "build": "graph build",
-    "deploy:goldsky": "goldsky subgraph deploy nextblock-redemption/v1 --path .",
-    "deploy:studio": "graph deploy --studio nextblock-redemption"
+    "deploy:goldsky": "goldsky subgraph deploy nextblock-protocol/v1 --path .",
+    "deploy:studio": "graph deploy --studio nextblock-protocol"
   },
   "dependencies": {
     "@graphprotocol/graph-cli": "^0.71.0",

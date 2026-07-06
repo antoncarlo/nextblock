@@ -3,19 +3,19 @@
     "type": "constructor",
     "inputs": [
       {
+        "name": "usdc_",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
         "name": "protocolRoles_",
         "type": "address",
         "internalType": "address"
       },
       {
-        "name": "vault_",
+        "name": "portfolioRegistry_",
         "type": "address",
         "internalType": "address"
-      },
-      {
-        "name": "epochDuration_",
-        "type": "uint64",
-        "internalType": "uint64"
       }
     ],
     "stateMutability": "nonpayable"
@@ -48,6 +48,19 @@
   },
   {
     "type": "function",
+    "name": "BASIS_POINTS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "CLAIMS_COMMITTEE_ROLE",
     "inputs": [],
     "outputs": [
@@ -61,26 +74,26 @@
   },
   {
     "type": "function",
-    "name": "EPOCH_CEILING",
+    "name": "DEFAULT_PROTOCOL_FEE_BPS",
     "inputs": [],
     "outputs": [
       {
         "name": "",
-        "type": "uint64",
-        "internalType": "uint64"
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
   },
   {
     "type": "function",
-    "name": "EPOCH_FLOOR",
+    "name": "DEFAULT_UNDERWRITING_FEE_BPS",
     "inputs": [],
     "outputs": [
       {
         "name": "",
-        "type": "uint64",
-        "internalType": "uint64"
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -100,7 +113,20 @@
   },
   {
     "type": "function",
-    "name": "MAX_BPS",
+    "name": "MAX_PROTOCOL_FEE_BPS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MAX_UNDERWRITING_FEE_BPS",
     "inputs": [],
     "outputs": [
       {
@@ -191,120 +217,132 @@
   },
   {
     "type": "function",
-    "name": "asset",
+    "name": "accruedProtocolFees",
     "inputs": [],
     "outputs": [
       {
         "name": "",
-        "type": "address",
-        "internalType": "contract IERC20"
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
   },
   {
     "type": "function",
-    "name": "claim",
-    "inputs": [
-      {
-        "name": "epochId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
+    "name": "accruedUnderwritingFees",
+    "inputs": [],
     "outputs": [
       {
-        "name": "assetsPaid",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "sharesReturned",
+        "name": "",
         "type": "uint256",
         "internalType": "uint256"
       }
     ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "claimProtocolFees",
+    "inputs": [
+      {
+        "name": "recipient",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
     "stateMutability": "nonpayable"
   },
   {
     "type": "function",
-    "name": "claimed",
+    "name": "claimUnderwritingFees",
+    "inputs": [
+      {
+        "name": "recipient",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "getPremiumAccounting",
+    "inputs": [
+      {
+        "name": "portfolioId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "internalType": "struct PremiumDistributor.PremiumAccounting",
+        "components": [
+          {
+            "name": "gross",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "lpQuota",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "protocolFees",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "underwritingFees",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "portfolioRegistry",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract PortfolioRegistry"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "portfolioVault",
     "inputs": [
       {
         "name": "",
         "type": "uint256",
         "internalType": "uint256"
-      },
+      }
+    ],
+    "outputs": [
       {
         "name": "",
         "type": "address",
         "internalType": "address"
       }
     ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
     "stateMutability": "view"
   },
   {
     "type": "function",
-    "name": "currentEpochId",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "currentEpochMaturesAt",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint64",
-        "internalType": "uint64"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "currentEpochStart",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint64",
-        "internalType": "uint64"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "epochDuration",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint64",
-        "internalType": "uint64"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "epochs",
+    "name": "premiumAccounting",
     "inputs": [
       {
         "name": "",
@@ -314,40 +352,22 @@
     ],
     "outputs": [
       {
-        "name": "totalSharesRequested",
+        "name": "gross",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "settledShares",
+        "name": "lpQuota",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "settledAssets",
+        "name": "protocolFees",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "settledAt",
-        "type": "uint64",
-        "internalType": "uint64"
-      },
-      {
-        "name": "settled",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "escrowedShares",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
+        "name": "underwritingFees",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -356,40 +376,40 @@
   },
   {
     "type": "function",
-    "name": "paused",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "previewClaim",
+    "name": "previewSplit",
     "inputs": [
       {
-        "name": "epochId",
+        "name": "grossAmount",
         "type": "uint256",
         "internalType": "uint256"
-      },
-      {
-        "name": "lp",
-        "type": "address",
-        "internalType": "address"
       }
     ],
     "outputs": [
       {
-        "name": "assetsPaid",
+        "name": "lpQuota",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "sharesReturned",
+        "name": "protocolFee",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "underwritingFee",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "protocolFeeBps",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -411,71 +431,62 @@
   },
   {
     "type": "function",
-    "name": "requestRedemption",
+    "name": "receivePremium",
     "inputs": [
       {
-        "name": "shares",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "epochId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "setEpochDuration",
-    "inputs": [
-      {
-        "name": "newDuration",
-        "type": "uint64",
-        "internalType": "uint64"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "setPaused",
-    "inputs": [
-      {
-        "name": "paused_",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "settleEpoch",
-    "inputs": [],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "sharesRequested",
-    "inputs": [
-      {
-        "name": "",
+        "name": "portfolioId",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "",
+        "name": "grossAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setPortfolioVault",
+    "inputs": [
+      {
+        "name": "portfolioId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "vault",
         "type": "address",
         "internalType": "address"
       }
     ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setPremiumSplit",
+    "inputs": [
+      {
+        "name": "protocolFeeBps_",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "underwritingFeeBps_",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "totalGrossReceived",
+    "inputs": [],
     "outputs": [
       {
         "name": "",
@@ -487,104 +498,67 @@
   },
   {
     "type": "function",
-    "name": "vault",
+    "name": "underwritingFeeBps",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "usdc",
     "inputs": [],
     "outputs": [
       {
         "name": "",
         "type": "address",
-        "internalType": "contract IERC4626"
+        "internalType": "contract IERC20"
       }
     ],
     "stateMutability": "view"
   },
   {
     "type": "event",
-    "name": "EpochDurationUpdated",
+    "name": "PortfolioVaultSet",
     "inputs": [
       {
-        "name": "oldDuration",
-        "type": "uint64",
-        "indexed": false,
-        "internalType": "uint64"
-      },
-      {
-        "name": "newDuration",
-        "type": "uint64",
-        "indexed": false,
-        "internalType": "uint64"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "EpochSettled",
-    "inputs": [
-      {
-        "name": "epochId",
+        "name": "portfolioId",
         "type": "uint256",
         "indexed": true,
         "internalType": "uint256"
       },
       {
-        "name": "settledShares",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "settledAssets",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "ratioBps",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
+        "name": "vault",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       }
     ],
     "anonymous": false
   },
   {
     "type": "event",
-    "name": "PausedSet",
+    "name": "PremiumAllocated",
     "inputs": [
       {
-        "name": "paused",
-        "type": "bool",
-        "indexed": false,
-        "internalType": "bool"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "RedemptionClaimed",
-    "inputs": [
-      {
-        "name": "epochId",
+        "name": "portfolioId",
         "type": "uint256",
         "indexed": true,
         "internalType": "uint256"
       },
       {
-        "name": "lp",
+        "name": "vault",
         "type": "address",
         "indexed": true,
         "internalType": "address"
       },
       {
-        "name": "assetsPaid",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "sharesReturned",
+        "name": "lpQuota",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
@@ -594,22 +568,117 @@
   },
   {
     "type": "event",
-    "name": "RedemptionRequested",
+    "name": "PremiumReceived",
     "inputs": [
       {
-        "name": "epochId",
+        "name": "portfolioId",
         "type": "uint256",
         "indexed": true,
         "internalType": "uint256"
       },
       {
-        "name": "lp",
+        "name": "from",
         "type": "address",
         "indexed": true,
         "internalType": "address"
       },
       {
-        "name": "shares",
+        "name": "grossAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "PremiumSplitUpdated",
+    "inputs": [
+      {
+        "name": "protocolFeeBps",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "underwritingFeeBps",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ProtocolFeeAccrued",
+    "inputs": [
+      {
+        "name": "portfolioId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ProtocolFeesClaimed",
+    "inputs": [
+      {
+        "name": "recipient",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "UnderwritingFeeAccrued",
+    "inputs": [
+      {
+        "name": "portfolioId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "UnderwritingFeesClaimed",
+    "inputs": [
+      {
+        "name": "recipient",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
@@ -619,59 +688,15 @@
   },
   {
     "type": "error",
-    "name": "RQ__AlreadyClaimed",
+    "name": "PremiumDistributor__FeeAboveMax",
     "inputs": [
       {
-        "name": "epochId",
+        "name": "requestedBps",
         "type": "uint256",
         "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "RQ__AlreadySettled",
-    "inputs": [
-      {
-        "name": "epochId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "RQ__BadEpochDuration",
-    "inputs": [
-      {
-        "name": "provided",
-        "type": "uint64",
-        "internalType": "uint64"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "RQ__EpochNotMatured",
-    "inputs": [
-      {
-        "name": "nowTs",
-        "type": "uint64",
-        "internalType": "uint64"
       },
       {
-        "name": "maturesAt",
-        "type": "uint64",
-        "internalType": "uint64"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "RQ__NotSettled",
-    "inputs": [
-      {
-        "name": "epochId",
+        "name": "maxBps",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -679,23 +704,29 @@
   },
   {
     "type": "error",
-    "name": "RQ__NothingToClaim",
+    "name": "PremiumDistributor__InvalidParams",
     "inputs": []
   },
   {
     "type": "error",
-    "name": "RQ__QueuePaused",
+    "name": "PremiumDistributor__NothingToClaim",
     "inputs": []
   },
   {
     "type": "error",
-    "name": "RQ__Unauthorized",
+    "name": "PremiumDistributor__PortfolioNotAllocatable",
     "inputs": [
       {
-        "name": "role",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
+        "name": "portfolioId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "PremiumDistributor__UnauthorizedPremiumSource",
+    "inputs": [
       {
         "name": "caller",
         "type": "address",
@@ -705,8 +736,41 @@
   },
   {
     "type": "error",
-    "name": "RQ__ZeroShares",
-    "inputs": []
+    "name": "PremiumDistributor__UnauthorizedRole",
+    "inputs": [
+      {
+        "name": "caller",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "role",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "PremiumDistributor__VaultChangeAfterFunding",
+    "inputs": [
+      {
+        "name": "portfolioId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "PremiumDistributor__VaultNotSet",
+    "inputs": [
+      {
+        "name": "portfolioId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
   },
   {
     "type": "error",
