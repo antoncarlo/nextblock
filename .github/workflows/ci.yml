@@ -99,13 +99,15 @@ jobs:
       - name: Test
         run: forge test -vvv
 
-      # Gas ratchet: .gas-snapshot is committed; fuzz/invariant seeds are
-      # pinned in foundry.toml so runs are reproducible. 1% tolerance absorbs
-      # metering noise (e.g. the deploy-script test) without hiding real
-      # regressions. Regenerate with `forge snapshot` when gas changes are
-      # intentional and commit the diff.
+      # Gas ratchet on unit/fuzz tests: .gas-snapshot is committed; the fuzz
+      # seed is pinned in foundry.toml so runs reproduce. Invariant campaigns
+      # are multi-threaded (revert counts drift between machines) and fork
+      # tests skip without RPC — both are excluded, they are not gas-tracking
+      # material. 1% tolerance absorbs metering noise. Regenerate with
+      #   forge snapshot --no-match-contract "(Invariant|Fork)"
+      # when gas changes are intentional and commit the diff.
       - name: Gas snapshot check
-        run: forge snapshot --check --tolerance 1
+        run: forge snapshot --check --tolerance 1 --no-match-contract "(Invariant|Fork)"
 
   coverage:
     name: coverage
