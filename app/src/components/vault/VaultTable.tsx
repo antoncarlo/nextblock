@@ -53,6 +53,21 @@ export function VaultTable({ vaultAddresses }: VaultTableProps) {
           ))}
         </tbody>
       </table>
+      {/* Compliance: target figures must never read as promised yield. */}
+      <p
+        style={{
+          padding: '10px 24px 12px',
+          margin: 0,
+          fontFamily: "'Inter', sans-serif",
+          fontSize: '11px',
+          color: '#9A9A9A',
+          borderTop: '1px solid rgba(0,0,0,0.04)',
+        }}
+      >
+        Target APY figures are illustrative underwriting targets set at vault
+        creation — not measured performance and not a promise of yield. Returns
+        depend on premiums earned and claims incurred; capital is at risk.
+      </p>
     </div>
   );
 }

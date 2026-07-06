@@ -66,6 +66,25 @@ export async function GET() {
     error: rpcError,
   });
 
+  // 3. Required configuration. A route that 503s on demand is quiet until
+  //    someone hits it; the uptime monitor hitting THIS endpoint makes a
+  //    missing critical env var loud within minutes of a bad deploy. Names
+  //    only — never values.
+  const requiredEnv = [
+    'NEXT_PUBLIC_SUPABASE_URL',
+    'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+    'SUPABASE_SERVICE_ROLE_KEY',
+    'CRON_SECRET',
+    'PINATA_JWT',
+  ];
+  const missingEnv = requiredEnv.filter((name) => !process.env[name]);
+  checks.push({
+    name: 'env',
+    ok: missingEnv.length === 0,
+    ms: 0,
+    error: missingEnv.length > 0 ? `missing: ${missingEnv.join(', ')}` : null,
+  });
+
   const allOk = checks.every((c) => c.ok);
   return NextResponse.json(
     {
