@@ -1,6 +1,5 @@
 # KYB Durable State Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Rendere durevoli su Supabase i nonce single-use KYB e i rate-limit delle route KYB, mantenendo fallback locale solo per sviluppo/test senza configurazione Supabase e comportamento fail-closed quando lo store durevole configurato non è disponibile.
 
