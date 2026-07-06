@@ -112,6 +112,7 @@ exactly this).
 | Surface | Where | Runbook |
 |---|---|---|
 | CI | `.github/workflows/ci.yml` | red `frontend` job blocks Vercel — fix before merge |
+| "Supabase Preview" check | GitHub integration (not our CI) | fails on every commit because Supabase branching is not enabled on this plan — **known noise, safe to ignore**; our checks are `contracts` / `frontend` / `security` / `addressbook` |
 | Scheduled jobs | `scheduled-jobs.yml` | [ops notes in-file]; endpoints are idempotent, jitter-safe |
 | Redemption keeper | `redemption-keeper.yml` | no-ops until an epoch matures |
 | Contract (re)deploy | owner terminal | [contracts/REDEPLOY_RUNBOOK.md](../contracts/REDEPLOY_RUNBOOK.md) |

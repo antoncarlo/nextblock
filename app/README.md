@@ -1,6 +1,6 @@
 # NextBlock app — frontend + server API
 
-Next.js 15 (App Router, wagmi/viem) frontend for the NextBlock protocol,
+Next.js 16 (App Router, wagmi/viem) frontend for the NextBlock protocol,
 plus the server-side API routes that power the institutional workflows.
 Chain scope: **Base Sepolia (84532) only** in staging.
 
