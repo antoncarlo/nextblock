@@ -137,7 +137,7 @@ export function VaultCard({ vaultAddress }: VaultCardProps) {
         <div className="mb-4 grid grid-cols-2 gap-4">
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-gray-400">
-              Target APY
+              Illustrative APY
             </p>
             <p className="font-mono-num mt-0.5 text-xl font-semibold text-gray-900">
               {display.targetApy}

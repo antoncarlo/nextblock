@@ -31,7 +31,7 @@ export function VaultTable({ vaultAddresses }: VaultTableProps) {
               { label: 'Syndicate Manager', align: 'left' },
               { label: 'Exposure', align: 'left' },
               { label: 'Policies', align: 'center' },
-              { label: 'Target APY', align: 'right' },
+              { label: 'Illustrative APY', align: 'right' },
             ].map((col) => (
               <th
                 key={col.label}

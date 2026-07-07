@@ -186,11 +186,11 @@ export default function OfferingTermsPage() {
               </select>
             </div>
             <div>
-              <label style={labelStyle} htmlFor="ot-min">Target APY min (%)</label>
+              <label style={labelStyle} htmlFor="ot-min">Illustrative APY min (%)</label>
               <input id="ot-min" style={inputStyle} type="number" min={0} max={50} step={0.5} value={minPct} onChange={(e) => setMinPct(e.target.value)} />
             </div>
             <div>
-              <label style={labelStyle} htmlFor="ot-max">Target APY max (%)</label>
+              <label style={labelStyle} htmlFor="ot-max">Illustrative APY max (%)</label>
               <input id="ot-max" style={inputStyle} type="number" min={0} max={50} step={0.5} value={maxPct} onChange={(e) => setMaxPct(e.target.value)} />
             </div>
           </div>
