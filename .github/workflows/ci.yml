@@ -54,6 +54,37 @@ jobs:
       - name: Build
         run: npm run ci:frontend:build
 
+  # Read-only E2E against the production build: the vault table reads REAL
+  # Base Sepolia state through the public RPC (no wallet, no secrets), so a
+  # green run proves the investor read path end-to-end. Wallet-signing flows
+  # stay with the contract suite + pilot manual checklist.
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install dependencies (lockfile)
+        run: npm run ci:frontend:install
+
+      - name: Install Playwright chromium
+        working-directory: app
+        run: npx playwright install --with-deps chromium
+
+      - name: Build
+        run: npm run ci:frontend:build
+
+      - name: E2E (production build + live Base Sepolia reads)
+        run: npm run ci:frontend:e2e
+
   security:
     name: security
     runs-on: ubuntu-latest
