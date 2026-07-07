@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useAccount } from 'wagmi';
 import { useVaultAddresses, useMultiVaultInfo } from '@/hooks/useVaultData';
 import { LEGACY_ADMIN_UI_HINT } from '@/config/constants';
@@ -107,6 +108,33 @@ export default function AdminPage() {
           wallet APIs or verified email RBAC). Email access can operate off-chain
           admin/KYB workflows, while on-chain writes still require a wallet signature.
         </p>
+      </div>
+
+      {/* Operator consoles — every admin sub-surface is reachable from here
+          (discoverability: no console should require typing a URL by hand). */}
+      <div className="mb-8">
+        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">Consoles</h3>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { href: '/app/admin/offering-terms', title: 'Offering terms', desc: 'Publish curator terms per vault (manager, strategy, illustrative APY)' },
+            { href: '/app/admin/governance', title: 'Governance', desc: 'Safe → timelock batches for owner-gated actions' },
+            { href: '/app/admin/ai-assessments', title: 'AI assessments', desc: 'Sentinel queue: publish pending assessments on-chain' },
+            { href: '/app/admin/bordereau', title: 'Bordereau', desc: 'Review and propose bordereau assertions' },
+            { href: '/app/admin/sanctions', title: 'Sanctions', desc: 'Screening matches review' },
+            { href: '/app/admin/system-status', title: 'System status', desc: 'Providers, env readiness, RPC and DB probes' },
+            { href: '/admin/analytics', title: 'Site analytics', desc: 'Visits, cities, behavioral events (internal)' },
+          ].map((c) => (
+            <Link
+              key={c.href}
+              href={c.href}
+              className="rounded-xl border border-gray-200 bg-white p-4 transition-colors hover:border-[#1B3A6B]/40 hover:bg-[#1B3A6B]/[0.03]"
+              style={{ textDecoration: 'none' }}
+            >
+              <p className="text-sm font-semibold text-gray-900">{c.title}</p>
+              <p className="mt-1 text-xs leading-5 text-gray-500">{c.desc}</p>
+            </Link>
+          ))}
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
