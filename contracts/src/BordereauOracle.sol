@@ -169,6 +169,8 @@ contract BordereauOracle is ProtocolRoleConstants {
         }
         if (dataHash == bytes32(0)) revert BordereauOracle__InvalidParams();
         // Reverts if the portfolio does not exist.
+        // Existence check: getPortfolio reverts on unknown id (return unused by design).
+        // slither-disable-next-line unused-return
         portfolioRegistry.getPortfolio(portfolioId);
 
         assertionId = nextAssertionId++;

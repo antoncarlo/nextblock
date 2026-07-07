@@ -184,7 +184,11 @@ jobs:
       # Static analysis gate: fails on MEDIUM severity and above (raised from
       # high after a clean first run). Low/informational stay review material,
       # tracked in the audit-prep docs. Scope is contracts/src (lib/test/script
-      # filtered in contracts/slither.config.json).
+      # filtered in contracts/slither.config.json). The incorrect-equality
+      # detector is config-excluded: all 16 hits were enum-status or
+      # zero-sentinel comparisons (the dangerous variant — strict equality on
+      # balances — does not occur in the codebase); the remaining findings are
+      # triaged inline with slither-disable comments and justifications.
       - name: Slither (fail on medium and above)
         uses: crytic/slither-action@v0.4.1
         with:

@@ -236,7 +236,7 @@ contract VaultAllocator is ProtocolRoleConstants {
             revert VaultAllocator__InvalidParams();
         }
 
-        uint256 weightSum;
+        uint256 weightSum = 0;
         for (uint256 i = 0; i < n; i++) {
             if (weightsBps[i] == 0) revert VaultAllocator__InvalidParams();
             weightSum += weightsBps[i];
@@ -244,7 +244,7 @@ contract VaultAllocator is ProtocolRoleConstants {
         if (weightSum != BASIS_POINTS) revert VaultAllocator__WeightsMismatch();
 
         proposalIds = new uint256[](n);
-        uint256 assigned;
+        uint256 assigned = 0;
         for (uint256 i = 0; i < n; i++) {
             uint256 legAmount = i == n - 1
                 ? totalAmount - assigned  // remainder to the last leg (exact conservation)
