@@ -200,6 +200,7 @@ contract RedemptionQueue is ProtocolRoleConstants, ReentrancyGuard {
         currentEpochId = epochId + 1;
         currentEpochStart = uint64(block.timestamp);
     }
+
     // slither-disable-end reentrancy-no-eth
 
     // --- LP: claim ---------------------------------------------------------
