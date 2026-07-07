@@ -167,6 +167,8 @@ contract PremiumDistributor is ProtocolRoleConstants, ReentrancyGuard {
     {
         if (vault == address(0)) revert PremiumDistributor__InvalidParams();
         // Reverts if the portfolio does not exist.
+        // Existence check: getPortfolio reverts on unknown id (return unused by design).
+        // slither-disable-next-line unused-return
         portfolioRegistry.getPortfolio(portfolioId);
         if (premiumAccounting[portfolioId].gross != 0) {
             revert PremiumDistributor__VaultChangeAfterFunding(portfolioId);

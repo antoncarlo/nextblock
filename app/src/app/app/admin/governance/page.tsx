@@ -7,6 +7,7 @@ import {
   buildRevokeRoleOperation,
   buildRawOperation,
   buildOperationBatches,
+  hashOperation,
   type ProtocolRoleName,
   type TimelockOperation,
 } from '@/lib/governance/timelock';
@@ -94,7 +95,9 @@ export default function GovernancePage() {
     return Number.isFinite(h) && h >= 1 ? BigInt(Math.round(h * 3600)) : null;
   }, [delayHours]);
 
-  const batches = useMemo(() => {
+  const operationId = useMemo(() => (op ? hashOperation(op) : null), [op]);
+
+  const buildBatches = () => {
     if (!op || delaySeconds == null) return null;
     return buildOperationBatches(
       op,
@@ -103,7 +106,7 @@ export default function GovernancePage() {
       delaySeconds,
       Date.now(),
     );
-  }, [op, delaySeconds]);
+  };
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#FAFAF8', padding: '40px 32px' }}>
@@ -175,22 +178,28 @@ export default function GovernancePage() {
             <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, color: '#991B1B', margin: 0 }}>{error}</p>
           )}
 
-          {batches && (
+          {operationId && delaySeconds != null && (
             <div style={{ borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: 18, display: 'flex', flexDirection: 'column', gap: 12 }}>
               <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 12, color: '#6B7280', margin: 0, wordBreak: 'break-all' }}>
-                <strong>Operation id:</strong> {batches.id}
+                <strong>Operation id:</strong> {operationId}
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
                 <button
                   type="button"
-                  onClick={() => downloadJson('timelock-schedule.json', batches.schedule)}
+                  onClick={() => {
+                    const batches = buildBatches();
+                    if (batches) downloadJson('timelock-schedule.json', batches.schedule);
+                  }}
                   style={{ padding: '10px 22px', background: '#1B3A6B', color: '#FFF', borderRadius: 50, fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer' }}
                 >
                   Download schedule batch
                 </button>
                 <button
                   type="button"
-                  onClick={() => downloadJson('timelock-execute.json', batches.execute)}
+                  onClick={() => {
+                    const batches = buildBatches();
+                    if (batches) downloadJson('timelock-execute.json', batches.execute);
+                  }}
                   style={{ padding: '10px 22px', background: 'rgba(27,58,107,0.08)', color: '#1B3A6B', borderRadius: 50, fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 600, border: '1px solid rgba(27,58,107,0.25)', cursor: 'pointer' }}
                 >
                   Download execute batch

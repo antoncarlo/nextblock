@@ -155,10 +155,13 @@ contract RedemptionQueue is ProtocolRoleConstants, ReentrancyGuard {
 
     // --- Keeper: settle ----------------------------------------------------
 
+    // slither-disable-start reentrancy-no-eth
     /// @notice Settle the current epoch once its notice period has elapsed.
     ///         Redeems whatever the vault can free now (capped at the vault's
     ///         own buffer via maxRedeem) and distributes it pro-rata. Advances
     ///         to a fresh epoch. Only ALLOCATOR_ROLE (keeper / Braino).
+    /// @dev Protected by nonReentrant; the only external call is the trusted
+    ///      protocol vault, and post-call writes merely open the next epoch.
     function settleEpoch() external nonReentrant onlyRole(ALLOCATOR_ROLE) {
         if (paused) revert RQ__QueuePaused();
         uint256 epochId = currentEpochId;
@@ -171,8 +174,8 @@ contract RedemptionQueue is ProtocolRoleConstants, ReentrancyGuard {
         }
 
         uint256 requested = e.totalSharesRequested;
-        uint256 settleShares;
-        uint256 settleAssets;
+        uint256 settleShares = 0;
+        uint256 settleAssets = 0;
         if (requested > 0) {
             // The vault is the final solvency authority: never redeem beyond
             // what its buffer permits right now.
@@ -198,6 +201,8 @@ contract RedemptionQueue is ProtocolRoleConstants, ReentrancyGuard {
         currentEpochStart = uint64(block.timestamp);
     }
 
+    // slither-disable-end reentrancy-no-eth
+
     // --- LP: claim ---------------------------------------------------------
 
     /// @notice Claim the pro-rata USDC for a settled epoch and receive back any
@@ -216,11 +221,15 @@ contract RedemptionQueue is ProtocolRoleConstants, ReentrancyGuard {
 
         uint256 requested = e.totalSharesRequested;
         // Pro-rata settled shares for this LP (round down -> user not over-paid).
+        // Two-step floor rounding is deliberate: the share quota is the escrow
+        // unit of account; USDC conservation is invariant-tested (dust-safe).
+        // slither-disable-next-line divide-before-multiply
         uint256 userSettledShares = (userShares * e.settledShares) / requested;
         sharesReturned = userShares - userSettledShares;
 
         if (e.settledShares > 0 && userSettledShares > 0) {
             // Pro-rata of the USDC actually received, by settled shares.
+            // slither-disable-next-line divide-before-multiply
             assetsPaid = (userSettledShares * e.settledAssets) / e.settledShares;
             if (assetsPaid > 0) asset.safeTransfer(msg.sender, assetsPaid);
         }
@@ -272,9 +281,12 @@ contract RedemptionQueue is ProtocolRoleConstants, ReentrancyGuard {
         Epoch storage e = epochs[epochId];
         uint256 userShares = sharesRequested[epochId][lp];
         if (!e.settled || userShares == 0 || claimed[epochId][lp]) return (0, 0);
+        // Mirrors claim(): two-step floor rounding is the escrow unit of account.
+        // slither-disable-next-line divide-before-multiply
         uint256 userSettledShares = (userShares * e.settledShares) / e.totalSharesRequested;
         sharesReturned = userShares - userSettledShares;
         if (e.settledShares > 0 && userSettledShares > 0) {
+            // slither-disable-next-line divide-before-multiply
             assetsPaid = (userSettledShares * e.settledAssets) / e.settledShares;
         }
     }

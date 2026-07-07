@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAccount, useSignMessage } from 'wagmi';
 import { useVaultAddresses } from '@/hooks/useVaultData';
 import { operatorAuthMessage } from '@/lib/kyb/schema';
@@ -63,26 +63,32 @@ export default function OfferingTermsPage() {
   const [maxPct, setMaxPct] = useState('12');
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
 
-  const loadExisting = useCallback(async () => {
-    try {
-      const res = await fetch('/api/app/offering-terms');
-      if (!res.ok) return;
-      const json = (await res.json()) as { terms: OfferingTerms[] };
-      const map = new Map<string, OfferingTerms>();
-      for (const t of json.terms ?? []) map.set(t.vaultAddress.toLowerCase(), t);
-      setExisting(map);
-    } catch {
-      // list stays empty; publishing still works
-    }
-  }, []);
-
+  // Subscription-style load: the effect resolves external state (the API) and
+  // commits it in the promise callback; save() bumps the nonce to re-sync.
+  const [reloadNonce, setReloadNonce] = useState(0);
   useEffect(() => {
-    void loadExisting();
-  }, [loadExisting]);
+    let cancelled = false;
+    fetch('/api/app/offering-terms')
+      .then((res) => (res.ok ? res.json() : Promise.reject(new Error(String(res.status)))))
+      .then((json: { terms: OfferingTerms[] }) => {
+        if (cancelled) return;
+        const map = new Map<string, OfferingTerms>();
+        for (const t of json.terms ?? []) map.set(t.vaultAddress.toLowerCase(), t);
+        setExisting(map);
+      })
+      .catch(() => {
+        // list stays empty; publishing still works
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadNonce]);
 
-  // Prefill the form when selecting a vault that already has terms.
-  useEffect(() => {
-    const t = existing.get(vault.toLowerCase());
+  // Prefill happens on selection (event), not in an effect: same behaviour,
+  // no cascading render.
+  function selectVault(nextVault: string) {
+    setVault(nextVault);
+    const t = existing.get(nextVault.toLowerCase());
     if (t) {
       setManagerName(t.managerName);
       setStrategy(t.strategyStatement);
@@ -90,7 +96,7 @@ export default function OfferingTermsPage() {
       setMinPct(String(t.targetApyMinBps / 100));
       setMaxPct(String(t.targetApyMaxBps / 100));
     }
-  }, [vault, existing]);
+  }
 
   async function save() {
     if (!isConnected || !address) {
@@ -137,7 +143,7 @@ export default function OfferingTermsPage() {
         return;
       }
       setPhase({ kind: 'saved', vault: validated.value.vaultAddress });
-      void loadExisting();
+      setReloadNonce((n) => n + 1);
     } catch {
       setPhase({ kind: 'error', message: 'Network error while saving.' });
     }
@@ -159,7 +165,7 @@ export default function OfferingTermsPage() {
         <div className="card-institutional" style={{ padding: 28, display: 'flex', flexDirection: 'column', gap: 18 }}>
           <div>
             <label style={labelStyle} htmlFor="ot-vault">Vault</label>
-            <select id="ot-vault" style={inputStyle} value={vault} onChange={(e) => setVault(e.target.value)}>
+            <select id="ot-vault" style={inputStyle} value={vault} onChange={(e) => selectVault(e.target.value)}>
               <option value="">Select a vault…</option>
               {(vaultAddresses ?? []).map((a) => (
                 <option key={a} value={a}>
@@ -186,11 +192,11 @@ export default function OfferingTermsPage() {
               </select>
             </div>
             <div>
-              <label style={labelStyle} htmlFor="ot-min">Target APY min (%)</label>
+              <label style={labelStyle} htmlFor="ot-min">Illustrative APY min (%)</label>
               <input id="ot-min" style={inputStyle} type="number" min={0} max={50} step={0.5} value={minPct} onChange={(e) => setMinPct(e.target.value)} />
             </div>
             <div>
-              <label style={labelStyle} htmlFor="ot-max">Target APY max (%)</label>
+              <label style={labelStyle} htmlFor="ot-max">Illustrative APY max (%)</label>
               <input id="ot-max" style={inputStyle} type="number" min={0} max={50} step={0.5} value={maxPct} onChange={(e) => setMaxPct(e.target.value)} />
             </div>
           </div>

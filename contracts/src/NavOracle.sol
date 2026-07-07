@@ -214,6 +214,8 @@ contract NavOracle is ProtocolRoleConstants {
             revert NavOracle__ConfidenceTooLow(confidenceBps, minConfidenceBps);
         }
         // Reverts if the portfolio does not exist.
+        // Existence check: getPortfolio reverts on unknown id (return unused by design).
+        // slither-disable-next-line unused-return
         portfolioRegistry.getPortfolio(portfolioId);
 
         _portfolioRisk[portfolioId] = RiskAttestation({

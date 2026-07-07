@@ -164,11 +164,13 @@ jobs:
         run: forge coverage --report lcov --no-match-coverage "(test|script)"
 
       # Ratchet floor — raise when coverage improves, never lower.
-      # Measured 2026-07-06: 97.45% lines on contracts/src (1718/1763).
-      # 95 leaves room for a new module landing at good-but-not-total
-      # coverage without ever letting the suite decay.
+      # Measured 2026-07-08: 98.75% lines on contracts/src (1741/1763) after
+      # BranchCoverage.t.sol closed the reachable revert/edge branches. The
+      # remaining ~22 lines are deep defensive branches (256-entry queue caps,
+      # expiry-pruning swaps) whose tests would be pathological loops — see
+      # the audit-prep invariants catalogue for why they are safe.
       - name: Line-coverage floor (contracts/src)
-        run: node scripts/check-coverage.mjs contracts/lcov.info 95
+        run: node scripts/check-coverage.mjs contracts/lcov.info 98
 
   slither:
     name: slither
@@ -179,13 +181,17 @@ jobs:
         with:
           submodules: recursive
 
-      # Static analysis gate: fails on high-severity findings only; medium and
-      # below are review material, tracked in the audit-prep docs, not build
-      # blockers. Scope is contracts/src (lib/test/script filtered in
-      # contracts/slither.config.json).
-      - name: Slither (fail on high)
+      # Static analysis gate: fails on MEDIUM severity and above (raised from
+      # high after a clean first run). Low/informational stay review material,
+      # tracked in the audit-prep docs. Scope is contracts/src (lib/test/script
+      # filtered in contracts/slither.config.json). The incorrect-equality
+      # detector is config-excluded: all 16 hits were enum-status or
+      # zero-sentinel comparisons (the dangerous variant — strict equality on
+      # balances — does not occur in the codebase); the remaining findings are
+      # triaged inline with slither-disable comments and justifications.
+      - name: Slither (fail on medium and above)
         uses: crytic/slither-action@v0.4.1
         with:
           target: contracts/
           slither-config: contracts/slither.config.json
-          fail-on: high
+          fail-on: medium

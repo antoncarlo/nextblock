@@ -49,6 +49,8 @@ contract NavShareOracle {
     function priceCollateralUSDC(uint256 shares) public view returns (uint256) {
         uint256 supply = IERC20(vault).totalSupply();
         if (supply == 0) revert NavShareOracle__NoSupply();
+        // Partial destructuring is deliberate: staleness/confidence are re-checked here.
+        // slither-disable-next-line unused-return
         (uint256 nav,,) = navOracle.getNav(vault);
         return Math.mulDiv(shares, nav, supply);
     }

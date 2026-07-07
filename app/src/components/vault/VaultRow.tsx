@@ -197,7 +197,7 @@ export function VaultRow({ vaultAddress, offeringTerms }: VaultRowProps) {
         </Link>
       </td>
 
-      {/* Target APY */}
+      {/* Illustrative APY */}
       <td style={{ padding: "18px 24px", textAlign: "right" }}>
         <Link href={`/app/vault/${vaultAddress}`} style={{ textDecoration: "none", display: "block" }}>
           <span

@@ -17,7 +17,7 @@ function VaultTableSkeleton() {
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr style={{ borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
-            {["Vault", "TVL", "Syndicate Manager", "Exposure", "Policies", "Target APY"].map((h) => (
+            {["Vault", "TVL", "Syndicate Manager", "Exposure", "Policies", "Illustrative APY"].map((h) => (
               <th key={h} style={{ padding: "12px 24px", fontFamily: "'Inter', sans-serif", fontSize: "11px", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "#9A9A9A", textAlign: "left" }}>{h}</th>
             ))}
           </tr>

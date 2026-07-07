@@ -304,7 +304,7 @@ contract LendingMarket is ProtocolRoleConstants, ReentrancyGuard {
                 totalBorrowAssets = borrowed + interest;
                 totalSupplyAssets += interest;
 
-                uint256 feeShares;
+                uint256 feeShares = 0;
                 if (protocolFeeBps != 0) {
                     uint256 feeAssets = Math.mulDiv(interest, protocolFeeBps, MAX_BPS);
                     if (feeAssets != 0) {
