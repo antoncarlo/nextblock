@@ -155,13 +155,13 @@ contract RedemptionQueue is ProtocolRoleConstants, ReentrancyGuard {
 
     // --- Keeper: settle ----------------------------------------------------
 
+    // slither-disable-start reentrancy-no-eth
     /// @notice Settle the current epoch once its notice period has elapsed.
     ///         Redeems whatever the vault can free now (capped at the vault's
     ///         own buffer via maxRedeem) and distributes it pro-rata. Advances
     ///         to a fresh epoch. Only ALLOCATOR_ROLE (keeper / Braino).
     /// @dev Protected by nonReentrant; the only external call is the trusted
     ///      protocol vault, and post-call writes merely open the next epoch.
-    /// slither-disable-next-line reentrancy-no-eth
     function settleEpoch() external nonReentrant onlyRole(ALLOCATOR_ROLE) {
         if (paused) revert RQ__QueuePaused();
         uint256 epochId = currentEpochId;
@@ -200,6 +200,7 @@ contract RedemptionQueue is ProtocolRoleConstants, ReentrancyGuard {
         currentEpochId = epochId + 1;
         currentEpochStart = uint64(block.timestamp);
     }
+    // slither-disable-end reentrancy-no-eth
 
     // --- LP: claim ---------------------------------------------------------
 
