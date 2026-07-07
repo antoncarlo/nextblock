@@ -1,6 +1,6 @@
 # Project status — what is real, what is advisory, what remains
 
-**Snapshot: 2026-07-06** (post PR #72). Update this file whenever a
+**Snapshot: 2026-07-08** (post PR #84). Update this file whenever a
 workstream lands or a mock becomes real — it supersedes the historical
 [NEXTBLOCK_GAP_MATRIX](../NEXTBLOCK_GAP_MATRIX.md) (2026-06-11 baseline) as
 the single answer to "where is the project?".
@@ -18,12 +18,12 @@ to trust, and what to build next.
 | 4 | `PolicyRegistry` | **Present** | Incl. one-way `lockRealTime()` — flips the whole protocol to the real block clock for truthful tests |
 | 5 | `AdapterRegistry` / `IRiskPoolAdapter` | **Partial** | Registry + interface only; no external risk-pool adapter integrated (needs a vendor decision) |
 | 6 | `PremiumDistributor` | **Present** | Real USDC `safeTransferFrom` splits. Single-vault-per-portfolio (MVP) |
-| 7 | `NavOracle` | **Partial — advisory** | Real attestation store + staleness guards; **feed is manual/mock** until Braino API exists |
+| 7 | `NavOracle` | **Partial — advisory** | Real attestation store + staleness guards + **publisher node** (reference canonical serializer, HMAC auth, fail-closed CLI — #83); **feed stays manual** until Braino sandbox keys exist |
 | 8 | `ClaimManager` / `ClaimReceipt` | **Present** | 3 verification types, liveness/dispute, committee approval, CEI payout |
 | 9 | `AIAssessor` | **Partial — advisory** | Store is real, can never approve/trigger payouts; Braino/WAVENURE feed not wired |
 | 10 | `VaultAllocator` | **Present** | Proposal+TTL, concentration caps, advisory NAV guard, fully curator-parametrized (demo split removed) |
 | 11 | `BordereauOracle` | **Partial — advisory** | UMA-style liveness (2d) + committee verify; **no economic bonds** (real UMA OOv3 is future work) |
-| 12 | `NextBlockLens` / frontend / indexer | **Present** | Lens read-model, 22 app routes, Goldsky subgraph (redemptions), Supabase backend, DataSource badges label anything mock-fed |
+| 12 | `NextBlockLens` / frontend / indexer | **Present** | Lens read-model, 24+ app routes, **full-protocol subgraph** (12 datasources + vault factory template, #76) + typed SDK with staleness (#77) — subgraph deploy owner-gated; Supabase backend; DataSource badges label anything mock-fed |
 | + | `RedemptionQueue` | **Present, live** | Periodic-window pro-rata LP exit + keeper workflow + subgraph |
 | + | `lending/` (LendingMarket + NavShareOracle) | **Present** | nbUSDC-collateral borrow market (guarded NAV attestation) |
 
@@ -71,6 +71,16 @@ to trust, and what to build next.
 | Site polish: legal pages (privacy/terms), SEO (robots/sitemap), data-retention purge, monthly backup workflow | #67 |
 | 100% NatSpec coverage of the contracts public surface + CI gate | #68 |
 | Docs author-attribution cleanup | #72 |
+| CI hard gates: gas ratchet (concrete tests), 95% coverage floor, Slither fail-on-high; monthly-backup phantom-run fix | #74, #82 |
+| Compliance copy (illustrative-APY labeling, honest exit copy) + env health check + zero-vendor uptime alert | #75 |
+| Full-protocol event indexer (12 datasources + vault factory template, 21 entities) | #76 |
+| Typed subgraph SDK with _meta staleness verdicts | #77 |
+| Curator-published vault offering terms (DB+API+console+UI labeling; replaces the static demo metadata) | #78 |
+| Claims finalization keeper (pays approved claims, finalizes elapsed assertions; 6h cron) | #79 |
+| Settlement reporting from indexed history (per-portfolio statements + vault rollup) | #80 |
+| Governance execution console (Safe→timelock batches, cast-parity operation ids) | #81 |
+| NAV oracle publisher node (canonical serializer, HMAC, fail-closed publish CLI) | #83 |
+| Read-path E2E suite (Playwright vs production build + live chain reads) + CI job | #84 |
 
 ## 4. Open scope (what to build next)
 
@@ -89,9 +99,7 @@ to trust, and what to build next.
 6. Performance fee (business decision) · multi-vault-per-portfolio splits ·
    secondary nbUSDC transfers UX (hook ready) · statement PDF export ·
    fiat on/off-ramp + qualified custody · external security audit + bounty ·
-   mainnet deployment plan (native USDC) · curator-supplied vault offering
-   terms (manager identity, strategy, target return) to replace the
-   presentational `app/src/config/vaultDisplay.ts` demo metadata
+   mainnet deployment plan (native USDC)
 
 ## 5. Update protocol for this file
 
