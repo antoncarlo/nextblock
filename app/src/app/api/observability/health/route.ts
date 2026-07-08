@@ -70,23 +70,36 @@ export async function GET() {
   //    someone hits it; the uptime monitor hitting THIS endpoint makes a
   //    missing critical env var loud within minutes of a bad deploy. Names
   //    only — never values.
-  // Each entry is satisfied by ANY of its alternative names — mirroring the
-  // actual lookup logic (supabase-server.ts accepts PUBLISHABLE or ANON).
+  // REQUIRED = absence breaks a real production path (server routes, crons,
+  // pinning). Each entry is satisfied by ANY of its alternative names.
   const requiredEnv: string[][] = [
     ['NEXT_PUBLIC_SUPABASE_URL'],
-    ['NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY', 'NEXT_PUBLIC_SUPABASE_ANON_KEY'],
     ['SUPABASE_SERVICE_ROLE_KEY'],
     ['CRON_SECRET'],
     ['PINATA_JWT'],
   ];
-  const missingEnv = requiredEnv
-    .filter((alternatives) => alternatives.every((name) => !process.env[name]))
-    .map((alternatives) => alternatives.join('|'));
+  // ADVISORY = worth configuring, but a documented fallback exists: the
+  // browser client ships the PUBLIC anon key as a literal (RLS is the
+  // security boundary), so its absence must not page anyone at 3am.
+  const advisoryEnv: string[][] = [
+    ['NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY', 'NEXT_PUBLIC_SUPABASE_ANON_KEY'],
+  ];
+  const missing = (groups: string[][]) =>
+    groups
+      .filter((alternatives) => alternatives.every((name) => !process.env[name]))
+      .map((alternatives) => alternatives.join('|'));
+  const missingEnv = missing(requiredEnv);
+  const advisoryMissing = missing(advisoryEnv);
   checks.push({
     name: 'env',
     ok: missingEnv.length === 0,
     ms: 0,
-    error: missingEnv.length > 0 ? `missing: ${missingEnv.join(', ')}` : null,
+    error:
+      missingEnv.length > 0
+        ? `missing: ${missingEnv.join(', ')}`
+        : advisoryMissing.length > 0
+          ? `advisory (fallback in use): ${advisoryMissing.join(', ')}`
+          : null,
   });
 
   const allOk = checks.every((c) => c.ok);
