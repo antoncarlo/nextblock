@@ -97,7 +97,11 @@ function readPlatformEnv(env: NodeJS.ProcessEnv): Array<{ name: string; present:
   return [
     { name: 'SUPABASE_SERVICE_ROLE_KEY', required: true, present: isPresent(env.SUPABASE_SERVICE_ROLE_KEY) },
     { name: 'NEXT_PUBLIC_SUPABASE_URL', required: true, present: isPresent(env.NEXT_PUBLIC_SUPABASE_URL) },
-    { name: 'NEXT_PUBLIC_SUPABASE_ANON_KEY', required: true, present: isPresent(env.NEXT_PUBLIC_SUPABASE_ANON_KEY) },
+    {
+      name: 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY|NEXT_PUBLIC_SUPABASE_ANON_KEY',
+      required: true,
+      present: isPresent(env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) || isPresent(env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
+    },
     { name: 'CRON_SECRET', required: true, present: isPresent(env.CRON_SECRET) },
     { name: 'BASE_SEPOLIA_RPC_URL', required: false, present: isPresent(env.BASE_SEPOLIA_RPC_URL) },
     { name: 'NEXT_PUBLIC_APP_URL', required: false, present: isPresent(env.NEXT_PUBLIC_APP_URL) },
