@@ -140,7 +140,11 @@ export function EmailSessionProvider({ children }: { children: ReactNode }) {
     const { error: signInError } = await supabase.auth.signInWithOtp({
       email: normalizedEmail,
       options: {
-        emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}/app/admin` : undefined,
+        // Signup is explicit: a new address gets an Auth account on the first
+        // magic link; the app profile is provisioned (roleless) on first /me.
+        shouldCreateUser: true,
+        emailRedirectTo:
+          typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined,
       },
     });
 

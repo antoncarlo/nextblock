@@ -73,7 +73,7 @@ export async function getEmailActorFromRequest(
     return { ok: false, status: 401, error: 'invalid email session' };
   }
 
-  const { data: profile, error: profileError } = await serviceClient
+  let { data: profile, error: profileError } = await serviceClient
     .from('app_users')
     .select('id,email,display_name,status')
     .eq('id', user.id)
@@ -83,7 +83,26 @@ export async function getEmailActorFromRequest(
     return { ok: false, status: 502, error: 'email profile lookup failed' };
   }
   if (!profile) {
-    return { ok: false, status: 403, error: 'email account is not authorized for this app' };
+    // Self-service registration: a CONFIRMED Auth user (magic link clicked /
+    // email verified) gets an app profile with ZERO roles. Privileges stay
+    // grant-only (admin/kyb roles come from the DB, never from signup) — this
+    // only makes the session visible so the account can apply, get notified
+    // and link a wallet later.
+    if (!user.email_confirmed_at) {
+      return { ok: false, status: 403, error: 'email address not confirmed yet' };
+    }
+    const { data: created, error: createError } = await serviceClient
+      .from('app_users')
+      .upsert(
+        { id: user.id, email: user.email.toLowerCase(), status: 'active' },
+        { onConflict: 'id' },
+      )
+      .select('id,email,display_name,status')
+      .single();
+    if (createError || !created) {
+      return { ok: false, status: 502, error: 'email profile provisioning failed' };
+    }
+    profile = created;
   }
   if (profile.status !== 'active') {
     return { ok: false, status: 403, error: 'email account is disabled' };
