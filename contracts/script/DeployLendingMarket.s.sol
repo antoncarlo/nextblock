@@ -30,12 +30,20 @@ contract DeployLendingMarket is Script {
     uint256 internal constant PROTOCOL_FEE_BPS = 1000;
     uint256 internal constant SLOPE_PER_SECOND_WAD = 1e10; // ~31.5% APR at full utilization
 
+    /// @dev CLI entrypoint: reads configuration from env, then delegates.
     function run() external {
+        runWithConfig(
+            vm.envUint("PRIVATE_KEY"), // testnet placeholder key only
+            vm.envOr("WRITE_DEPLOYMENT_JSON", true)
+        );
+    }
+
+    /// @dev Parameterized entrypoint: tests call this directly (no env races).
+    function runWithConfig(uint256 pk, bool writeJson) public {
         // 1. Fresh stack generation (chain-guarded inside DeployStack).
         stack = new DeployStack();
-        stack.run();
+        stack.runWithConfig(pk, writeJson, address(0));
 
-        uint256 pk = vm.envUint("PRIVATE_KEY"); // testnet placeholder key only
         address deployer = vm.addr(pk);
 
         vm.startBroadcast(pk);

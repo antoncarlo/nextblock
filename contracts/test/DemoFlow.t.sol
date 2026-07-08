@@ -22,10 +22,8 @@ contract DemoFlowTest is Test {
     uint256 constant ANVIL_PK = 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
 
     function setUp() public {
-        vm.setEnv("PRIVATE_KEY", vm.toString(ANVIL_PK));
-        vm.setEnv("WRITE_DEPLOYMENT_JSON", "false");
         demo = new DemoFlow();
-        demo.run(); // steps 1-12 incl. lens + conservation checks (revert = fail)
+        demo.runWithKey(ANVIL_PK, false); // steps 1-12 incl. lens + conservation checks (revert = fail)
     }
 
     // =========== CONSERVATION (exact, re-asserted independently) ===========

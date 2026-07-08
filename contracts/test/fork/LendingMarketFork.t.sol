@@ -45,11 +45,8 @@ contract LendingMarketForkTest is Test {
         vm.createSelectFork(rpc, PINNED_BLOCK);
         forked = true;
 
-        vm.setEnv("PRIVATE_KEY", vm.toString(ANVIL_PK));
-        vm.setEnv("WRITE_DEPLOYMENT_JSON", "false");
-
         deploy = new DeployLendingMarket();
-        deploy.run();
+        deploy.runWithConfig(ANVIL_PK, false);
 
         market = LendingMarket(deploy.market());
         vault = deploy.stack().vault();

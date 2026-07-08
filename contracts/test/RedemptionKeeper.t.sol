@@ -28,12 +28,8 @@ contract RedemptionKeeperTest is Test {
     address lp = makeAddr("keeperLp");
 
     function setUp() public {
-        vm.setEnv("PRIVATE_KEY", vm.toString(ANVIL_PK));
-        vm.setEnv("WRITE_DEPLOYMENT_JSON", "false");
-        vm.setEnv("REDEMPTION_EPOCH_SECONDS", "604800"); // 7 days
-
         deploy = new DeployRedemptionQueue();
-        deploy.run();
+        deploy.runWithConfig(ANVIL_PK, false, 7 days);
 
         queue = deploy.queue();
         vault = deploy.stack().vault();

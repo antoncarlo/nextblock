@@ -20,13 +20,11 @@ contract DeployRedemptionQueueTest is Test {
     DeployRedemptionQueue deploy;
 
     function setUp() public {
-        vm.setEnv("PRIVATE_KEY", vm.toString(ANVIL_PK));
-        vm.setEnv("WRITE_DEPLOYMENT_JSON", "false");
         deploy = new DeployRedemptionQueue();
     }
 
     function test_run_deploysWiresAndApprovesQueue() public {
-        deploy.run();
+        deploy.runWithConfig(ANVIL_PK, false, 7 days);
 
         RedemptionQueue queue = deploy.queue();
 
@@ -43,28 +41,22 @@ contract DeployRedemptionQueueTest is Test {
         assertTrue(roles.hasRole(roles.ALLOCATOR_ROLE(), ANVIL_DEPLOYER), "keeper lacks ALLOCATOR_ROLE");
     }
 
-    /// @dev Epoch config is exercised in a SINGLE sequential test: Foundry runs
-    ///      test functions in parallel within one process, and REDEMPTION_EPOCH_SECONDS
-    ///      is process-global mutable state — splitting baseline vs override across
-    ///      two parallel tests would race. Sequential reads here are deterministic.
+    /// @dev Baseline and override epoch config, parameterized — no env, so no
+    ///      race with parallel suites (vm.setEnv is process-global).
     function test_run_epochConfig_baselineThenOverride() public {
-        // Baseline: env set to the 7-day institutional cadence.
-        vm.setEnv("REDEMPTION_EPOCH_SECONDS", "604800");
         DeployRedemptionQueue d7 = new DeployRedemptionQueue();
-        d7.run();
+        d7.runWithConfig(ANVIL_PK, false, 7 days);
         assertEq(d7.queue().epochDuration(), 7 days, "baseline 7-day epoch");
 
-        // Override: a shorter staging-demo cadence.
-        vm.setEnv("REDEMPTION_EPOCH_SECONDS", "86400");
         DeployRedemptionQueue d1 = new DeployRedemptionQueue();
-        d1.run();
-        assertEq(d1.queue().epochDuration(), 1 days, "env epoch override");
+        d1.runWithConfig(ANVIL_PK, false, 1 days);
+        assertEq(d1.queue().epochDuration(), 1 days, "epoch override");
     }
 
     function test_run_rejectsUnexpectedChain() public {
         // The underlying stack guards the chain: mainnet must be refused.
         vm.chainId(1);
         vm.expectRevert();
-        deploy.run();
+        deploy.runWithConfig(ANVIL_PK, false, 7 days);
     }
 }

@@ -32,13 +32,22 @@ contract DeployRedemptionQueue is Script {
     ///         Bounded by the queue itself to [1 hours, 90 days].
     uint64 public epochDuration;
 
+    /// @dev CLI entrypoint: reads configuration from env, then delegates.
     function run() external {
+        runWithConfig(
+            vm.envUint("PRIVATE_KEY"), // testnet placeholder key only
+            vm.envOr("WRITE_DEPLOYMENT_JSON", true),
+            uint64(vm.envOr("REDEMPTION_EPOCH_SECONDS", uint256(7 days)))
+        );
+    }
+
+    /// @dev Parameterized entrypoint: tests call this directly (no env races).
+    function runWithConfig(uint256 pk, bool writeJson, uint64 epochDuration_) public {
         // 1. Fresh stack generation (chain-guarded inside DeployStack).
         stack = new DeployStack();
-        stack.run();
+        stack.runWithConfig(pk, writeJson, address(0));
 
-        uint256 pk = vm.envUint("PRIVATE_KEY"); // testnet placeholder key only
-        epochDuration = uint64(vm.envOr("REDEMPTION_EPOCH_SECONDS", uint256(7 days)));
+        epochDuration = epochDuration_;
 
         vm.startBroadcast(pk);
 

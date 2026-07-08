@@ -89,12 +89,27 @@ contract DeployStack is Script, ProtocolRoleConstants {
     address public oracleNodeAddr;
     address public cedantAddr;
     address public kycOperatorAddr;
+    /// @dev Optional settlement-asset override (set by runWithConfig; the CLI
+    ///      path feeds it from USDC_ADDRESS).
+    address internal usdcOverrideAddr;
 
+    /// @dev CLI entrypoint: reads configuration from env, then delegates.
     function run() external {
+        runWithConfig(
+            vm.envUint("PRIVATE_KEY"), // testnet placeholder key only
+            vm.envOr("WRITE_DEPLOYMENT_JSON", true),
+            vm.envOr("USDC_ADDRESS", address(0))
+        );
+    }
+
+    /// @dev Parameterized entrypoint: tests call this directly so no test ever
+    ///      touches process-global env (vm.setEnv races across parallel suites
+    ///      — a foreign USDC_ADDRESS made lens verification fail flakily).
+    function runWithConfig(uint256 pk, bool writeJson, address usdcOverride) public {
         _guardChain();
 
-        uint256 pk = vm.envUint("PRIVATE_KEY"); // testnet placeholder key only
         deployer = vm.addr(pk);
+        usdcOverrideAddr = usdcOverride;
         _loadRoleConfig();
 
         vm.startBroadcast(pk);
@@ -107,7 +122,7 @@ contract DeployStack is Script, ProtocolRoleConstants {
 
         _verifyDeployment();
 
-        if (vm.envOr("WRITE_DEPLOYMENT_JSON", true)) {
+        if (writeJson) {
             _writeAddresses();
         }
         _logSummary();
@@ -133,9 +148,9 @@ contract DeployStack is Script, ProtocolRoleConstants {
     }
 
     function _deployCore() internal {
-        // Settlement asset: reuse USDC_ADDRESS if configured AND deployed,
+        // Settlement asset: reuse the configured USDC if it is deployed,
         // otherwise deploy the staging MockUSDC faucet.
-        address usdcEnv = vm.envOr("USDC_ADDRESS", address(0));
+        address usdcEnv = usdcOverrideAddr;
         if (usdcEnv != address(0) && usdcEnv.code.length > 0) {
             usdc = MockUSDC(usdcEnv);
         } else {

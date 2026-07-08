@@ -20,14 +20,12 @@ contract DeployStackTest is Test {
     address constant ANVIL_DEPLOYER = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
 
     function setUp() public {
-        vm.setEnv("PRIVATE_KEY", vm.toString(ANVIL_PK));
-        vm.setEnv("WRITE_DEPLOYMENT_JSON", "false"); // tests must not write files
         deploy = new DeployStack();
     }
 
     function test_run_deploysWiresAndVerifies() public {
         // chainid in forge tests is 31337: allowed by the guard.
-        deploy.run();
+        deploy.runWithConfig(ANVIL_PK, false, address(0));
 
         ProtocolRoles roles = deploy.protocolRoles();
         address deployer = deploy.deployer();
@@ -66,23 +64,21 @@ contract DeployStackTest is Test {
         // Mainnet (1) and Base mainnet (8453) must both be refused: staging only.
         vm.chainId(1);
         vm.expectRevert(abi.encodeWithSelector(DeployStack.DeployStack__UnexpectedChain.selector, 1));
-        deploy.run();
+        deploy.runWithConfig(ANVIL_PK, false, address(0));
 
         vm.chainId(8453);
         vm.expectRevert(abi.encodeWithSelector(DeployStack.DeployStack__UnexpectedChain.selector, 8453));
-        deploy.run();
+        deploy.runWithConfig(ANVIL_PK, false, address(0));
     }
 
     function test_run_reusesConfiguredUsdc() public {
         MockUSDC existing = new MockUSDC();
-        vm.setEnv("USDC_ADDRESS", vm.toString(address(existing)));
-        deploy.run();
+        deploy.runWithConfig(ANVIL_PK, false, address(existing));
         assertEq(address(deploy.usdc()), address(existing));
-        vm.setEnv("USDC_ADDRESS", vm.toString(address(0))); // reset for other tests
     }
 
     function test_mockUSDC_faucetCap() public {
-        deploy.run();
+        deploy.runWithConfig(ANVIL_PK, false, address(0));
         MockUSDC usdc = deploy.usdc();
         address user = makeAddr("faucetUser");
         uint256 cap = usdc.FAUCET_CAP();
