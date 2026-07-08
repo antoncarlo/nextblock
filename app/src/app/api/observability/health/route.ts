@@ -70,14 +70,18 @@ export async function GET() {
   //    someone hits it; the uptime monitor hitting THIS endpoint makes a
   //    missing critical env var loud within minutes of a bad deploy. Names
   //    only — never values.
-  const requiredEnv = [
-    'NEXT_PUBLIC_SUPABASE_URL',
-    'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-    'SUPABASE_SERVICE_ROLE_KEY',
-    'CRON_SECRET',
-    'PINATA_JWT',
+  // Each entry is satisfied by ANY of its alternative names — mirroring the
+  // actual lookup logic (supabase-server.ts accepts PUBLISHABLE or ANON).
+  const requiredEnv: string[][] = [
+    ['NEXT_PUBLIC_SUPABASE_URL'],
+    ['NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY', 'NEXT_PUBLIC_SUPABASE_ANON_KEY'],
+    ['SUPABASE_SERVICE_ROLE_KEY'],
+    ['CRON_SECRET'],
+    ['PINATA_JWT'],
   ];
-  const missingEnv = requiredEnv.filter((name) => !process.env[name]);
+  const missingEnv = requiredEnv
+    .filter((alternatives) => alternatives.every((name) => !process.env[name]))
+    .map((alternatives) => alternatives.join('|'));
   checks.push({
     name: 'env',
     ok: missingEnv.length === 0,
