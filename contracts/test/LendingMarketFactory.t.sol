@@ -31,10 +31,8 @@ contract LendingMarketFactoryTest is Test {
     LendingMarketFactory factory;
 
     function setUp() public {
-        vm.setEnv("PRIVATE_KEY", vm.toString(ANVIL_PK));
-        vm.setEnv("WRITE_DEPLOYMENT_JSON", "false");
         deploy = new DeployStack();
-        deploy.run();
+        deploy.runWithConfig(ANVIL_PK, false, address(0));
 
         vault = deploy.vault();
         navOracle = deploy.navOracle();

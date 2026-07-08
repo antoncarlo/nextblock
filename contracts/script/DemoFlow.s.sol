@@ -84,13 +84,21 @@ contract DemoFlow is Script, ProtocolRoleConstants {
     uint256 internal preVault;
     uint256 internal preDistributor;
 
+    /// @dev CLI entrypoint: reads configuration from env, then delegates.
     function run() external {
+        runWithKey(
+            vm.envUint("PRIVATE_KEY"), // testnet placeholder key only
+            vm.envOr("WRITE_DEPLOYMENT_JSON", true)
+        );
+    }
+
+    /// @dev Parameterized entrypoint: tests call this directly (no env races).
+    function runWithKey(uint256 pk, bool writeJson) public {
         // ---- Step 1: fresh staging stack (guarded, wired, verified) ----
         deployStack = new DeployStack();
-        deployStack.run();
+        deployStack.runWithConfig(pk, writeJson, address(0));
         _bindStack();
 
-        uint256 pk = vm.envUint("PRIVATE_KEY"); // testnet placeholder key only
         actor = vm.addr(pk);
 
         preActor = usdc.balanceOf(actor);

@@ -18,13 +18,11 @@ contract DeployLendingMarketTest is Test {
     DeployLendingMarket deploy;
 
     function setUp() public {
-        vm.setEnv("PRIVATE_KEY", vm.toString(ANVIL_PK));
-        vm.setEnv("WRITE_DEPLOYMENT_JSON", "false");
         deploy = new DeployLendingMarket();
     }
 
     function test_run_deploysWiresAndApprovesMarket() public {
-        deploy.run();
+        deploy.runWithConfig(ANVIL_PK, false);
 
         LendingMarketFactory factory = deploy.factory();
         address market = deploy.market();
@@ -49,6 +47,6 @@ contract DeployLendingMarketTest is Test {
         // The underlying stack guards the chain: mainnet must be refused.
         vm.chainId(1);
         vm.expectRevert();
-        deploy.run();
+        deploy.runWithConfig(ANVIL_PK, false);
     }
 }
