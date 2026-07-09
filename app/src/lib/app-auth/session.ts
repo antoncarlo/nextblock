@@ -73,11 +73,12 @@ export async function getEmailActorFromRequest(
     return { ok: false, status: 401, error: 'invalid email session' };
   }
 
-  let { data: profile, error: profileError } = await serviceClient
+  const { data: existingProfile, error: profileError } = await serviceClient
     .from('app_users')
     .select('id,email,display_name,status')
     .eq('id', user.id)
     .maybeSingle();
+  let profile = existingProfile;
 
   if (profileError) {
     return { ok: false, status: 502, error: 'email profile lookup failed' };
