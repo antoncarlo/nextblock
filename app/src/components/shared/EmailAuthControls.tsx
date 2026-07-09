@@ -110,13 +110,19 @@ export function EmailAuthControls() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="hidden lg:flex items-center gap-2" style={{ position: 'relative' }}>
+    <>
+      {/* Mobile/tablet: the inline form is hidden below lg — route to the
+          full sign-in / registration page instead of a dead end. */}
+      <a href="/auth" className="lg:hidden" style={pillStyle} aria-label="Accedi o registrati via email">
+        Email
+      </a>
+      <form onSubmit={handleSubmit} className="hidden lg:flex items-center gap-2" style={{ position: 'relative' }}>
       <input
         type="email"
         value={email}
         onChange={event => setEmail(event.target.value)}
-        placeholder="Email admin"
-        aria-label="Email admin"
+        placeholder="Email"
+        aria-label="Email"
         style={{
           width: '170px',
           border: '1px solid rgba(27,58,107,0.16)',
@@ -132,8 +138,8 @@ export function EmailAuthControls() {
         type="password"
         value={password}
         onChange={event => setPassword(event.target.value)}
-        placeholder="Password opz."
-        aria-label="Password admin opzionale"
+        placeholder="Password (opz.)"
+        aria-label="Password opzionale"
         autoComplete="current-password"
         style={{
           width: '125px',
@@ -184,6 +190,7 @@ export function EmailAuthControls() {
           {localError || error || (lastMode === 'password' ? 'Accesso email completato.' : 'Magic link inviato. Controlla la casella email.')}
         </div>
       )}
-    </form>
+      </form>
+    </>
   );
 }
