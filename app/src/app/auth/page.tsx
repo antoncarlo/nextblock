@@ -3,6 +3,7 @@ import { FormEvent, Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useEmailSession } from '@/hooks/useEmailSession';
+import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Email sign-in / registration gateway.
@@ -42,17 +43,94 @@ function AuthPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect') ?? '/app';
-  const { isEmailAuthenticated, signInWithEmail } = useEmailSession();
+  const { isEmailAuthenticated, profile, signInWithEmail } = useEmailSession();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [savingPassword, setSavingPassword] = useState(false);
+  const [passwordSaved, setPasswordSaved] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+
+  async function handleSetPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (newPassword.length < 8) {
+      setPasswordError('La password deve avere almeno 8 caratteri.');
+      return;
+    }
+    setSavingPassword(true);
+    setPasswordError(null);
+    const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+    setSavingPassword(false);
+    if (updateError) {
+      setPasswordError(updateError.message);
+      return;
+    }
+    setPasswordSaved(true);
+    setNewPassword('');
+  }
 
   if (isEmailAuthenticated) {
-    router.replace(redirect);
-    return null;
+    return (
+      <div style={{ minHeight: '100vh', backgroundColor: '#FAFAF8', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
+        <div className="card-institutional" style={{ width: '100%', maxWidth: 440, padding: '36px 32px' }}>
+          <p className="section-label" style={{ marginBottom: 6 }}>NextBlock account</p>
+          <h1 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 24, fontWeight: 400, color: '#0F1218', marginBottom: 8 }}>
+            You are signed in
+          </h1>
+          <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, color: '#6B7280', lineHeight: 1.6, marginBottom: 20 }}>
+            {profile?.user.email ?? 'Email account active.'} — the email identity tracks applications
+            and notifications; on-chain actions still require an authorized wallet.
+          </p>
+
+          <form onSubmit={handleSetPassword} style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
+            <label style={labelStyle} htmlFor="auth-new-password">
+              {passwordSaved ? 'Password saved — you can now sign in with it' : 'Set a password (optional, skips the magic link next time)'}
+            </label>
+            <input
+              id="auth-new-password"
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="At least 8 characters"
+              style={inputStyle}
+              autoComplete="new-password"
+            />
+            {passwordError && (
+              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, color: '#991B1B', margin: 0 }}>{passwordError}</p>
+            )}
+            <button
+              type="submit"
+              disabled={savingPassword || newPassword.length === 0}
+              style={{
+                padding: '11px 22px',
+                background: savingPassword || newPassword.length === 0 ? '#94A3B8' : 'rgba(27,58,107,0.08)',
+                color: savingPassword || newPassword.length === 0 ? '#FFFFFF' : '#1B3A6B',
+                borderRadius: 50,
+                fontFamily: "'Inter', sans-serif",
+                fontSize: 13,
+                fontWeight: 600,
+                border: '1px solid rgba(27,58,107,0.25)',
+                cursor: savingPassword ? 'wait' : 'pointer',
+              }}
+            >
+              {savingPassword ? 'Saving…' : passwordSaved ? 'Update password' : 'Save password'}
+            </button>
+          </form>
+
+          <button
+            type="button"
+            onClick={() => router.replace(redirect)}
+            style={{ width: '100%', padding: '13px 24px', background: '#1B3A6B', color: '#FFFFFF', borderRadius: 50, fontFamily: "'Inter', sans-serif", fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer' }}
+          >
+            Continue to the app →
+          </button>
+        </div>
+      </div>
+    );
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
