@@ -23,8 +23,26 @@ test('auth callback shows the verifying state, then the retry path on a dead lin
   await expect(page.getByRole('link', { name: /request a new link/i })).toBeVisible({ timeout: 15_000 });
 });
 
-test('header exposes an email entry point on mobile', async ({ page }) => {
+test('header shows a single Sign in entry on desktop', async ({ page }) => {
+  await page.goto('/app');
+  const signIn = page.getByRole('link', { name: /sign in or register/i });
+  await expect(signIn).toBeVisible();
+  // Standard-site pattern: exactly one entry point, no inline credential
+  // fields in the header (credentials live on /auth).
+  await expect(signIn).toHaveCount(1);
+  await expect(page.locator('header input[type="email"]')).toHaveCount(0);
+  await expect(page.locator('header input[type="password"]')).toHaveCount(0);
+});
+
+test('header shows the same single Sign in entry on mobile', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/app');
-  await expect(page.getByRole('link', { name: /accedi o registrati via email/i })).toBeVisible();
+  await expect(page.getByRole('link', { name: /sign in or register/i })).toBeVisible();
+});
+
+test('Sign in leads to the auth gateway', async ({ page }) => {
+  await page.goto('/app');
+  await page.getByRole('link', { name: /sign in or register/i }).click();
+  await expect(page).toHaveURL(/\/auth/);
+  await expect(page.getByRole('heading', { name: 'Sign in or register' })).toBeVisible();
 });

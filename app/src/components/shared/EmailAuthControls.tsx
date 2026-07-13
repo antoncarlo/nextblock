@@ -1,7 +1,16 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import Link from 'next/link';
 import { useEmailSession } from '@/hooks/useEmailSession';
+
+/**
+ * Header email-account control — the standard-site pattern:
+ *   signed out → ONE "Sign in" button, linking to the full /auth gateway
+ *                (magic link, optional password, self-service registration);
+ *   signed in  → account pill with the email and a dropdown (roles, account
+ *                management, sign out).
+ * No inline credential form in the header: credentials belong to /auth.
+ */
 
 const pillStyle: React.CSSProperties = {
   display: 'inline-flex',
@@ -22,39 +31,14 @@ export function EmailAuthControls() {
     profile,
     loading,
     profileLoading,
-    error,
     isEmailAuthenticated,
     isAppAdmin,
     canOperateKyb,
-    signInWithEmail,
     signOutEmail,
   } = useEmailSession();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [sent, setSent] = useState(false);
-  const [lastMode, setLastMode] = useState<'password' | 'magic_link' | null>(null);
-  const [localError, setLocalError] = useState<string | null>(null);
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setSubmitting(true);
-    setLocalError(null);
-    const result = await signInWithEmail(email, password);
-    setSubmitting(false);
-    if (!result.ok) {
-      setLocalError(result.error ?? 'Impossibile completare l’accesso email.');
-      return;
-    }
-    setSent(true);
-    setLastMode(result.mode ?? (password ? 'password' : 'magic_link'));
-    if (result.mode === 'password') {
-      setPassword('');
-    }
-  }
 
   if (loading) {
-    return <span style={pillStyle}>Email…</span>;
+    return <span style={pillStyle}>…</span>;
   }
 
   if (isEmailAuthenticated && profile) {
@@ -87,6 +71,25 @@ export function EmailAuthControls() {
             Ruoli: {profile.roles.join(', ') || 'nessuno'}
             {profileLoading ? ' · aggiornamento…' : ''}
           </p>
+          <Link
+            href="/auth"
+            style={{
+              display: 'block',
+              width: '100%',
+              textAlign: 'center',
+              border: '1px solid rgba(27,58,107,0.25)',
+              background: 'rgba(27,58,107,0.06)',
+              borderRadius: '10px',
+              padding: '8px 10px',
+              fontSize: '12px',
+              fontWeight: 600,
+              color: '#1B3A6B',
+              textDecoration: 'none',
+              marginBottom: '8px',
+            }}
+          >
+            Gestisci account / password
+          </Link>
           <button
             type="button"
             onClick={() => void signOutEmail()}
@@ -109,88 +112,10 @@ export function EmailAuthControls() {
     );
   }
 
+  // Signed out: one entry point, every breakpoint — like every other site.
   return (
-    <>
-      {/* Mobile/tablet: the inline form is hidden below lg — route to the
-          full sign-in / registration page instead of a dead end. */}
-      <a href="/auth" className="lg:hidden" style={pillStyle} aria-label="Accedi o registrati via email">
-        Email
-      </a>
-      <form onSubmit={handleSubmit} className="hidden lg:flex items-center gap-2" style={{ position: 'relative' }}>
-      <input
-        type="email"
-        value={email}
-        onChange={event => setEmail(event.target.value)}
-        placeholder="Email"
-        aria-label="Email"
-        style={{
-          width: '170px',
-          border: '1px solid rgba(27,58,107,0.16)',
-          borderRadius: '999px',
-          padding: '8px 12px',
-          fontSize: '12px',
-          color: '#111827',
-          background: '#FFFFFF',
-          outline: 'none',
-        }}
-      />
-      <input
-        type="password"
-        value={password}
-        onChange={event => setPassword(event.target.value)}
-        placeholder="Password (opz.)"
-        aria-label="Password opzionale"
-        autoComplete="current-password"
-        style={{
-          width: '125px',
-          border: '1px solid rgba(27,58,107,0.16)',
-          borderRadius: '999px',
-          padding: '8px 12px',
-          fontSize: '12px',
-          color: '#111827',
-          background: '#FFFFFF',
-          outline: 'none',
-        }}
-      />
-      <button
-        type="submit"
-        disabled={submitting}
-        style={{
-          border: 'none',
-          borderRadius: '999px',
-          padding: '8px 12px',
-          fontSize: '12px',
-          fontWeight: 700,
-          color: '#FFFFFF',
-          background: submitting ? '#94A3B8' : '#1B3A6B',
-          cursor: submitting ? 'not-allowed' : 'pointer',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {submitting ? 'Invio…' : 'Entra'}
-      </button>
-      {(sent || localError || error) && (
-        <div
-          style={{
-            position: 'absolute',
-            right: 0,
-            top: 'calc(100% + 8px)',
-            width: '260px',
-            background: '#FFFFFF',
-            border: '1px solid #E8E4DC',
-            borderRadius: '12px',
-            padding: '10px 12px',
-            boxShadow: '0 10px 32px rgba(27,58,107,0.14)',
-            fontSize: '12px',
-            lineHeight: 1.5,
-            color: localError || error ? '#991B1B' : '#166534',
-            zIndex: 1000,
-          }}
-        >
-          {localError || error || (lastMode === 'password' ? 'Accesso email completato.' : 'Magic link inviato. Controlla la casella email.')}
-        </div>
-      )}
-      </form>
-    </>
+    <Link href="/auth" style={pillStyle} aria-label="Sign in or register">
+      Sign in
+    </Link>
   );
 }
