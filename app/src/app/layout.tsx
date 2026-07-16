@@ -8,6 +8,11 @@ export const metadata: Metadata = {
   title: 'NextBlock | Tokenized Insurance Vaults',
   description:
     'Open infrastructure for tokenized insurance. Diversified vaults backed by on-chain, oracle, and off-chain verified policies.',
+  // Base App domain-ownership verification (renders as
+  // <meta name="base:app_id" content="…"> in the homepage head).
+  other: {
+    'base:app_id': '6a596b7558aaa84e3d067546',
+  },
 };
 
 export default function RootLayout({
