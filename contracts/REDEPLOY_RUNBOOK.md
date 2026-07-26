@@ -17,7 +17,7 @@ chats, or files in this repo. All commands below run from `contracts/`.
 
 ```bash
 forge build                 # compiles clean on main
-forge test                  # 558 passed / 0 failed expected
+forge test                  # 592 passed / 0 failed expected
 forge fmt --check           # no drift
 ```
 
@@ -79,6 +79,36 @@ forge script script/GovernanceCheck.s.sol --rpc-url "$BASE_SEPOLIA_RPC_URL"
 ```
 
 Run again later with `RENOUNCE_DEPLOYER=true` once the Safe flow is rehearsed.
+
+## 3b. (Optional) Provision capacity a syndicate can claim
+
+Every vault the deploy script creates already has its syndicate. To have a
+vault appear under **Vaults awaiting curation** — the take-over surface — the
+owner provisions one with no manager. It accepts capital immediately but no
+policy can be written to it until a syndicate is appointed.
+
+```bash
+VAULT_FACTORY=$(python -c "import json;print(json.load(open('deployments/84532-staging.json'))['vaultFactory'])")
+
+cast send "$VAULT_FACTORY" \
+  "createUnassignedVault(string,string,string,uint256,uint256)" \
+  "NextBlock Open Capacity" "nxbOPEN" "Open Capacity" 2000 0 \
+  --rpc-url "$BASE_SEPOLIA_RPC_URL" --private-key "$PRIVATE_KEY"
+```
+
+Appointment is a separate, owner-gated, **one-way** call — an incumbent
+syndicate is never displaced:
+
+```bash
+cast send <vault> "assignSyndicate(address)" <syndicate> \
+  --rpc-url "$BASE_SEPOLIA_RPC_URL" --private-key "$PRIVATE_KEY"
+
+cast call <vault> "isAwaitingCuration()(bool)" --rpc-url "$BASE_SEPOLIA_RPC_URL"  # false after
+```
+
+In the app, a Syndicate does not run this: it presses **Request curation**,
+which hands the encoded operation to the governance console for the owner to
+schedule through the Safe.
 
 ## 4. Regenerate the frontend addressbook + ship it
 

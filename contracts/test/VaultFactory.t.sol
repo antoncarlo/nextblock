@@ -333,4 +333,59 @@ contract VaultFactoryTest is Test {
             portfolioRegistry: address(portfolioRegistry)
         });
     }
+
+    // --- Vaults provisioned without a syndicate ---
+
+    function test_createUnassignedVaultLeavesTheManagerSlotEmpty() public {
+        vm.prank(admin);
+        address vault = factory.createUnassignedVault("NextBlock Open Capacity", "nxbOPEN", "Open Capacity", 2000, 0);
+
+        assertTrue(factory.isVault(vault), "tracked like any other vault");
+        assertEq(InsuranceVault(vault).vaultManager(), address(0), "no syndicate");
+        assertTrue(InsuranceVault(vault).isAwaitingCuration(), "claimable");
+    }
+
+    function test_unassignedVaultAppearsInTheVaultList() public {
+        uint256 before = factory.getVaultCount();
+        vm.prank(admin);
+        address vault = factory.createUnassignedVault("Open", "nxbOPEN", "Open", 2000, 0);
+
+        assertEq(factory.getVaultCount(), before + 1);
+        address[] memory all = factory.getVaults();
+        assertEq(all[all.length - 1], vault, "listed for everyone to see");
+    }
+
+    function test_onlyOwnerCanProvisionAnUnassignedVault() public {
+        // A curator can create a vault it manages, but cannot mint free capacity
+        // for someone else to claim.
+        vm.prank(managerA);
+        vm.expectRevert();
+        factory.createUnassignedVault("Open", "nxbOPEN", "Open", 2000, 0);
+    }
+
+    function test_unassignedVaultTakesCapitalButWritesNoPolicy() public {
+        vm.prank(admin);
+        address vault = factory.createUnassignedVault("Open", "nxbOPEN", "Open", 2000, 0);
+
+        // Nobody passes the manager gate while the slot is empty - not even a
+        // curator in good standing. Capacity can be funded; risk cannot be
+        // written until a syndicate is appointed.
+        vm.prank(managerA);
+        vm.expectRevert(abi.encodeWithSelector(InsuranceVault.InsuranceVault__UnauthorizedCaller.selector, managerA));
+        InsuranceVault(vault).addPolicy(1, 5_000);
+    }
+
+    function test_provisionedVaultCanBeTakenIntoCurationAndOnlyOnce() public {
+        vm.prank(admin);
+        address vault = factory.createUnassignedVault("Open", "nxbOPEN", "Open", 2000, 0);
+
+        vm.prank(admin);
+        InsuranceVault(vault).assignSyndicate(managerA);
+        assertEq(InsuranceVault(vault).vaultManager(), managerA);
+
+        // The slot is spent: a second syndicate cannot displace the first.
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(InsuranceVault.InsuranceVault__AlreadyCurated.selector, managerA));
+        InsuranceVault(vault).assignSyndicate(managerB);
+    }
 }

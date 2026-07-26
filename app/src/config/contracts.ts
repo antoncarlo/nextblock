@@ -234,6 +234,45 @@ export const VAULT_FACTORY_ABI = [
   },
   {
     "type": "function",
+    "name": "createUnassignedVault",
+    "inputs": [
+      {
+        "name": "name",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "symbol",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "vaultName",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "bufferRatioBps_",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "managementFeeBps_",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "vault",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "createVault",
     "inputs": [
       {
