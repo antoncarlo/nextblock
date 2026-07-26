@@ -6,6 +6,8 @@ import { useVaultPolicyIds } from "@/hooks/useVaultPolicies";
 import { useGlobalPoliciesData } from "@/hooks/useVaultPolicies";
 import { useAccount } from "wagmi";
 import { VerificationDot } from "@/components/shared/VerificationBadge";
+import { useOfferingTerms } from "@/hooks/useOfferingTerms";
+import { resolveVaultDisplay } from "@/config/vaultDisplay";
 import {
   formatUSDCCompact,
   getSharePriceNumber,
@@ -14,46 +16,12 @@ import {
   shortenAddress,
 } from "@/lib/formatting";
 
-// Static metadata for vaults (not stored on-chain)
-const VAULT_DISPLAY: Record<
-  string,
-  {
-    manager: string;
-    strategy: string;
-    riskLevel: string;
-    riskColor: string;
-    targetApy: string;
-  }
-> = {
-  "Balanced Core": {
-    manager: "NextBlock Core Team",
-    strategy: "Diversified across all verification types",
-    riskLevel: "Moderate",
-    riskColor: "text-amber-600 bg-amber-50",
-    targetApy: "8-12%",
-  },
-  "DeFi Alpha": {
-    manager: "AlphaRe Capital",
-    strategy: "Automated-only, no off-chain verification",
-    riskLevel: "Higher",
-    riskColor: "text-orange-600 bg-orange-50",
-    targetApy: "10-14%",
-  },
-};
-
-function getVaultDisplay(name: string) {
-  // Match by substring in case vault name is different
-  for (const [key, value] of Object.entries(VAULT_DISPLAY)) {
-    if (name.includes(key)) return value;
-  }
-  return {
-    manager: "Vault Manager",
-    strategy: "Custom strategy",
-    riskLevel: "Moderate",
-    riskColor: "text-amber-600 bg-amber-50",
-    targetApy: "8-14%",
-  };
-}
+// Display metadata comes from @/config/vaultDisplay, the same source the market
+// table reads. This file used to carry its own copy of the table — two hardcoded
+// sets of numbers for the same vaults, already drifted: the local copy still
+// keyed off "DeFi Alpha", a vault name that no longer exists. Worse, it never
+// consulted the published offering terms, so real terms entered by a curator
+// would not have reached this card at all.
 
 interface VaultCardProps {
   vaultAddress: `0x${string}`;
@@ -65,6 +33,7 @@ export function VaultCard({ vaultAddress }: VaultCardProps) {
   const { data: policyIds } = useVaultPolicyIds(vaultAddress);
   const { data: globalPolicies } = useGlobalPoliciesData(policyIds);
   const { data: userShares } = useUserShares(vaultAddress, userAddress);
+  const { terms } = useOfferingTerms();
 
   if (isLoading) {
     return <VaultCardSkeleton />;
@@ -99,7 +68,7 @@ export function VaultCard({ vaultAddress }: VaultCardProps) {
       bigint,
     ];
 
-  const display = getVaultDisplay(name);
+  const display = resolveVaultDisplay(name, terms.get(vaultAddress.toLowerCase()));
   const sharePrice = getSharePriceNumber(assets, shares);
   const hasPosition = userShares !== undefined && userShares > 0n;
 
@@ -123,8 +92,11 @@ export function VaultCard({ vaultAddress }: VaultCardProps) {
             <h3 className="text-lg font-semibold text-gray-900">{name}</h3>
             <p className="mt-0.5 text-sm text-gray-500">{display.manager}</p>
           </div>
+          {/* The shared config carries the grade colour as a hex, not as Tailwind
+              classes, so the tint is applied inline. */}
           <span
-            className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${display.riskColor}`}
+            className="rounded-full px-2.5 py-0.5 text-xs font-medium"
+            style={{ color: display.riskColor, background: `${display.riskColor}14` }}
           >
             {display.riskLevel}
           </span>

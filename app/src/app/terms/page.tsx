@@ -51,6 +51,7 @@ export default function TermsPage() {
         },
         {
           heading: '5. Risk acknowledgment',
+          id: 'risk',
           body: [
             'By using the platform you acknowledge and accept, without limitation:',
             '• Smart contract risk: contracts may contain defects; the protocol is unaudited at this stage; on-chain transactions are irreversible.',
@@ -102,7 +103,7 @@ export default function TermsPage() {
         {
           heading: '12. Changes and contact',
           body: [
-            'These Terms may change as the protocol approaches production; material changes will be reflected on this page and in the repository document with a new date. Questions: see the security and operations contacts in the public repository (github.com/antoncarlo/nextblock).',
+            'These Terms may change as the protocol approaches production; material changes will be reflected on this page with a new date. Questions: nextblock@financier.com.',
           ],
         },
       ]}

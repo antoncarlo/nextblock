@@ -12,6 +12,8 @@ export interface LegalSection {
   heading?: string;
   /** Paragraphs; a leading "• " renders as a list item. */
   body: string[];
+  /** Anchor id, so a section can be linked to directly (e.g. /terms#risk). */
+  id?: string;
 }
 
 export function LegalPage({
@@ -55,7 +57,7 @@ export function LegalPage({
         ))}
 
         {sections.map((s, i) => (
-          <section key={i} id={i === 0 ? anchorFirstSection : undefined}>
+          <section key={i} id={s.id ?? (i === 0 ? anchorFirstSection : undefined)}>
             {s.heading && (
               <h2
                 style={{
@@ -74,8 +76,12 @@ export function LegalPage({
         ))}
 
         <p style={{ ...paragraphStyle, marginTop: 40, fontSize: 13, color: '#6B7280' }}>
-          The source-controlled version of this document lives in the public repository
-          (github.com/antoncarlo/nextblock). Questions: see the security and operations contacts there.
+          This document is maintained under version control; the version shown here is the one in
+          force. Questions:{' '}
+          <a href="mailto:nextblock@financier.com" style={{ color: '#1B3A6B' }}>
+            nextblock@financier.com
+          </a>
+          .
         </p>
       </div>
     </div>

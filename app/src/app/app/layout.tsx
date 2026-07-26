@@ -4,6 +4,9 @@ import { ActiveRoleProvider } from '@/components/shared/WalletRoleIndicator';
 import { NetworkAvailabilityNotice } from '@/components/shared/NetworkAvailabilityNotice';
 import { DeployerWalletWarning } from '@/components/shared/DeployerWalletWarning';
 
+// Evaluated at module scope, once per deployment — see the landing Footer.
+const COPYRIGHT_YEAR = new Date().getFullYear();
+
 export default function AppLayout({
   children,
 }: {
@@ -60,7 +63,7 @@ export default function AppLayout({
                 color: '#9A9A9A',
               }}
             >
-              © 2025 NextBlock. All rights reserved.
+              © {COPYRIGHT_YEAR} NextBlock. All rights reserved.
             </p>
             <p
               style={{
