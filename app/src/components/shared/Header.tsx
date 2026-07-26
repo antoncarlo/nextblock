@@ -9,6 +9,7 @@ import { EmailAuthControls } from './EmailAuthControls';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { useEmailSession } from '@/hooks/useEmailSession';
 import { useCedantStatus } from '@/hooks/useCedantStatus';
+import { useProtocolAccess } from '@/hooks/useProtocolAccess';
 
 const navLinkStyle = (active: boolean): React.CSSProperties => ({
   padding: '6px 18px',
@@ -31,6 +32,7 @@ export function Header() {
   const { activeRole } = useActiveRole();
   const { isAppAdmin, canOperateKyb } = useEmailSession();
   const cedant = useCedantStatus();
+  const access = useProtocolAccess();
 
   // On-chain role resolution (ProtocolRoles/ComplianceRegistry)
   const { role: baseRole } = useWalletRole();
@@ -41,16 +43,19 @@ export function Header() {
   const showSyndicates        = role === 'syndicate' || role === 'admin' || isAppAdmin;
   const showSyndicateDashboard = role === 'syndicate' || role === 'admin' || isAppAdmin;
   const showMyCompany         = role === 'insurance' || role === 'admin' || isAppAdmin;
-  const showApply             = (!isConnected && !isAppAdmin) || role === 'investor';
+  // Apply is an ONBOARDING entry: it disappears the moment the wallet is an
+  // approved LP (or holds any protocol role) — asking an approved investor to
+  // "apply" again is the defect the owner reported.
+  const isApprovedLp          = access.status === 'onchain' && access.isCompliantLP;
+  const showApply             = !isAppAdmin && !isApprovedLp && (!isConnected || role === 'investor');
+  // Portfolio (positions + withdraw) replaces the standalone Redeem entry.
+  const showPortfolio         = isConnected;
   const showAdmin             = role === 'admin' || isAppAdmin || canOperateKyb;
   // Pilot is a Base Sepolia testnet ops hub (MockUSDC faucet + onboarding
   // diagnostic). ADMIN-ONLY in the nav: hidden from every other role (incl. KYC
   // operators) and from disconnected/logged-out visitors. The route stays public
   // so onboarding deep-links still resolve for invited pilot participants.
   const showPilot             = role === 'admin' || isAppAdmin;
-  // Redeem (LP exit via RedemptionQueue) is an Institutional-LP action — gated
-  // to the LP cluster, hidden from Cedant/Curator.
-  const showRedeem            = role === 'investor' || role === 'admin' || isAppAdmin;
 
   // ─── Active link helpers ────────────────────────────────────────────────────
   const isVaultsActive = pathname === '/app';
@@ -61,8 +66,8 @@ export function Header() {
   const isAdminActive = pathname?.startsWith('/app/admin') ?? false;
   const isPilotActive = pathname?.startsWith('/app/pilot') ?? false;
   const isBorrowActive = pathname?.startsWith('/app/borrow') ?? false;
-  const isRedeemActive = pathname?.startsWith('/app/redeem') ?? false;
-  const isMoneyFlowActive = pathname?.startsWith('/app/money-flow') ?? false;
+  const isPortfolioActive = pathname?.startsWith('/app/portfolio') ?? false;
+  const isTransparencyActive = pathname?.startsWith('/app/transparency') ?? false;
   const isClaimsActive = pathname?.startsWith('/app/claims') ?? false;
   const isCedantActive = pathname?.startsWith('/app/cedant') ?? false;
   const showCedant = cedant.state === 'present';
@@ -108,13 +113,33 @@ export function Header() {
             scrollbarWidth: 'none',
           }}
         >
-          {/* Vaults — sempre visibile */}
+          {/* Market — the vault marketplace, always visible */}
           <Link
             href="/app"
             style={navLinkStyle(isVaultsActive)}
             className="hover:bg-black/5"
           >
-            Vaults
+            Market
+          </Link>
+
+          {/* Portfolio — own positions + withdrawals (absorbs the old Redeem) */}
+          {showPortfolio && (
+            <Link
+              href="/app/portfolio"
+              style={navLinkStyle(isPortfolioActive)}
+              className="hover:bg-black/5"
+            >
+              Portfolio
+            </Link>
+          )}
+
+          {/* Claims control room — sempre visibile (coda read-only; azioni gated nel panel) */}
+          <Link
+            href="/app/claims"
+            style={navLinkStyle(isClaimsActive)}
+            className="hover:bg-black/5"
+          >
+            Claims
           </Link>
 
           {/* Borrow against nbRV collateral — sempre visibile */}
@@ -126,33 +151,14 @@ export function Header() {
             Borrow
           </Link>
 
-          {/* Redeem — LP exit via the RedemptionQueue (instant-in-buffer / queued) */}
-          {showRedeem && (
-            <Link
-              href="/app/redeem"
-              style={navLinkStyle(isRedeemActive)}
-              className="hover:bg-black/5"
-            >
-              Redeem
-            </Link>
-          )}
-
-          {/* Money Flow — sempre visibile (vista economica read-only) */}
+          {/* Transparency — protocol-wide state: every deployed vault, global
+              performance, allocation and reserves. Read-only by design. */}
           <Link
-            href="/app/money-flow"
-            style={navLinkStyle(isMoneyFlowActive)}
+            href="/app/transparency"
+            style={navLinkStyle(isTransparencyActive)}
             className="hover:bg-black/5"
           >
-            Money Flow
-          </Link>
-
-          {/* Claims control room — sempre visibile (coda read-only; azioni gated nel panel) */}
-          <Link
-            href="/app/claims"
-            style={navLinkStyle(isClaimsActive)}
-            className="hover:bg-black/5"
-          >
-            Claims
+            Transparency
           </Link>
 
           {/* Cedant dashboard — visibile solo quando il wallet collegato è un cedant approvato/in onboarding */}

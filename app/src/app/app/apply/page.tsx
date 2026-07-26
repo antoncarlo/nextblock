@@ -298,8 +298,26 @@ export default function ApplyPage() {
           <UnavailableNotice what="On-chain role verification (ProtocolRoles / ComplianceRegistry)" />
         </div>
       )}
+      {/* An already-approved LP has nothing to apply for: show the outcome, not
+          a form and an application tracker (owner-reported redundancy). */}
+      {isLpApproved && (
+        <div style={{ padding: '16px 32px 0' }}>
+          <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '10px', padding: '14px 18px' }}>
+            <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '13px', fontWeight: 600, color: '#166534', margin: 0 }}>
+              You are already an approved Institutional LP
+            </p>
+            <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '12px', color: '#166534', margin: '4px 0 0', lineHeight: 1.6 }}>
+              Your wallet is whitelisted on the ComplianceRegistry — no further application is needed.{' '}
+              <a href="/app" style={{ fontWeight: 600, textDecoration: 'underline', color: '#166534' }}>Go to the market</a>{' '}
+              or{' '}
+              <a href="/app/portfolio" style={{ fontWeight: 600, textDecoration: 'underline', color: '#166534' }}>open your portfolio</a>.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Existing applications for the connected wallet (real backend state) */}
-      {isConnected && (
+      {isConnected && !isLpApproved && (
         <div style={{ padding: '16px 32px 0' }}>
           <div style={{ background: '#FFFFFF', border: '1px solid rgba(27,58,107,0.15)', borderRadius: '10px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             <span style={{ fontFamily: "'Inter', sans-serif", fontSize: '12px', fontWeight: 600, color: '#1B3A6B' }}>

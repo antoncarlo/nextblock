@@ -41,10 +41,30 @@ test('vault detail shows labeled metadata and the deposit sidebar gate', async (
   await expect(page.getByText(/connect your wallet/i).first()).toBeVisible();
 });
 
-test('redeem page states the NAV-bearing, queue-based exit honestly', async ({ page }) => {
+test('nav shows the five institutional entries in order', async ({ page }) => {
+  await page.goto('/app');
+  const nav = page.locator('header nav');
+  await expect(nav.getByRole('link', { name: 'Market', exact: true })).toBeVisible();
+  await expect(nav.getByRole('link', { name: 'Claims', exact: true })).toBeVisible();
+  await expect(nav.getByRole('link', { name: 'Borrow', exact: true })).toBeVisible();
+  await expect(nav.getByRole('link', { name: 'Transparency', exact: true })).toBeVisible();
+  // Renamed away: the old labels must not survive anywhere in the nav.
+  await expect(nav.getByRole('link', { name: 'Vaults', exact: true })).toHaveCount(0);
+  await expect(nav.getByRole('link', { name: 'Money Flow', exact: true })).toHaveCount(0);
+  await expect(nav.getByRole('link', { name: 'Redeem', exact: true })).toHaveCount(0);
+});
+
+test('portfolio gates on wallet and offers the market as the next step', async ({ page }) => {
+  await page.goto('/app/portfolio');
+  await expect(page.getByRole('heading', { name: 'Portfolio' })).toBeVisible();
+  await expect(page.getByText(/connect your wallet to see your positions/i)).toBeVisible();
+});
+
+test('legacy redeem and money-flow URLs redirect to their new homes', async ({ page }) => {
   await page.goto('/app/redeem');
-  await expect(page.getByRole('heading', { name: 'Redeem', exact: true })).toBeVisible();
-  await expect(page.getByText(/NAV-bearing, not a stablecoin/i)).toBeVisible();
+  await expect(page).toHaveURL(/\/app\/portfolio/);
+  await page.goto('/app/money-flow');
+  await expect(page).toHaveURL(/\/app\/transparency/);
 });
 
 test('claims control room renders', async ({ page }) => {
