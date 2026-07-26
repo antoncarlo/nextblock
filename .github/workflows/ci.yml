@@ -37,7 +37,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: app/package-lock.json
+          cache-dependency-path: package-lock.json
 
       # Root ci:frontend:* scripts use npm --prefix app, which anchors npm to
       # app/ and its lockfile instead of resolving the workspace root (which
@@ -70,7 +70,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: app/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies (lockfile)
         run: npm run ci:frontend:install
