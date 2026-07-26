@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useAccount } from 'wagmi';
 import { useVaultAddresses } from '@/hooks/useVaultData';
+import { useLpPositions } from '@/hooks/useLpPositions';
 import { RedemptionFlow } from '@/components/portfolio/RedemptionFlow';
 import { PositionRow } from '@/components/portfolio/PositionRow';
 import { RedemptionHistory } from '@/components/redemption/RedemptionHistory';
@@ -16,7 +17,10 @@ import { getRedemptionQueueAddress } from '@/config/redemption';
 export default function PortfolioPage() {
   const { isConnected } = useAccount();
   const { data: vaultAddresses, isLoading } = useVaultAddresses();
+  const positions = useLpPositions();
   const queue = getRedemptionQueueAddress();
+  // An empty positions box with no message reads as a loading failure. Say it.
+  const holdsNothing = !positions.loading && positions.all.length > 0 && positions.held.length === 0;
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#FAFAF8' }}>
@@ -64,6 +68,19 @@ export default function PortfolioPage() {
                   </div>
                 ) : !vaultAddresses || vaultAddresses.length === 0 ? (
                   <p className="p-6 text-sm text-gray-500">No vaults are deployed on this network.</p>
+                ) : holdsNothing ? (
+                  <div className="p-6">
+                    <p className="text-sm text-gray-600">
+                      You do not hold shares in any of the {positions.all.length} deployed vaults yet.
+                    </p>
+                    <Link
+                      href="/app"
+                      className="mt-2 inline-block text-sm font-semibold"
+                      style={{ color: '#1B3A6B' }}
+                    >
+                      Browse the market →
+                    </Link>
+                  </div>
                 ) : (
                   <div>
                     {vaultAddresses.map((addr) => (
