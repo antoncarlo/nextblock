@@ -154,10 +154,10 @@ export default function CuratorsPage() {
             <span style={{ color:'rgba(255,255,255,0.9)', fontSize:'13px' }}>Syndicates</span>
           </div>
           <h1 style={{ fontFamily:'"Playfair Display", Georgia, serif', fontSize:'42px', fontWeight:700, color:'#FFFFFF', margin:'0 0 12px', letterSpacing:'-0.5px' }}>
-            Syndicates / Underwriting Curators
+            Syndicates / Syndicates
           </h1>
           <p style={{ color:'rgba(255,255,255,0.65)', fontSize:'16px', margin:'0 0 8px', maxWidth:'560px' }}>
-            On-chain authorized Underwriting Curators: the entities that evaluate ceded
+            On-chain authorized Syndicates: the entities that evaluate ceded
             reinsurance portfolios, approve risk terms and manage vault strategies.
           </p>
           <p style={{ color:'rgba(255,255,255,0.45)', fontSize:'12px', margin:'0 0 40px', maxWidth:'560px', textTransform:'uppercase', letterSpacing:'0.06em' }}>
@@ -185,7 +185,7 @@ export default function CuratorsPage() {
           <Lock size={14} color="#1D4ED8" />
           <span style={{ fontSize:'13px', color:'#1D4ED8' }}>
             <strong>Syndicate access is restricted.</strong> Only KYC-verified entities approved by NextBlock may deploy Syndicates.{' '}
-            <Link href="/app/apply" style={{ color:'#1D4ED8', textDecoration:'underline' }}>Apply to become a Syndicate Manager →</Link>{' · '}<Link href="/app/syndicates/dashboard" style={{ color:'#1D4ED8', textDecoration:'underline', fontWeight:600 }}>Syndicate Dashboard →</Link>
+            <Link href="/app/apply" style={{ color:'#1D4ED8', textDecoration:'underline' }}>Apply to become a Syndicate →</Link>{' · '}<Link href="/app/syndicates/dashboard" style={{ color:'#1D4ED8', textDecoration:'underline', fontWeight:600 }}>Syndicate Dashboard →</Link>
           </span>
         </div>
       </div>
@@ -260,7 +260,7 @@ export default function CuratorsPage() {
           </div>
           <div style={{ display:'flex', flexDirection:'column', gap:'12px', alignItems:'flex-end' }}>
             <Link href="/app/apply" style={{ display:'inline-flex', alignItems:'center', gap:'8px', backgroundColor:'#FFFFFF', color:'#1B3A6B', padding:'14px 28px', borderRadius:'8px', fontSize:'14px', fontWeight:600, textDecoration:'none', whiteSpace:'nowrap', letterSpacing:'0.02em' }}>
-              <Award size={16} />Apply as Syndicate Manager
+              <Award size={16} />Apply as Syndicate
             </Link>
             <Link href="/app/syndicates/dashboard" style={{ display:'inline-flex', alignItems:'center', gap:'8px', backgroundColor:'rgba(255,255,255,0.12)', color:'rgba(255,255,255,0.9)', padding:'12px 24px', borderRadius:'8px', fontSize:'13px', fontWeight:500, textDecoration:'none', whiteSpace:'nowrap', border:'1px solid rgba(255,255,255,0.25)' }}>
               Syndicate Dashboard →

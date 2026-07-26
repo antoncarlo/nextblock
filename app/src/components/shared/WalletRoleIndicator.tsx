@@ -77,7 +77,7 @@ const ROLE_CONFIG: Record<Exclude<AppRole, 'none'>, {
 }> = {
   admin:     { label: 'Admin / Sentinel',      dot: '#6D28D9', bg: 'rgba(109,40,217,0.08)',  color: '#6D28D9', border: 'rgba(109,40,217,0.2)' },
   insurance: { label: 'Cedant / Reinsurer',    dot: '#166534', bg: 'rgba(22,101,52,0.08)',   color: '#166534', border: 'rgba(22,101,52,0.2)' },
-  syndicate: { label: 'Underwriting Curator',  dot: '#C9A84C', bg: 'rgba(146,64,14,0.08)',   color: '#92400E', border: 'rgba(201,168,76,0.3)' },
+  syndicate: { label: 'Syndicate',  dot: '#C9A84C', bg: 'rgba(146,64,14,0.08)',   color: '#92400E', border: 'rgba(201,168,76,0.3)' },
   investor:  { label: 'Institutional LP',      dot: '#1B3A6B', bg: 'rgba(27,58,107,0.06)',   color: '#1B3A6B', border: 'rgba(27,58,107,0.15)' },
 };
 

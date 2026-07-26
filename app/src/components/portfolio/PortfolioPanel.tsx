@@ -25,7 +25,7 @@ import { DataSourceBadge } from '@/components/shared/DataSourceBadge';
 /**
  * Portfolio onboarding panel: the institutional submit -> review -> approve ->
  * activate lifecycle of PortfolioRegistry, role-aware. Cedants submit and track
- * their own portfolios; Underwriting Curators review/approve/reject/activate.
+ * their own portfolios; Syndicates review/approve/reject/activate.
  * Reads come from the canonical on-chain registry; nothing privileged is
  * reachable without the corresponding on-chain role. Onboarding only: no
  * allocation, premium or fee actions here.

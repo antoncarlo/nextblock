@@ -158,7 +158,7 @@ export default function OfferingTermsPage() {
         </h1>
         <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, color: '#6B7280', marginBottom: 28, lineHeight: 1.6 }}>
           Published terms replace the illustrative defaults in the vault list and detail page and
-          are labeled <strong>Curated</strong>. Saving requires the on-chain Underwriting Curator
+          are labeled <strong>Curated</strong>. Saving requires the on-chain Syndicate
           (or Owner) role — the API re-verifies the signature and the role on every write.
         </p>
 

@@ -30,7 +30,7 @@ export type KybApplicantType = (typeof KYB_APPLICANT_TYPES)[number];
  *  raw enum values ('cedant'/'curator'/'lp') out of operator-facing surfaces. */
 export const KYB_APPLICANT_TYPE_LABELS: Record<KybApplicantType, string> = {
   cedant: 'Reinsurer (Cedant)',
-  curator: 'Syndicate Curator',
+  curator: 'Syndicate',
   lp: 'Institutional Liquidity Provider',
 };
 

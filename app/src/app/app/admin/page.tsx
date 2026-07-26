@@ -96,7 +96,7 @@ export default function AdminPage() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">
-          Admin / Syndicate Manager Panel
+          Admin / Syndicate Panel
         </h1>
         <p className="mt-1 text-sm text-gray-500">
           Control time, oracles, and claim triggers for the demo. All changes

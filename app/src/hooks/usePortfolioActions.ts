@@ -65,7 +65,7 @@ export function usePortfolioActions(onDone?: () => void) {
     updateMetadata: (portfolioId: bigint, metadataURI: string, documentHash: `0x${string}`) =>
       send('updateMetadata', [portfolioId, metadataURI, documentHash]),
 
-    // Underwriting Curator (the only review/approval authority)
+    // Syndicate (the only review/approval authority)
     startReview: (portfolioId: bigint) => send('startReview', [portfolioId]),
     approvePortfolio: (portfolioId: bigint, expectedLossBps: number) =>
       send('approvePortfolio', [portfolioId, expectedLossBps]),

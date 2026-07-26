@@ -27,7 +27,7 @@ const roleCards: RoleCardData[] = [
   },
   {
     id: "syndicate curator",
-    label: "Syndicate Curator · Underwriting",
+    label: "Syndicate · Underwriting",
     title: "Deploy & manage insurance vaults",
     content: "Design compliant vault strategies, set risk parameters, select policies and underwrite. You control underwriting — the protocol handles infrastructure (Lloyd's-style managing agent).",
     icon: <Compass />,

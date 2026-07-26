@@ -108,7 +108,7 @@ export async function verifyCedantAuth(action: string, auth: CedantAuthInput): P
 
 /**
  * Read access to a CONFIDENTIAL portfolio document: the reviewing roles
- * (Underwriting Curator / Owner, checked on-chain) or the wallet that uploaded
+ * (Syndicate / Owner, checked on-chain) or the wallet that uploaded
  * it (`uploaderAddr`, recorded at upload after passing the cedant check).
  */
 export async function verifyDocumentAccess(

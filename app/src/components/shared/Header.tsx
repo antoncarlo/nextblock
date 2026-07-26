@@ -172,7 +172,7 @@ export function Header() {
             </Link>
           )}
 
-          {/* Syndicates — solo per Syndicate Manager e Admin */}
+          {/* Syndicates — solo per Syndicate e Admin */}
           {showSyndicates && (
             <div style={{ position: 'relative' }}>
               <div
@@ -253,7 +253,7 @@ export function Header() {
                       <li>Attracts <strong>USDC liquidity</strong> from investors seeking insurance yield</li>
                     </ul>
                     <div style={{ backgroundColor: '#F0F4FF', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', fontSize: '12px', color: '#1D4ED8', lineHeight: '1.6' }}>
-                      <strong>KYC required.</strong> Only entities holding the on-chain UNDERWRITING_CURATOR_ROLE (granted after identity and regulatory verification) may operate as Underwriting Curators.
+                      <strong>KYC required.</strong> Only entities holding the on-chain UNDERWRITING_CURATOR_ROLE (granted after identity and regulatory verification) may operate as Syndicates.
                     </div>
                     <div style={{ borderTop: '1px solid #F0EDE8', paddingTop: '12px', display: 'flex', justifyContent: 'flex-end' }}>
                       <Link href="/app/syndicates" onClick={() => setShowSyndicateInfo(false)} style={{ fontSize: '12px', fontWeight: 600, color: '#1B3A6B', textDecoration: 'none' }}>
@@ -266,7 +266,7 @@ export function Header() {
             </div>
           )}
 
-          {/* My Dashboard — solo per Syndicate Manager e Admin */}
+          {/* My Dashboard — solo per Syndicate e Admin */}
           {showSyndicateDashboard && (
             <Link
               href="/app/syndicates/dashboard"

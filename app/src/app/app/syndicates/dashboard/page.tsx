@@ -12,6 +12,7 @@ import { useVaultAddresses } from '@/hooks/useVaultData';
 import { useLensVaultDashboards, LensDataStatus } from '@/hooks/useNextBlockLens';
 import { DataSourceBadge } from '@/components/shared/DataSourceBadge';
 import { PortfolioPanel } from '@/components/portfolio/PortfolioPanel';
+import { CurationBook } from '@/components/syndicate/CurationBook';
 import { formatUSDC } from '@/lib/formatting';
 
 // Strategy templates available to syndicates
@@ -125,7 +126,7 @@ export default function CuratorDashboardPage() {
     verificationTypes: ['permissionless'],
   });
 
-  // ON-CHAIN authorization (ProtocolRoles): Underwriting Curator, Cedant or Owner.
+  // ON-CHAIN authorization (ProtocolRoles): Syndicate, Cedant or Owner.
   const access = useProtocolAccess();
   const isSyndicateManager =
     access.status === 'onchain' && (access.isCurator || access.isCedant || access.isOwner);
@@ -157,7 +158,7 @@ export default function CuratorDashboardPage() {
         <div style={{ textAlign: 'center', maxWidth: '400px', padding: '48px' }}>
           <Lock size={48} color="#1B3A6B" style={{ marginBottom: '20px' }} />
           <h2 style={{ fontFamily: '"Playfair Display", Georgia, serif', fontSize: '24px', color: '#1B3A6B', marginBottom: '12px' }}>Connect Your Wallet</h2>
-          <p style={{ fontSize: '14px', color: '#8A8A8A', lineHeight: '1.6' }}>Connect your wallet to access the Underwriting Curator dashboard. Authorization is verified on-chain (UNDERWRITING_CURATOR_ROLE).</p>
+          <p style={{ fontSize: '14px', color: '#8A8A8A', lineHeight: '1.6' }}>Connect your wallet to access the Syndicate dashboard. Authorization is verified on-chain (UNDERWRITING_CURATOR_ROLE).</p>
         </div>
       </div>
     );
@@ -169,7 +170,7 @@ export default function CuratorDashboardPage() {
       <div style={{ backgroundColor: '#FAFAF8', minHeight: '100vh' }}>
         <div style={{ background: 'linear-gradient(135deg, #1B3A6B 0%, #0F2447 100%)', padding: '64px 40px 56px' }}>
           <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-            <h1 style={{ fontFamily: '"Playfair Display", Georgia, serif', fontSize: '42px', fontWeight: 700, color: '#FFFFFF', margin: '0 0 12px' }}>Syndicate / Underwriting Curator Dashboard</h1>
+            <h1 style={{ fontFamily: '"Playfair Display", Georgia, serif', fontSize: '42px', fontWeight: 700, color: '#FFFFFF', margin: '0 0 12px' }}>Syndicate / Syndicate Dashboard</h1>
           </div>
         </div>
         <div style={{ maxWidth: '640px', margin: '64px auto', padding: '0 40px' }}>
@@ -177,10 +178,10 @@ export default function CuratorDashboardPage() {
             <Lock size={32} color="#C2410C" style={{ marginBottom: '16px' }} />
             <h2 style={{ fontFamily: '"Playfair Display", Georgia, serif', fontSize: '22px', color: '#1B3A6B', marginBottom: '12px' }}>Syndicate Access Required</h2>
             <p style={{ fontSize: '14px', color: '#5A5A5A', lineHeight: '1.7', marginBottom: '24px' }}>
-              This dashboard is reserved for KYC-verified syndicates. Apply to become a Syndicate Manager to access strategy creation and vault management tools.
+              This dashboard is reserved for KYC-verified syndicates. Apply to become a Syndicate to access strategy creation and vault management tools.
             </p>
             <Link href="/app/apply" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', backgroundColor: '#1B3A6B', color: '#FFFFFF', padding: '12px 28px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, textDecoration: 'none' }}>
-              Apply as Syndicate Manager
+              Apply as Syndicate
             </Link>
           </div>
         </div>
@@ -210,9 +211,9 @@ export default function CuratorDashboardPage() {
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
             <div>
-              <h1 style={{ fontFamily: '"Playfair Display", Georgia, serif', fontSize: '38px', fontWeight: 700, color: '#FFFFFF', margin: '0 0 8px' }}>Syndicate / Underwriting Curator Dashboard</h1>
+              <h1 style={{ fontFamily: '"Playfair Display", Georgia, serif', fontSize: '38px', fontWeight: 700, color: '#FFFFFF', margin: '0 0 8px' }}>Syndicate / Syndicate Dashboard</h1>
               <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px', margin: 0 }}>
-                {address?.slice(0, 6)}...{address?.slice(-4)} · Verified Syndicate Manager
+                {address?.slice(0, 6)}...{address?.slice(-4)} · Verified Syndicate
               </p>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
@@ -695,7 +696,14 @@ export default function CuratorDashboardPage() {
           </div>
         )}
 
-        {/* Portfolio onboarding review queue (Underwriting Curator) */}
+        {/* Curation book: which deployed vaults this syndicate is responsible
+            for, and which belong to other syndicates. A curator curates vaults
+            — the book comes before the template gallery in importance. */}
+        <div style={{ maxWidth: '1200px', margin: '24px auto 0', padding: '0 40px' }}>
+          <CurationBook />
+        </div>
+
+        {/* Portfolio onboarding review queue (Syndicate) */}
         <div style={{ maxWidth: '1200px', margin: '24px auto 0', padding: '0 40px 48px' }}>
           <PortfolioPanel mode="curator" />
         </div>
