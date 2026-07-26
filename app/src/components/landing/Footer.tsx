@@ -5,6 +5,11 @@ import WaitlistSection from "./WaitlistSection";
 const footerFriezeVideo = "/assets/footer-frieze.mp4";
 const logoBlack = "/assets/logo-black.svg";
 
+// Read once at module scope, not during render: the clock is an impure input
+// inside a component, and this only needs to be right per deployment. Every
+// deploy refreshes it, so the notice cannot silently rot the way a literal did.
+const COPYRIGHT_YEAR = new Date().getFullYear();
+
 // Custom X (Twitter) icon since lucide doesn't have the new X logo
 const XIcon = ({ size = 20 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
@@ -15,7 +20,6 @@ const XIcon = ({ size = 20 }: { size?: number }) => (
 const Footer = () => {
   const protocolLinks = [
     { label: "Protocol Overview", href: "#" },
-    { label: "GitHub", href: "https://github.com/antoncarlo/nextblock" },
   ];
 
   const resourceLinks = [
@@ -26,11 +30,14 @@ const Footer = () => {
     { label: "Terms of Service", href: "/terms" },
     { label: "Privacy Policy", href: "/privacy" },
     { label: "Cookie Policy", href: "/privacy#cookies" },
-    { label: "Risk Disclaimer", href: "https://github.com/antoncarlo/nextblock/blob/main/docs/legal/03-risk-disclosure.md" },
+    // Points at the risk section of the published Terms, not at the draft in
+    // the repository: a public "Risk Disclaimer" must not resolve to a document
+    // stamped "DRAFT — not legal advice".
+    { label: "Risk Disclaimer", href: "/terms#risk" },
   ];
 
   const socialLinks = [
-    { icon: XIcon, href: "https://x.com/NBlock2040", label: "X" },
+    { icon: XIcon, href: "https://x.com/NextblockRWA", label: "X" },
     { icon: Linkedin, href: "https://www.linkedin.com/company/next-block", label: "LinkedIn" },
     { icon: Mail, href: "mailto:nextblock@financier.com", label: "Email" },
   ];
@@ -227,7 +234,7 @@ const Footer = () => {
                 color: '#9A9A9A',
               }}
             >
-              © 2025 NextBlock. All rights reserved.
+              © {COPYRIGHT_YEAR} NextBlock. All rights reserved.
             </p>
             <p
               style={{

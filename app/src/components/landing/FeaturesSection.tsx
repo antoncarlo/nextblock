@@ -12,11 +12,16 @@ interface SolutionCardData {
   content: string;
   icon: React.ReactNode;
 }
+// No yield figure is stated here, deliberately. A public page carrying a range
+// becomes a second source of truth that can contradict the offering documents
+// the moment either one moves — and it is the page that reaches people first.
+// Per-vault targets are published where they belong: on the vault, labelled as
+// illustrative, alongside the terms that qualify them.
 const solutionCards: SolutionCardData[] = [{
   id: "premium",
   label: "Premium Collection",
-  title: "8-12% Annual Yields",
-  content: "8-12% annual yields from real insurance premiums. Independent of equity markets and crypto.",
+  title: "Yield From Insurance Premiums",
+  content: "Returns come from premiums written on real reinsurance portfolios — a source that does not move with equity markets or crypto.",
   icon: <Lock />
 }, {
   id: "settlement",
