@@ -69,6 +69,24 @@ ref `krycyeiwsplztagajauh`, and is followed by read-only verification
 (tables, RLS, zero anon/authenticated policies, advisors) and TypeScript
 type regeneration.
 
+**The version stamp must come from the repo file, not from the tool.**
+Applying SQL through an API/MCP client stamps a *fresh* timestamp in
+`supabase_migrations.schema_migrations`, which no longer matches the
+filename in this directory. The schema ends up correct and the history ends
+up lying: the Supabase check then reports *"Remote migration versions not
+found in local migrations directory"*, and the next `db push` cannot reason
+about what is applied.
+
+That drift happened once (migrations 0013–0017, plus a duplicate
+re-application of 0012 recorded as `20260702163229`). It was repaired by
+renaming the local files to the applied stamps — a repo-only change; the
+database was never touched, since the local SQL already described the live
+schema exactly.
+
+To check alignment at any time, compare the versions in
+`supabase_migrations.schema_migrations` against the filename prefixes here.
+The two lists must be identical, in the same order.
+
 ## PRODUCTION BLOCK (governance)
 
 PRODUCTION USE IS BLOCKED until Governance Phase 2 Stage A (operational key
