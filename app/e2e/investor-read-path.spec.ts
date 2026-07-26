@@ -77,3 +77,25 @@ test('governance console renders with zero-authority note', async ({ page }) => 
   await expect(page.getByText('Safe → timelock execution')).toBeVisible();
   await expect(page.getByText(/only timelock proposers can schedule/i)).toBeVisible();
 });
+
+test('transparency aggregates every deployed vault from chain', async ({ page }) => {
+  await page.goto('/app/transparency');
+  await expect(page.getByRole('heading', { name: /every vault, every unit of capacity/i })).toBeVisible();
+
+  // Live protocol KPIs, read through the factory — not a hardcoded list.
+  await expect(page.getByText('Total value locked')).toBeVisible({ timeout: 45_000 });
+  await expect(page.getByText('Deployed to underwriting').first()).toBeVisible();
+  await expect(page.getByText('Liquidity buffer').first()).toBeVisible();
+
+  // Allocation charts and the reserve gauge.
+  await expect(page.getByRole('heading', { name: 'Capital allocation' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Capacity by vault' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Reserve security' })).toBeVisible();
+
+  // The per-vault table lists real vaults with a live share price.
+  await expect(page.getByRole('heading', { name: 'All deployed vaults' })).toBeVisible();
+  await expect(page.locator('table a[href^="/app/vault/0x"]').first()).toBeVisible({ timeout: 45_000 });
+
+  // History is honest about needing the indexer rather than drawing a fake line.
+  await expect(page.getByRole('heading', { name: /historical nav per share/i })).toBeVisible();
+});
