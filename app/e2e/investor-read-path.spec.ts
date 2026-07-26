@@ -99,3 +99,15 @@ test('transparency aggregates every deployed vault from chain', async ({ page })
   // History is honest about needing the indexer rather than drawing a fake line.
   await expect(page.getByRole('heading', { name: /historical nav per share/i })).toBeVisible();
 });
+
+test('apply presents the three roles side by side', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/app/apply');
+  const cards = page.locator('[data-track-section="apply_role_cards"] > button');
+  await expect(cards).toHaveCount(3);
+
+  // Same row on desktop: all three share a vertical position (the 2+1 wrap the
+  // owner reported would put the third card lower).
+  const tops = await cards.evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
+  expect(Math.max(...tops) - Math.min(...tops)).toBeLessThan(8);
+});

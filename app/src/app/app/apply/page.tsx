@@ -395,7 +395,7 @@ export default function ApplyPage() {
         </div>
       </div>
 
-      <div className="mx-auto" style={{ maxWidth: '860px', padding: '40px 32px 80px' }}>
+      <div className="mx-auto" style={{ maxWidth: step === 'choose' ? '1140px' : '860px', padding: '40px 32px 80px' }}>
 
         {/* Already approved banners */}
         {isInsuranceApproved && (
@@ -442,7 +442,11 @@ export default function ApplyPage() {
               Choose the type of access you are applying for. Each role has different requirements and capabilities.
             </p>
 
-            <div data-track-section="apply_role_cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px', marginBottom: '32px' }}>
+            <div
+              data-track-section="apply_role_cards"
+              className="grid grid-cols-1 gap-5 md:grid-cols-3"
+              style={{ marginBottom: '32px' }}
+            >
               {/* Insurance Company Card */}
               <button
                 onClick={() => { setRole('insurance'); setStep('form'); }}

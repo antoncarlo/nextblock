@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
-import { useVaultAddresses } from "@/hooks/useVaultData";
+import { useVaultAddresses, useUserPositions } from "@/hooks/useVaultData";
 import { useProtocolAccess } from "@/hooks/useProtocolAccess";
 import { VaultTable } from "@/components/vault/VaultTable";
 import { VerificationBadge } from "@/components/shared/VerificationBadge";
@@ -185,6 +185,9 @@ function QuickActions({ actions }: { actions: { icon: string; title: string; des
 // ─── Vista Investor / Non connesso ───────────────────────────────────────────
 function InvestorView() {
   const access = useProtocolAccess();
+  const { address } = useAccount();
+  const { data: vaultAddrs } = useVaultAddresses();
+  const { data: positions } = useUserPositions(vaultAddrs, address);
   const [nudgeDismissed, setNudgeDismissed] = useState(false);
   useEffect(() => {
     try {
@@ -194,7 +197,13 @@ function InvestorView() {
       // localStorage disabled — show the nudge, it is harmless.
     }
   }, []);
-  const showApprovedNudge = access.status === 'onchain' && access.isCompliantLP && !nudgeDismissed;
+  // "Make your first deposit" is only true until there IS a first deposit:
+  // every even index of the positions batch is a balanceOf result.
+  const hasPosition = Boolean(
+    positions?.some((r, i) => i % 2 === 0 && r.status === 'success' && (r.result as bigint) > 0n),
+  );
+  const showApprovedNudge =
+    access.status === 'onchain' && access.isCompliantLP && !nudgeDismissed && !hasPosition;
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#FAFAF8" }}>
