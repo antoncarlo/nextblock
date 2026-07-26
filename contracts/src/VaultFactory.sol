@@ -125,11 +125,47 @@ contract VaultFactory is Ownable, ProtocolRoleConstants {
         uint256 managementFeeBps_
     ) external onlyProtocolRole(UNDERWRITING_CURATOR_ROLE) returns (address vault) {
         if (vaultManager_ == address(0)) revert VaultFactory__InvalidParams();
-        if (bufferRatioBps_ > BASIS_POINTS) revert VaultFactory__InvalidParams();
-        if (managementFeeBps_ > BASIS_POINTS) revert VaultFactory__InvalidParams();
         if (!protocolRoles.hasRole(UNDERWRITING_CURATOR_ROLE, vaultManager_)) {
             revert VaultFactory__ManagerNotCurator(vaultManager_);
         }
+        vault = _create(name, symbol, vaultName, vaultManager_, bufferRatioBps_, managementFeeBps_);
+    }
+
+    /// @notice Create a vault with no syndicate, to be taken into curation later.
+    ///         Permissioned: OWNER_ROLE. The protocol provisions the capacity; a
+    ///         syndicate is appointed afterwards through
+    ///         `InsuranceVault.assignSyndicate`, which is itself owner-gated and
+    ///         one-way. Until that happens the vault accepts capital but no
+    ///         policy can be written to it, because `onlyVaultManager` admits
+    ///         nobody while the manager slot is empty.
+    /// @param name Share token name
+    /// @param symbol Share token symbol
+    /// @param vaultName Display name for the vault
+    /// @param bufferRatioBps_ Buffer ratio in basis points
+    /// @param managementFeeBps_ Annual management fee in basis points
+    /// @return vault The address of the newly deployed, uncurated vault
+    function createUnassignedVault(
+        string memory name,
+        string memory symbol,
+        string memory vaultName,
+        uint256 bufferRatioBps_,
+        uint256 managementFeeBps_
+    ) external onlyProtocolRole(OWNER_ROLE) returns (address vault) {
+        vault = _create(name, symbol, vaultName, address(0), bufferRatioBps_, managementFeeBps_);
+    }
+
+    /// @dev Shared deployment path. The caller validates the manager; everything
+    ///      below holds for an assigned and an unassigned vault alike.
+    function _create(
+        string memory name,
+        string memory symbol,
+        string memory vaultName,
+        address vaultManager_,
+        uint256 bufferRatioBps_,
+        uint256 managementFeeBps_
+    ) internal returns (address vault) {
+        if (bufferRatioBps_ > BASIS_POINTS) revert VaultFactory__InvalidParams();
+        if (managementFeeBps_ > BASIS_POINTS) revert VaultFactory__InvalidParams();
 
         address newVault = vaultDeployer.deploy(
             InsuranceVault.VaultInitParams({

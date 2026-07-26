@@ -6,16 +6,20 @@ import { usePlatformSnapshot } from '@/hooks/usePlatformSnapshot';
 import { useMultiVaultInfo, useVaultAddresses } from '@/hooks/useVaultData';
 import { formatUSDCCompact, shortenAddress } from '@/lib/formatting';
 import { fmtBps, bpsOf } from '@/lib/platform-metrics';
+import { curationConsoleHref } from '@/lib/governance/curation';
+
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
 /**
- * The Syndicate's curation book: which deployed vaults this wallet curates, and
- * which are curated by someone else.
+ * The Syndicate's curation book: which deployed vaults this wallet curates,
+ * which are still free to be taken on, and which belong to someone else.
  *
  * Follows the Morpho grammar — a curator is the risk officer of a vault, not a
- * vault factory — with one honest deviation stated in the UI: in NextBlock the
- * curator (`InsuranceVault.vaultManager`) is bound at construction and has no
- * setter, so curation is assigned when the vault is created rather than
- * reassigned afterwards. Nothing here pretends a take-over button exists.
+ * vault factory. A vault deployed without a syndicate can now be taken into
+ * curation (`InsuranceVault.assignSyndicate`), but that call is OWNER_ROLE-gated
+ * and one-way: a syndicate cannot appoint itself, and an incumbent is never
+ * displaced. So the take-over here is a *request* that produces the exact
+ * governance operation, not a button that pretends to have authority.
  */
 export function CurationBook() {
   const { address } = useAccount();
@@ -36,7 +40,12 @@ export function CurationBook() {
   }
 
   const mine = vaults.filter((v) => address && managerOf.get(v.address.toLowerCase()) === address.toLowerCase());
-  const others = vaults.filter((v) => !mine.includes(v));
+  // A vault whose manager slot is still zero has no syndicate: it is the only
+  // kind that can be taken on, because assignSyndicate refuses the rest.
+  const awaiting = vaults.filter(
+    (v) => !mine.includes(v) && managerOf.get(v.address.toLowerCase()) === ZERO_ADDRESS,
+  );
+  const others = vaults.filter((v) => !mine.includes(v) && !awaiting.includes(v));
   const myTvl = mine.reduce((acc, v) => acc + v.totalAssets, 0n);
 
   if (isLoading) {
@@ -66,9 +75,18 @@ export function CurationBook() {
           <div className="px-5 py-8 text-center">
             <p className="text-sm text-gray-600">This wallet does not curate any vault yet.</p>
             <p className="mx-auto mt-2 max-w-lg text-xs leading-5 text-gray-500">
-              Curation is bound when a vault is created: the vault records its syndicate on-chain and
-              the binding has no setter, so an existing vault cannot be taken over from the
-              interface. To curate, a vault must be deployed with your wallet as its syndicate.
+              {awaiting.length > 0 ? (
+                <>
+                  {awaiting.length} deployed vault{awaiting.length === 1 ? ' has' : 's have'} no
+                  syndicate yet — you can ask to take {awaiting.length === 1 ? 'it' : 'one'} on below,
+                  or have a new vault deployed under your curation.
+                </>
+              ) : (
+                <>
+                  Every deployed vault already has a syndicate. To curate, a new vault must be
+                  deployed with your wallet as its syndicate — an incumbent is never displaced.
+                </>
+              )}
             </p>
             <Link
               href="/app/create-vault"
@@ -82,6 +100,64 @@ export function CurationBook() {
           <VaultLines vaults={mine} tvl={totals.tvl} manage />
         )}
       </section>
+
+      {/* Free vaults: the only ones assignSyndicate will accept */}
+      {awaiting.length > 0 && (
+        <section className="rounded-xl border border-gray-200 bg-white">
+          <div className="border-b border-gray-100 px-5 py-3">
+            <h3 className="text-sm font-semibold text-gray-900">Vaults awaiting curation</h3>
+            <p className="mt-0.5 max-w-2xl text-xs leading-5 text-gray-500">
+              Deployed with no syndicate on record. Requesting one prepares the on-chain operation
+              and hands it to protocol governance — appointment is owner-gated and passes the
+              timelock, so no wallet can take a vault on its own authority. Once assigned, curation
+              cannot be transferred away by a single transaction.
+            </p>
+          </div>
+          <div>
+            {awaiting.map((v) => (
+              <div
+                key={v.address}
+                className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-50 px-5 py-4 last:border-b-0"
+              >
+                <div className="min-w-0">
+                  <Link
+                    href={`/app/vault/${v.address}`}
+                    className="text-sm font-medium text-gray-900 hover:underline"
+                  >
+                    {v.name}
+                  </Link>
+                  <p className="mt-0.5 text-xs text-gray-400">
+                    {shortenAddress(v.address)} · no syndicate
+                  </p>
+                </div>
+                <div className="flex items-center gap-5 text-right">
+                  <div>
+                    <p className="text-xs text-gray-400">TVL</p>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {formatUSDCCompact(v.totalAssets)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-400">Policies</p>
+                    <p className="text-sm font-semibold text-gray-900">{v.policyCount}</p>
+                  </div>
+                  {address ? (
+                    <Link
+                      href={curationConsoleHref(v.address as `0x${string}`, address)}
+                      className="rounded-full px-4 py-1.5 text-xs font-semibold text-white"
+                      style={{ background: '#1B3A6B' }}
+                    >
+                      Request curation
+                    </Link>
+                  ) : (
+                    <span className="text-xs text-gray-400">Connect to request</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Everything else on the protocol, read-only */}
       <section className="rounded-xl border border-gray-200 bg-white">

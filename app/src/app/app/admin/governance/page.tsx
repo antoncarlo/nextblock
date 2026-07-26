@@ -1,5 +1,7 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { getAddress, isAddress } from 'viem';
 import { NEXTBLOCK_ADDRESSES, NEXTBLOCK_CHAIN_ID } from '@/config/generated/addressBook';
 import {
   PROTOCOL_ROLES,
@@ -59,28 +61,66 @@ function downloadJson(filename: string, payload: unknown) {
 const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
 const HEX_RE = /^0x[0-9a-fA-F]*$/;
 
+/**
+ * useSearchParams needs a Suspense boundary in the App Router; the console
+ * itself is unchanged whether or not a request arrives pre-filled.
+ */
 export default function GovernancePage() {
-  const [kind, setKind] = useState<OpKind>('grant');
+  return (
+    <Suspense fallback={<div style={{ minHeight: '100vh', backgroundColor: '#FAFAF8' }} />}>
+      <GovernanceConsole />
+    </Suspense>
+  );
+}
+
+function GovernanceConsole() {
+  // A pre-filled link (e.g. a syndicate asking to curate a free vault) only
+  // seeds the form's initial values. Everything after that is the owner's own
+  // review, and the fields stay editable.
+  const params = useSearchParams();
+  const seeded = params.get('kind') === 'raw';
+
+  const [kind, setKind] = useState<OpKind>(seeded ? 'raw' : 'grant');
   const [role, setRole] = useState<ProtocolRoleName>('UNDERWRITING_CURATOR_ROLE');
   const [account, setAccount] = useState('');
-  const [rawLabel, setRawLabel] = useState('');
-  const [rawTarget, setRawTarget] = useState('');
-  const [rawData, setRawData] = useState('');
+  const [rawLabel, setRawLabel] = useState(() => (seeded ? (params.get('label') ?? '') : ''));
+  const [rawTarget, setRawTarget] = useState(() => (seeded ? (params.get('target') ?? '') : ''));
+  const [rawData, setRawData] = useState(() => (seeded ? (params.get('data') ?? '') : ''));
   const [delayHours, setDelayHours] = useState('24');
 
   const { op, error } = useMemo((): { op: TimelockOperation | null; error: string | null } => {
     try {
       if (kind === 'raw') {
         if (!rawLabel.trim()) return { op: null, error: 'Label required for the raw operation.' };
-        if (!ADDRESS_RE.test(rawTarget.trim())) return { op: null, error: 'Raw target must be a 0x…40-hex address.' };
+        if (!isAddress(rawTarget.trim(), { strict: true })) {
+          return {
+            op: null,
+            error: ADDRESS_RE.test(rawTarget.trim())
+              ? 'Raw target fails its EIP-55 checksum — check for a mistyped character.'
+              : 'Raw target must be a 0x…40-hex address.',
+          };
+        }
         if (!HEX_RE.test(rawData.trim()) || rawData.trim().length < 10) {
           return { op: null, error: 'Raw calldata must be 0x-hex (selector + args).' };
         }
-        return { op: buildRawOperation(rawLabel.trim(), rawTarget.trim() as `0x${string}`, rawData.trim() as `0x${string}`), error: null };
+        // getAddress enforces the EIP-55 checksum. A mixed-case address whose
+        // checksum does not match is a typo, and it must surface as a message
+        // here rather than as a throw further down the render.
+        return {
+          op: buildRawOperation(rawLabel.trim(), getAddress(rawTarget.trim()), rawData.trim() as `0x${string}`),
+          error: null,
+        };
       }
-      if (!ADDRESS_RE.test(account.trim())) return { op: null, error: 'Account must be a 0x…40-hex address.' };
+      if (!isAddress(account.trim(), { strict: true })) {
+        return {
+          op: null,
+          error: ADDRESS_RE.test(account.trim())
+            ? 'Account fails its EIP-55 checksum — check for a mistyped character.'
+            : 'Account must be a 0x…40-hex address.',
+        };
+      }
       const roles = NEXTBLOCK_ADDRESSES.protocolRoles as `0x${string}`;
-      const target = account.trim() as `0x${string}`;
+      const target = getAddress(account.trim());
       return {
         op: kind === 'grant' ? buildGrantRoleOperation(roles, role, target) : buildRevokeRoleOperation(roles, role, target),
         error: null,
@@ -95,7 +135,17 @@ export default function GovernancePage() {
     return Number.isFinite(h) && h >= 1 ? BigInt(Math.round(h * 3600)) : null;
   }, [delayHours]);
 
-  const operationId = useMemo(() => (op ? hashOperation(op) : null), [op]);
+  // Hashing must never be able to take the console down: an operation that
+  // cannot be hashed is one that cannot be scheduled, which is a message, not
+  // a crashed page.
+  const operationId = useMemo(() => {
+    if (!op) return null;
+    try {
+      return hashOperation(op);
+    } catch {
+      return null;
+    }
+  }, [op]);
 
   const buildBatches = () => {
     if (!op || delaySeconds == null) return null;

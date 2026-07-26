@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useAccount, useChainId, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { parseUnits, formatUnits } from 'viem';
 import { useRedemptionQueue } from '@/hooks/useRedemptionQueue';
-import { useVaultAddresses } from '@/hooks/useVaultData';
+import { useLpPositions, type LpPosition } from '@/hooks/useLpPositions';
 import { REDEMPTION_QUEUE_ABI, REDEMPTION_CHAIN_ID } from '@/config/redemption';
 import { INSURANCE_VAULT_ABI } from '@/config/contracts';
 import { formatUSDC, shortenAddress } from '@/lib/formatting';
@@ -13,22 +13,29 @@ import { SHARE_SYMBOL } from '@/lib/disclosure';
 /**
  * Guided exit flow — one screen, one obvious next step.
  *
- * Replaces the old two-button panel (Approve / Request side by side) that gave
- * no ordering and let users sign a doomed transaction. Now:
- *
- *  1. GUARD  — the queue's bound vault must be the vault the LP actually holds.
- *              A mismatched generation is reported honestly instead of letting
- *              `requestRedemption` revert with an unreadable gas message.
- *  2. AMOUNT — one input with Max; the path (instant vs queued) is derived and
- *              stated in plain language before anything is signed.
- *  3. ALLOW  — the approval step only appears when allowance is insufficient,
+ *  0. VAULT  — every vault the protocol has deployed is listed, each stating
+ *              whether this wallet holds anything in it. The screen used to
+ *              show only the vault the redemption queue happened to be bound
+ *              to, so an LP with shares anywhere else saw a zero balance and no
+ *              reason for it.
+ *  1. AMOUNT — one input with Max; the path is derived and stated in plain
+ *              language before anything is signed.
+ *  2. ALLOW  — the approval step appears only when allowance is insufficient,
  *              and only for the queued path.
- *  4. SUBMIT — a single primary action, labelled with what will happen.
- *  5. CLAIM  — surfaced when a settled epoch has proceeds waiting.
+ *  3. SUBMIT — a single primary action, labelled with what will happen.
+ *  4. CLAIM  — surfaced when a settled epoch has proceeds waiting.
+ *
+ * The two exit paths do not live in the same place, and that is what decides
+ * what the screen may offer. `redeem` is a function of the VAULT, so an
+ * immediate withdrawal within the free buffer works on any vault the wallet
+ * holds. The queue is a separate contract bound to ONE vault, so the queued
+ * path exists only for that vault; for the others the panel says so instead of
+ * offering a button that would revert.
  */
 
 const SHARE_DECIMALS = 18;
-const fmtShares = (v: bigint) => Number(formatUnits(v, SHARE_DECIMALS)).toLocaleString('en-US', { maximumFractionDigits: 4 });
+const fmtShares = (v: bigint) =>
+  Number(formatUnits(v, SHARE_DECIMALS)).toLocaleString('en-US', { maximumFractionDigits: 4 });
 
 type Step = 1 | 2 | 3;
 
@@ -36,10 +43,30 @@ export function RedemptionFlow({ queueAddress }: { queueAddress?: `0x${string}` 
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
   const q = useRedemptionQueue(queueAddress);
-  const { data: protocolVaults } = useVaultAddresses();
+  const positions = useLpPositions();
 
+  const [selected, setSelected] = useState<`0x${string}` | ''>('');
   const [amount, setAmount] = useState('');
   const wrongChain = chainId !== REDEMPTION_CHAIN_ID;
+
+  // The default selection is derived, never written from an effect: the vault
+  // with the largest holding, falling back to the queue's vault, then the first
+  // vault the factory lists.
+  const largestHeld = positions.held.reduce<LpPosition | null>(
+    (best, p) => (best === null || p.shares > best.shares ? p : best),
+    null,
+  );
+  const defaultVault =
+    largestHeld?.address ??
+    (q.vault && positions.all.some((p) => p.address === q.vault) ? q.vault : positions.all[0]?.address);
+  const activeAddress = (selected || defaultVault) as `0x${string}` | undefined;
+  const active = positions.all.find((p) => p.address === activeAddress);
+
+  const isQueueVault =
+    !!q.available && !!q.vault && !!activeAddress && q.vault.toLowerCase() === activeAddress.toLowerCase();
+
+  const heldShares = active?.shares ?? 0n;
+  const instantRedeemable = active?.instantRedeemable ?? 0n;
 
   let parsedShares = 0n;
   try {
@@ -48,13 +75,12 @@ export function RedemptionFlow({ queueAddress }: { queueAddress?: `0x${string}` 
     parsedShares = 0n;
   }
 
-  // Allowance drives whether the approval step is needed at all.
   const { data: allowanceRaw, refetch: refetchAllowance } = useReadContract({
-    address: q.vault,
+    address: activeAddress,
     abi: INSURANCE_VAULT_ABI,
     functionName: 'allowance',
     args: address && queueAddress ? [address, queueAddress] : undefined,
-    query: { enabled: Boolean(q.vault && address && queueAddress) },
+    query: { enabled: Boolean(activeAddress && address && queueAddress && isQueueVault) },
   });
   const allowance = typeof allowanceRaw === 'bigint' ? allowanceRaw : 0n;
 
@@ -62,48 +88,12 @@ export function RedemptionFlow({ queueAddress }: { queueAddress?: `0x${string}` 
   const { isLoading: confirming, isSuccess } = useWaitForTransactionReceipt({ hash: txHash });
   const busy = isPending || confirming;
 
-  const withinBuffer = parsedShares > 0n && parsedShares <= q.instantRedeemable;
-  const needsApproval = !withinBuffer && parsedShares > 0n && allowance < parsedShares;
+  const withinBuffer = parsedShares > 0n && parsedShares <= instantRedeemable;
+  // Above the buffer there is only one way out, and it exists only on the vault
+  // the queue is bound to.
+  const queueUnavailable = !withinBuffer && parsedShares > 0n && !isQueueVault;
+  const needsApproval = !withinBuffer && parsedShares > 0n && isQueueVault && allowance < parsedShares;
   const step: Step = parsedShares <= 0n ? 1 : needsApproval ? 2 : 3;
-
-  // --- Guard: queue not deployed ---
-  if (!queueAddress || !q.available) {
-    return (
-      <Card title="Withdraw">
-        <p className="text-sm text-gray-500">
-          The redemption queue is not deployed on this network yet. Your position stays fully
-          accounted for on-chain in the meantime.
-        </p>
-      </Card>
-    );
-  }
-
-  // --- Guard: the queue is bound to a different vault generation ---
-  // The LP holds shares of a protocol vault, but this queue escrows a different
-  // one: requesting would transfer shares the wallet does not own on THAT vault.
-  const boundVaultIsProtocolVault =
-    !q.vault ||
-    !protocolVaults ||
-    protocolVaults.some((v) => v.toLowerCase() === q.vault!.toLowerCase());
-
-  if (!boundVaultIsProtocolVault) {
-    return (
-      <Card title="Withdraw">
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
-          <p className="text-sm font-medium text-amber-900">Exit queue temporarily unavailable</p>
-          <p className="mt-1 text-xs leading-5 text-amber-800">
-            The deployed redemption queue is bound to vault {shortenAddress(q.vault!)}, which is not
-            one of the vaults currently listed on the protocol. Requesting an exit through it would
-            fail, so the action is disabled rather than letting you sign a transaction that cannot
-            succeed. This clears when the queue is redeployed against the live generation.
-          </p>
-        </div>
-        <p className="mt-3 text-xs text-gray-500">
-          Your position is unaffected: {fmtShares(q.userShares)} {SHARE_SYMBOL} remain yours on-chain.
-        </p>
-      </Card>
-    );
-  }
 
   if (!isConnected) {
     return (
@@ -114,23 +104,24 @@ export function RedemptionFlow({ queueAddress }: { queueAddress?: `0x${string}` 
   }
 
   function setMax() {
-    setAmount(formatUnits(q.userShares, SHARE_DECIMALS));
+    setAmount(formatUnits(heldShares, SHARE_DECIMALS));
   }
 
   function submit() {
-    if (!q.vault || !address || !queueAddress) return;
+    if (!activeAddress || !address) return;
     if (withinBuffer) {
       writeContract({
-        address: q.vault,
+        address: activeAddress,
         abi: INSURANCE_VAULT_ABI,
         functionName: 'redeem',
         args: [parsedShares, address, address],
       });
       return;
     }
+    if (!isQueueVault || !queueAddress) return;
     if (needsApproval) {
       writeContract({
-        address: q.vault,
+        address: activeAddress,
         abi: INSURANCE_VAULT_ABI,
         functionName: 'approve',
         args: [queueAddress, parsedShares],
@@ -146,16 +137,19 @@ export function RedemptionFlow({ queueAddress }: { queueAddress?: `0x${string}` 
   }
 
   const noticeDays = Math.max(1, Math.round(q.epochDurationSec / 86_400));
+  const submitDisabled =
+    wrongChain || parsedShares <= 0n || parsedShares > heldShares || queueUnavailable || q.paused || busy;
 
   return (
     <Card title="Withdraw">
-      {/* Claimable proceeds from a settled epoch come first: it is free money waiting. */}
-      {q.claimable?.settled && !q.claimable.alreadyClaimed && (
+      {/* Claimable proceeds from a settled epoch come first: it is money waiting. */}
+      {q.claimable?.settled && !q.claimable.alreadyClaimed && queueAddress && (
         <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
           <p className="text-sm font-medium text-emerald-900">Your withdrawal is ready</p>
           <p className="mt-1 text-xs text-emerald-800">
             {formatUSDC(q.claimable.assetsPaid)} USDC
-            {q.claimable.sharesReturned > 0n && ` + ${fmtShares(q.claimable.sharesReturned)} ${SHARE_SYMBOL} returned`}
+            {q.claimable.sharesReturned > 0n &&
+              ` + ${fmtShares(q.claimable.sharesReturned)} ${SHARE_SYMBOL} returned`}
           </p>
           <button
             type="button"
@@ -175,7 +169,6 @@ export function RedemptionFlow({ queueAddress }: { queueAddress?: `0x${string}` 
         </div>
       )}
 
-      {/* Pending request: nothing to do but wait — say so instead of showing buttons. */}
       {q.openEpochRequested > 0n && (
         <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
           <p className="text-sm font-medium text-gray-900">
@@ -188,6 +181,25 @@ export function RedemptionFlow({ queueAddress }: { queueAddress?: `0x${string}` 
         </div>
       )}
 
+      {/* Step 0 — which vault */}
+      <VaultPicker
+        positions={positions}
+        activeAddress={activeAddress}
+        queueVault={q.available ? q.vault : undefined}
+        onSelect={(a) => {
+          setSelected(a);
+          setAmount('');
+          reset();
+        }}
+      />
+
+      {active?.unreadable && (
+        <p className="mb-4 rounded-lg bg-amber-50 p-2 text-xs text-amber-800">
+          This vault did not answer the balance read, so your position in it is unknown rather than
+          zero. Nothing is offered here until it responds.
+        </p>
+      )}
+
       {/* Step 1 — amount */}
       <StepRow n={1} active={step === 1} done={step > 1} label="How much do you want to withdraw?" />
       <div className="mb-4 mt-2">
@@ -198,31 +210,50 @@ export function RedemptionFlow({ queueAddress }: { queueAddress?: `0x${string}` 
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0.00"
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-gray-400 focus:outline-none"
+            disabled={heldShares === 0n}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-gray-400 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400"
           />
           <button
             type="button"
             onClick={setMax}
-            className="shrink-0 rounded-lg border border-gray-200 px-3 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+            disabled={heldShares === 0n}
+            className="shrink-0 rounded-lg border border-gray-200 px-3 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40"
           >
             Max
           </button>
         </div>
         <p className="mt-1 text-xs text-gray-500">
-          You hold {fmtShares(q.userShares)} {SHARE_SYMBOL} · {fmtShares(q.instantRedeemable)} available immediately
+          {heldShares === 0n ? (
+            <>You hold no {SHARE_SYMBOL} in this vault — pick one above where you have a position.</>
+          ) : (
+            <>
+              You hold {fmtShares(heldShares)} {SHARE_SYMBOL} here ·{' '}
+              {fmtShares(instantRedeemable)} available immediately
+            </>
+          )}
         </p>
-        {parsedShares > q.userShares && (
-          <p className="mt-1 text-xs text-red-600">More than you hold.</p>
-        )}
+        {parsedShares > heldShares && <p className="mt-1 text-xs text-red-600">More than you hold.</p>}
       </div>
 
       {/* Path explanation, before anything is signed */}
-      {parsedShares > 0n && parsedShares <= q.userShares && (
-        <div className="mb-4 rounded-lg bg-gray-50 p-3 text-xs leading-5 text-gray-700">
+      {parsedShares > 0n && parsedShares <= heldShares && (
+        <div
+          className={`mb-4 rounded-lg p-3 text-xs leading-5 ${
+            queueUnavailable ? 'border border-amber-200 bg-amber-50 text-amber-900' : 'bg-gray-50 text-gray-700'
+          }`}
+        >
           {withinBuffer ? (
             <>
               <strong>Immediate withdrawal.</strong> This amount fits the vault&apos;s free liquidity
               buffer, so you receive USDC in a single transaction.
+            </>
+          ) : queueUnavailable ? (
+            <>
+              <strong>Above this vault&apos;s free buffer.</strong> Larger exits go through the
+              redemption queue, and the deployed queue is bound to vault{' '}
+              {q.vault ? shortenAddress(q.vault) : 'another vault'} — not this one. Withdraw up to{' '}
+              {fmtShares(instantRedeemable)} {SHARE_SYMBOL} immediately, or wait for a queue bound to
+              this vault. Signing anything else here would revert.
             </>
           ) : (
             <>
@@ -236,21 +267,25 @@ export function RedemptionFlow({ queueAddress }: { queueAddress?: `0x${string}` 
       )}
 
       {/* Step 2 — approval (only when actually required) */}
-      {!withinBuffer && parsedShares > 0n && (
+      {!withinBuffer && parsedShares > 0n && isQueueVault && (
         <StepRow
           n={2}
           active={step === 2}
           done={step > 2}
-          label={needsApproval ? `Allow the queue to hold your ${SHARE_SYMBOL}` : `${SHARE_SYMBOL} allowance granted`}
+          label={
+            needsApproval
+              ? `Allow the queue to hold your ${SHARE_SYMBOL}`
+              : `${SHARE_SYMBOL} allowance granted`
+          }
         />
       )}
 
       {/* Step 3 — submit */}
       <StepRow
-        n={withinBuffer || parsedShares <= 0n ? 2 : 3}
-        active={step === 3}
+        n={withinBuffer || parsedShares <= 0n || !isQueueVault ? 2 : 3}
+        active={step === 3 && !queueUnavailable}
         done={false}
-        label={withinBuffer ? 'Receive your USDC' : 'Join the withdrawal window'}
+        label={withinBuffer || queueUnavailable ? 'Receive your USDC' : 'Join the withdrawal window'}
       />
 
       {wrongChain && (
@@ -262,18 +297,20 @@ export function RedemptionFlow({ queueAddress }: { queueAddress?: `0x${string}` 
       <button
         type="button"
         onClick={submit}
-        disabled={wrongChain || parsedShares <= 0n || parsedShares > q.userShares || q.paused || busy}
+        disabled={submitDisabled}
         className="mt-4 w-full rounded-full bg-[#1B3A6B] px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
       >
         {busy
           ? 'Confirm in your wallet…'
           : parsedShares <= 0n
             ? 'Enter an amount'
-            : withinBuffer
-              ? 'Withdraw now'
-              : needsApproval
-                ? `Step 2 of 3 — approve ${SHARE_SYMBOL}`
-                : 'Step 3 of 3 — request withdrawal'}
+            : queueUnavailable
+              ? `Reduce to ${fmtShares(instantRedeemable)} or less`
+              : withinBuffer
+                ? 'Withdraw now'
+                : needsApproval
+                  ? `Step 2 of 3 — approve ${SHARE_SYMBOL}`
+                  : 'Step 3 of 3 — request withdrawal'}
       </button>
 
       {isSuccess && (
@@ -284,6 +321,7 @@ export function RedemptionFlow({ queueAddress }: { queueAddress?: `0x${string}` 
             onClick={() => {
               setAmount('');
               q.refetch();
+              positions.refetch();
               void refetchAllowance();
               reset();
             }}
@@ -294,11 +332,83 @@ export function RedemptionFlow({ queueAddress }: { queueAddress?: `0x${string}` 
         </p>
       )}
       {error && (
-        <p className="mt-2 rounded-lg bg-red-50 p-2 text-xs text-red-700">
-          {humanizeError(error.message)}
-        </p>
+        <p className="mt-2 rounded-lg bg-red-50 p-2 text-xs text-red-700">{humanizeError(error.message)}</p>
       )}
     </Card>
+  );
+}
+
+/**
+ * Every deployed vault, each stating this wallet's position in it up front —
+ * the answer to "do I have anything here" should not require selecting first
+ * and reading a balance second.
+ */
+function VaultPicker({
+  positions,
+  activeAddress,
+  queueVault,
+  onSelect,
+}: {
+  positions: ReturnType<typeof useLpPositions>;
+  activeAddress?: `0x${string}`;
+  queueVault?: `0x${string}`;
+  onSelect: (a: `0x${string}`) => void;
+}) {
+  if (positions.loading) {
+    return <div className="mb-4 h-24 animate-pulse rounded-lg bg-gray-100" />;
+  }
+  if (positions.all.length === 0) {
+    return (
+      <p className="mb-4 rounded-lg bg-gray-50 p-3 text-xs text-gray-500">
+        No vaults are deployed on this network yet.
+      </p>
+    );
+  }
+
+  return (
+    <div className="mb-4">
+      <StepRow n={0} active={false} done label="Which vault are you withdrawing from?" />
+      <ul className="mt-2 space-y-1.5">
+        {positions.all.map((p) => {
+          const isActive = p.address === activeAddress;
+          const isQueue = !!queueVault && queueVault.toLowerCase() === p.address.toLowerCase();
+          return (
+            <li key={p.address}>
+              <button
+                type="button"
+                onClick={() => onSelect(p.address)}
+                aria-pressed={isActive}
+                className={`flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left transition ${
+                  isActive ? 'border-[#1B3A6B] bg-[#1B3A6B]/[0.04]' : 'border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                <span className="min-w-0">
+                  <span className="block truncate text-xs font-semibold text-gray-900">{p.name}</span>
+                  <span className="block text-[11px] text-gray-400">{shortenAddress(p.address)}</span>
+                </span>
+                <span className="shrink-0 text-right">
+                  {p.unreadable ? (
+                    <span className="text-[11px] font-medium text-amber-700">Position unknown</span>
+                  ) : p.shares > 0n ? (
+                    <>
+                      <span className="block text-xs font-semibold text-emerald-700">
+                        {fmtShares(p.shares)} {SHARE_SYMBOL}
+                      </span>
+                      <span className="block text-[11px] text-gray-400">
+                        {fmtShares(p.instantRedeemable)} instant
+                        {isQueue ? ' · queue' : ''}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-[11px] text-gray-400">No position</span>
+                  )}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 

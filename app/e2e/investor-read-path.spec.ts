@@ -78,6 +78,29 @@ test('governance console renders with zero-authority note', async ({ page }) => 
   await expect(page.getByText(/only timelock proposers can schedule/i)).toBeVisible();
 });
 
+test('governance console accepts a pre-filled curation request', async ({ page }) => {
+  // A syndicate asking to curate a free vault arrives here with the operation
+  // already encoded; the console must seed the form and hash the operation.
+  const target = '0x47b1F34b0f2BD9c8b8b1E4A1f7D4c9c0b3A5E6d7';
+  const data = '0xe1aae2770000000000000000000000001234567890abcdef1234567890abcdef12345678';
+  await page.goto(`/app/admin/governance?kind=raw&label=assign-syndicate-test&target=${target}&data=${data}`);
+
+  await expect(page.locator('#gov-target')).toHaveValue(target);
+  await expect(page.locator('#gov-data')).toHaveValue(data);
+  await expect(page.getByText(/Operation id: 0x[0-9a-f]{64}/i)).toBeVisible();
+});
+
+test('a mistyped address in the console reports, it does not crash the page', async ({ page }) => {
+  // Same 40 hex characters with one case flipped: the EIP-55 checksum no
+  // longer matches. This used to throw inside hashOperation and take the whole
+  // console down, and the throw was reachable from a link.
+  const bad = '0x47b1F34b0F2Bd9C8b8B1E4A1f7d4c9C0b3A5e6D7';
+  await page.goto(`/app/admin/governance?kind=raw&label=typo&target=${bad}&data=0xe1aae277`);
+
+  await expect(page.getByText('Safe → timelock execution')).toBeVisible();
+  await expect(page.getByText(/fails its EIP-55 checksum/i)).toBeVisible();
+});
+
 test('transparency aggregates every deployed vault from chain', async ({ page }) => {
   await page.goto('/app/transparency');
   await expect(page.getByRole('heading', { name: /every vault, every unit of capacity/i })).toBeVisible();

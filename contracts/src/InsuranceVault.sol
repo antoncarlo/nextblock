@@ -190,6 +190,11 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
     event ClaimManagerUpdated(address indexed claimManager);
     /// @notice Emitted when the sole allocation path is bound.
     event VaultAllocatorUpdated(address indexed vaultAllocator);
+
+    /// @notice Emitted when an unassigned vault gains its syndicate (curator).
+    /// @param syndicate The address taking curation of this vault.
+    /// @param assignedBy The OWNER_ROLE holder (the timelock in phase 1).
+    event SyndicateAssigned(address indexed syndicate, address indexed assignedBy);
     /// @notice Emitted when funds are reserved for an approved claim.
     event PortfolioClaimReserved(
         uint256 indexed claimId, uint256 indexed portfolioId, uint256 amount, uint256 allocationReleased
@@ -214,6 +219,11 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
     error InsuranceVault__InvalidParams();
     /// @notice No accrued fees to collect.
     error InsuranceVault__NoFeesToClaim();
+    /// @notice The vault already has a syndicate; curation is never taken away
+    ///         from an incumbent by a single transaction.
+    error InsuranceVault__AlreadyCurated(address syndicate);
+    /// @notice The candidate does not hold UNDERWRITING_CURATOR_ROLE.
+    error InsuranceVault__NotACurator(address candidate);
     /// @notice Portfolio not in an allocatable status.
     error InsuranceVault__PortfolioNotAllocatable(uint256 portfolioId);
     /// @notice Allocation exceeds free underwriting capacity.
@@ -617,6 +627,32 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
     function setClaimManager(address claimManager_) external onlyProtocolRole(OWNER_ROLE) {
         claimManager = claimManager_;
         emit ClaimManagerUpdated(claimManager_);
+    }
+
+    /// @notice Assign a syndicate (curator) to a vault that has none.
+    /// @dev Deliberately ONE-WAY: it only writes when `vaultManager` is unset,
+    ///      so an incumbent syndicate can never be displaced by a single call.
+    ///      Reassigning a curated vault is a governance decision that must be
+    ///      designed with its own migration path, not smuggled in through this
+    ///      setter. Gated on OWNER_ROLE, which the timelock holds in phase 1 —
+    ///      so assignment goes through schedule -> delay -> execute like every
+    ///      other risk-relevant action. Touches no accounting: shares, buffer,
+    ///      reserves and every compliance gate are unaffected.
+    /// @param syndicate The candidate curator; must already hold
+    ///        UNDERWRITING_CURATOR_ROLE in ProtocolRoles.
+    function assignSyndicate(address syndicate) external onlyProtocolRole(OWNER_ROLE) {
+        if (vaultManager != address(0)) revert InsuranceVault__AlreadyCurated(vaultManager);
+        if (syndicate == address(0)) revert InsuranceVault__InvalidParams();
+        if (!protocolRoles.hasRole(UNDERWRITING_CURATOR_ROLE, syndicate)) {
+            revert InsuranceVault__NotACurator(syndicate);
+        }
+        vaultManager = syndicate;
+        emit SyndicateAssigned(syndicate, msg.sender);
+    }
+
+    /// @notice True when no syndicate curates this vault yet.
+    function isAwaitingCuration() external view returns (bool) {
+        return vaultManager == address(0);
     }
 
     /// @notice Bind the VaultAllocator contract. Only OWNER_ROLE.

@@ -234,6 +234,45 @@ export const VAULT_FACTORY_ABI = [
   },
   {
     "type": "function",
+    "name": "createUnassignedVault",
+    "inputs": [
+      {
+        "name": "name",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "symbol",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "vaultName",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "bufferRatioBps_",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "managementFeeBps_",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "vault",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "createVault",
     "inputs": [
       {
@@ -713,7 +752,33 @@ export const INSURANCE_VAULT_ABI = [
   },
   {
     "type": "function",
+    "name": "MAX_ACTIVE_POLICIES",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "MAX_MANAGEMENT_FEE_BPS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MAX_PREMIUM_PORTFOLIOS",
     "inputs": [],
     "outputs": [
       {
@@ -950,6 +1015,19 @@ export const INSURANCE_VAULT_ABI = [
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "assignSyndicate",
+    "inputs": [
+      {
+        "name": "syndicate",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -1363,6 +1441,19 @@ export const INSURANCE_VAULT_ABI = [
       },
       {
         "name": "expired",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "isAwaitingCuration",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
         "type": "bool",
         "internalType": "bool"
       }
@@ -1990,6 +2081,19 @@ export const INSURANCE_VAULT_ABI = [
   },
   {
     "type": "function",
+    "name": "totalPremiumReceived",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "totalSupply",
     "inputs": [],
     "outputs": [
@@ -2546,6 +2650,25 @@ export const INSURANCE_VAULT_ABI = [
   },
   {
     "type": "event",
+    "name": "SyndicateAssigned",
+    "inputs": [
+      {
+        "name": "syndicate",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "assignedBy",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "Transfer",
     "inputs": [
       {
@@ -2828,6 +2951,17 @@ export const INSURANCE_VAULT_ABI = [
   },
   {
     "type": "error",
+    "name": "InsuranceVault__AlreadyCurated",
+    "inputs": [
+      {
+        "name": "syndicate",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "InsuranceVault__ClaimReserveInsufficientFunds",
     "inputs": [
       {
@@ -2907,6 +3041,17 @@ export const INSURANCE_VAULT_ABI = [
   },
   {
     "type": "error",
+    "name": "InsuranceVault__NotACurator",
+    "inputs": [
+      {
+        "name": "candidate",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "InsuranceVault__NotClaimManager",
     "inputs": [
       {
@@ -2966,6 +3111,17 @@ export const INSURANCE_VAULT_ABI = [
     "inputs": [
       {
         "name": "portfolioId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InsuranceVault__PremiumQueueFull",
+    "inputs": [
+      {
+        "name": "maxItems",
         "type": "uint256",
         "internalType": "uint256"
       }
