@@ -231,7 +231,10 @@ function InvestorView() {
         label="Insurance Tokenization Protocol"
         title="Curated Insurance Vaults"
         subtitle="Deposit capital into syndicate-managed vaults backed by tokenized insurance policies. Earn premiums as yield — uncorrelated to equities, bonds, and crypto."
-        stats={[{ label: "Illustrative APY Range", value: "5–18%" }, { label: "Verification Types", value: "3" }, { label: "Active Syndicates", value: "8" }]}
+        // 8–14% is the protocol-level range in the offering documents. This
+        // header used to say 5–18%, the span of eight hand-written per-vault
+        // ranges — a figure that existed nowhere else and matched no document.
+        stats={[{ label: "Illustrative APY Range", value: "8–14%" }, { label: "Verification Types", value: "3" }, { label: "Active Syndicates", value: "8" }]}
         ctas={[]}
       />
       {/* How It Works */}

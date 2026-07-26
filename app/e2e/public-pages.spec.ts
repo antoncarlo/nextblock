@@ -34,7 +34,8 @@ test('the footer carries the current handle, year and on-site risk link', async 
   await page.goto('/');
   // The old handle was reclaimable by a third party; the risk link used to
   // resolve to a document stamped "DRAFT — not legal advice".
-  await expect(page.locator('a[href*="x.com"]')).toHaveAttribute('href', 'https://x.com/NextblockRWA');
+  // Case matters: the handle is NextBlockRWA, not Nextblockrwa.
+  await expect(page.locator('a[href*="x.com"]')).toHaveAttribute('href', 'https://x.com/NextBlockRWA');
   await expect(page.locator('a[href="/terms#risk"]')).toBeVisible();
   await expect(page.locator('a[href*="github"]')).toHaveCount(0);
   await expect(page.getByText(`© ${new Date().getFullYear()} NextBlock`)).toBeVisible();

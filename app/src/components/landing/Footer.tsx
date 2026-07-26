@@ -37,7 +37,7 @@ const Footer = () => {
   ];
 
   const socialLinks = [
-    { icon: XIcon, href: "https://x.com/NextblockRWA", label: "X" },
+    { icon: XIcon, href: "https://x.com/NextBlockRWA", label: "X" },
     { icon: Linkedin, href: "https://www.linkedin.com/company/next-block", label: "LinkedIn" },
     { icon: Mail, href: "mailto:nextblock@financier.com", label: "Email" },
   ];
