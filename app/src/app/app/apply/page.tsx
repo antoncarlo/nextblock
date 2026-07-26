@@ -76,7 +76,7 @@ export default function ApplyPage() {
     agreedTerms: false,
   });
 
-  // Syndicate Manager form state
+  // Syndicate form state
   const [curForm, setCurForm] = useState({
     entityName: '',
     entityType: '',
@@ -341,7 +341,7 @@ export default function ApplyPage() {
             {myApps.kind === 'ready' && myApps.apps.map((a, i) => (
               <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '12px', color: '#374151', background: '#F3F4F6', borderRadius: '9999px', padding: '3px 10px' }}>
-                  {a.applicantType === 'lp' ? 'Institutional LP' : a.applicantType === 'cedant' ? 'Reinsurer (Cedant)' : 'Syndicate Curator'}: <strong>{a.status.replace('_', ' ')}</strong>
+                  {a.applicantType === 'lp' ? 'Institutional LP' : a.applicantType === 'cedant' ? 'Reinsurer (Cedant)' : 'Syndicate'}: <strong>{a.status.replace('_', ' ')}</strong>
                 </span>
                 {/* Approved → hand the applicant straight to the next step of their path. */}
                 {a.status === 'approved' && a.applicantType === 'cedant' && (
@@ -390,7 +390,7 @@ export default function ApplyPage() {
             Join NextBlock
           </h1>
           <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '15px', color: 'rgba(255,255,255,0.6)', maxWidth: '560px', lineHeight: 1.6 }}>
-            NextBlock is an institutional protocol for tokenized reinsurance portfolios, open to qualified institutional participants only. Apply for on-chain authorization as a Reinsurer (Cedant — cede &amp; tokenize a portfolio), a Syndicate Curator (Underwriting — deploy &amp; manage vaults), or an Institutional Liquidity Provider (LP — provide USDC capital, earn reinsurance yield).
+            NextBlock is an institutional protocol for tokenized reinsurance portfolios, open to qualified institutional participants only. Apply for on-chain authorization as a Reinsurer (Cedant — cede &amp; tokenize a portfolio), a Syndicate (Underwriting — deploy &amp; manage vaults), or an Institutional Liquidity Provider (LP — provide USDC capital, earn reinsurance yield).
           </p>
         </div>
       </div>
@@ -413,7 +413,7 @@ export default function ApplyPage() {
           <div style={{ background: 'rgba(27,58,107,0.06)', border: '1px solid rgba(27,58,107,0.2)', borderRadius: '12px', padding: '16px 20px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1B3A6B" strokeWidth="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             <div>
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '14px', fontWeight: 600, color: '#1B3A6B', margin: 0 }}>Your wallet holds UNDERWRITING_CURATOR_ROLE on-chain (Underwriting Curator)</p>
+              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '14px', fontWeight: 600, color: '#1B3A6B', margin: 0 }}>Your wallet holds UNDERWRITING_CURATOR_ROLE on-chain (Syndicate)</p>
               <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '12px', color: '#1B3A6B', opacity: 0.8, margin: '2px 0 0' }}>
                 You can deploy insurance vaults. <Link href="/app/create-vault" style={{ color: '#1B3A6B', fontWeight: 600 }}>Create a vault →</Link>
               </p>
@@ -488,7 +488,7 @@ export default function ApplyPage() {
                 </div>
               </button>
 
-              {/* Syndicate Manager Card */}
+              {/* Syndicate Card */}
               <button
                 onClick={() => { setRole('syndicate manager'); setStep('form'); }}
                 style={{
@@ -508,7 +508,7 @@ export default function ApplyPage() {
                     </svg>
                   </div>
                   <div>
-                    <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '17px', fontWeight: 400, color: '#0F1218', margin: 0 }}>Syndicate Curator</p>
+                    <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '17px', fontWeight: 400, color: '#0F1218', margin: 0 }}>Syndicate</p>
                     <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '12px', color: '#6B7280', margin: '2px 0 0' }}>Underwriting — managing agent</p>
                   </div>
                 </div>
@@ -740,7 +740,7 @@ export default function ApplyPage() {
           </form>
         )}
 
-        {/* ── STEP: Syndicate Manager Form ── */}
+        {/* ── STEP: Syndicate Form ── */}
         {step === 'form' && role === 'syndicate manager' && (
           <form data-track-section="apply_form_curator" onSubmit={handleCurSubmit}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px' }}>
@@ -748,7 +748,7 @@ export default function ApplyPage() {
                 ← Back
               </button>
               <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: '22px', fontWeight: 400, color: '#0F1218', margin: 0 }}>
-                Underwriting Curator Application
+                Syndicate Application
               </h2>
             </div>
 
@@ -1031,7 +1031,7 @@ export default function ApplyPage() {
             </h2>
             <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '14px', color: '#6B7280', maxWidth: '480px', margin: '0 auto 8px', lineHeight: 1.6 }}>
               Thank you for applying to NextBlock. Our team will review your{' '}
-              {role === 'lp' ? 'Institutional LP' : role === 'insurance' ? 'Reinsurer' : 'Syndicate Curator'} application and contact you at the provided email address.
+              {role === 'lp' ? 'Institutional LP' : role === 'insurance' ? 'Reinsurer' : 'Syndicate'} application and contact you at the provided email address.
             </p>
             <p style={{ fontFamily: "'Inter', sans-serif", fontSize: '13px', color: '#9A9A9A', marginBottom: '32px' }}>
               Review typically takes <strong>3–7 business days</strong>.

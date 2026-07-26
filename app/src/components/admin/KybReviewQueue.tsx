@@ -91,7 +91,7 @@ const STATUS_COLORS: Record<KybStatus, { bg: string; color: string }> = {
  *  a Reinsurer/Curator onboarding at a glance. LP uses the protocol green. */
 const TYPE_BADGE: Record<KybApplicantType, { bg: string; color: string; short: string }> = {
   cedant: { bg: '#EEF2FF', color: '#3730A3', short: 'Reinsurer' },
-  curator: { bg: '#FFF7ED', color: '#9A3412', short: 'Syndicate Curator' },
+  curator: { bg: '#FFF7ED', color: '#9A3412', short: 'Syndicate' },
   lp: { bg: '#F0FDF4', color: '#166534', short: 'Institutional LP' },
 };
 

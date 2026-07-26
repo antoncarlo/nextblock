@@ -17,7 +17,7 @@ function VaultTableSkeleton() {
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr style={{ borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
-            {["Vault", "TVL", "Syndicate Manager", "Exposure", "Policies", "Illustrative APY"].map((h) => (
+            {["Vault", "TVL", "Syndicate", "Exposure", "Policies", "Illustrative APY"].map((h) => (
               <th key={h} style={{ padding: "12px 24px", fontFamily: "'Inter', sans-serif", fontSize: "11px", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "#9A9A9A", textAlign: "left" }}>{h}</th>
             ))}
           </tr>
@@ -259,7 +259,7 @@ function InvestorView() {
       {/* CTA Apply */}
       <div data-track-section="insurer_cta" style={{ backgroundColor: "#F2F1EE", borderTop: "1px solid rgba(0,0,0,0.06)", padding: "48px 32px", textAlign: "center" }}>
         <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "22px", color: "#1B3A6B", marginBottom: "8px" }}>Are you an insurer or asset manager?</p>
-        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "14px", color: "#6B7280", marginBottom: "24px" }}>Apply to become a Syndicate Manager or list your insurance portfolio on NextBlock.</p>
+        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "14px", color: "#6B7280", marginBottom: "24px" }}>Apply to become a Syndicate or list your insurance portfolio on NextBlock.</p>
         <Link href="/app/apply" style={{ display: "inline-block", padding: "12px 32px", background: "#1B3A6B", color: "#FFFFFF", borderRadius: "50px", fontFamily: "'Inter', sans-serif", fontSize: "14px", fontWeight: 600, textDecoration: "none" }}>
           Apply Now →
         </Link>
@@ -299,14 +299,14 @@ function InsuranceCompanyView() {
   );
 }
 
-// ─── Vista Syndicate Manager ──────────────────────────────────────────────────
+// ─── Vista Syndicate ──────────────────────────────────────────────────
 function SyndicateManagerView() {
   const { address } = useAccount();
-  const userName = getWalletName(address) ?? 'Syndicate Manager';
+  const userName = getWalletName(address) ?? 'Syndicate';
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#FAFAF8" }}>
       <Hero
-        label="Syndicate Manager Portal"
+        label="Syndicate Portal"
         title={`Welcome back, ${userName}`}
         subtitle="Deploy and manage insurance vaults, define risk strategies, attract USDC liquidity and earn management fees."
         stats={[]}

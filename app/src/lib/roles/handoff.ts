@@ -51,7 +51,7 @@ export interface GrantableRole {
 
 export const GRANTABLE_ROLES: readonly GrantableRole[] = [
   { key: 'AUTHORIZED_CEDANT', id: ROLE_ID.AUTHORIZED_CEDANT, label: 'Authorized Cedant', description: 'Submit portfolios and claims.' },
-  { key: 'UNDERWRITING_CURATOR', id: ROLE_ID.UNDERWRITING_CURATOR, label: 'Underwriting Curator', description: 'Review, approve and activate portfolios and claims.' },
+  { key: 'UNDERWRITING_CURATOR', id: ROLE_ID.UNDERWRITING_CURATOR, label: 'Syndicate', description: 'Review, approve and activate portfolios and claims.' },
   { key: 'ALLOCATOR', id: ROLE_ID.ALLOCATOR, label: 'Vault Allocator', description: 'Distribute capacity within approved limits.' },
   { key: 'SENTINEL', id: ROLE_ID.SENTINEL, label: 'Sentinel / Risk Guardian', description: 'Pause and dispute; never moves funds.' },
   { key: 'CLAIMS_COMMITTEE', id: ROLE_ID.CLAIMS_COMMITTEE, label: 'Claims Committee', description: 'Off-chain claim approval path.' },

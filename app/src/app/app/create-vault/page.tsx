@@ -84,7 +84,7 @@ export default function CreateVaultPage() {
   const { writeContract, data: txHash, isPending, error: writeError } = useWriteContract();
   const { isLoading: isConfirming, isSuccess: isConfirmed, data: receipt } = useWaitForTransactionReceipt({ hash: txHash });
 
-  // ON-CHAIN authorization: Underwriting Curator role from ProtocolRoles.
+  // ON-CHAIN authorization: Syndicate role from ProtocolRoles.
   const access = useProtocolAccess();
   const isKycApproved = access.status === 'onchain' && (access.isCurator || access.isOwner);
 
@@ -193,7 +193,7 @@ export default function CreateVaultPage() {
               ))}
             </div>
             <a
-              href="mailto:nextblock@financier.com?subject=Syndicate Manager Application"
+              href="mailto:nextblock@financier.com?subject=Syndicate Application"
               style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', backgroundColor: '#1B3A6B', color: '#FFFFFF', padding: '14px 32px', borderRadius: '8px', fontSize: '14px', fontWeight: 600, textDecoration: 'none', letterSpacing: '0.02em' }}
             >
               <ExternalLink size={15} />Apply for Syndicate Access

@@ -28,7 +28,7 @@ export function VaultTable({ vaultAddresses }: VaultTableProps) {
             {[
               { label: 'Vault', align: 'left' },
               { label: 'TVL', align: 'left' },
-              { label: 'Syndicate Manager', align: 'left' },
+              { label: 'Syndicate', align: 'left' },
               { label: 'Exposure', align: 'left' },
               { label: 'Policies', align: 'center' },
               { label: 'Illustrative APY', align: 'right' },
