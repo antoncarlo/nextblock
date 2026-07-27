@@ -4,16 +4,36 @@ import type { NextConfig } from "next";
 // - connect-src additionally allows *.walletconnect.org (relay/pulse moved to
 //   the .org domains in WalletConnect v2 infrastructure); without it the
 //   wallet modal cannot open sessions in production.
+// - connect-src allows api.goldsky.com: every indexed read (LP exit history,
+//   epoch settlements, NAV series) goes to the subgraph from the browser. It
+//   was missing, so those queries were blocked by the policy and surfaced as
+//   "Failed to fetch" — the endpoint was healthy the whole time and answered
+//   curl normally. If the subgraph ever moves off Goldsky, this line moves too,
+//   or the same silent failure returns.
 // - Legacy demo chains (Ethereum Sepolia, Arc) use RPC endpoints that are NOT
 //   allow-listed on purpose: their reads fail closed and the UI already
 //   renders them as unavailable/demo-legacy.
 // - frame-ancestors 'none' + X-Frame-Options DENY: the app is never embedded.
+const connectSources = [
+  "'self'",
+  "https://*.supabase.co",
+  "wss://*.supabase.co",
+  "https://*.walletconnect.com",
+  "wss://*.walletconnect.com",
+  "https://*.walletconnect.org",
+  "wss://*.walletconnect.org",
+  "https://*.alchemy.com",
+  "https://mainnet.base.org",
+  "https://sepolia.base.org",
+  "https://api.goldsky.com",
+];
+
 const contentSecurityPolicy = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: https:",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.walletconnect.com wss://*.walletconnect.com https://*.walletconnect.org wss://*.walletconnect.org https://*.alchemy.com https://mainnet.base.org https://sepolia.base.org",
+  `connect-src ${connectSources.join(" ")}`,
   "frame-ancestors 'none'",
 ].join("; ");
 
