@@ -24,7 +24,7 @@
  * by nothing, so authorising through it granted no permission at all.
  */
 
-export type StepId = 'register' | 'add' | 'authorize' | 'premium';
+export type StepId = 'register' | 'activate' | 'add' | 'authorize' | 'premium';
 
 export interface SetupStep {
   id: StepId;
@@ -39,6 +39,10 @@ export interface SetupStep {
 }
 
 export interface SetupInputs {
+  /** At least one policy exists in the registry (any status). */
+  hasRegisteredPolicy: boolean;
+  /** At least one policy has reached ACTIVE status. */
+  hasActivePolicy: boolean;
   /** At least one policy has been added to this vault. */
   hasVaultPolicy: boolean;
   /** The connected wallet holds the role that gates premium deposits. */
@@ -48,6 +52,8 @@ export interface SetupInputs {
 }
 
 export function deriveSetupSteps({
+  hasRegisteredPolicy,
+  hasActivePolicy,
   hasVaultPolicy,
   callerCanDeposit,
   premiumReceived,
@@ -60,9 +66,9 @@ export function deriveSetupSteps({
   const premiumBlockedReason = premiumDone
     ? undefined
     : !hasVaultPolicy
-      ? 'No policy has been added to this vault yet, so there is nothing to pay a premium against. Finish step 2 first.'
+      ? 'No policy has been added to this vault yet, so there is nothing to pay a premium against. Finish step 3 first.'
       : !callerCanDeposit
-        ? 'This wallet does not hold PREMIUM_DEPOSITOR_ROLE, which is what the vault checks. Finish step 3 first.'
+        ? 'This wallet does not hold PREMIUM_DEPOSITOR_ROLE, which is what the vault checks. Finish step 4 first.'
         : undefined;
 
   return [
@@ -71,27 +77,44 @@ export function deriveSetupSteps({
       n: 1,
       label: 'Register policy',
       description: 'Create the policy in the global registry, with its cover, premium and dates.',
-      // A policy in the vault proves one was registered. The registry is
-      // protocol-wide, so an empty vault says nothing about step 1 on its own.
-      done: hasVaultPolicy,
+      done: hasRegisteredPolicy,
+    },
+    {
+      id: 'activate',
+      n: 2,
+      label: 'Activate policy',
+      // registerPolicy leaves the policy REGISTERED. addPolicy demands ACTIVE,
+      // so without this transition step 3 reverts with PolicyNotActive — a
+      // whole state change the interface used to omit.
+      description: 'Move it from REGISTERED to ACTIVE, which starts cover from now.',
+      done: hasActivePolicy,
+      blockedReason: hasActivePolicy
+        ? undefined
+        : !hasRegisteredPolicy
+          ? 'No policy has been registered yet. Finish step 1 first.'
+          : undefined,
     },
     {
       id: 'add',
-      n: 2,
+      n: 3,
       label: 'Add to this vault',
-      description: 'Allocate the registered policy to this vault and set its weight.',
+      description: 'Allocate the active policy to this vault and set its weight.',
       done: hasVaultPolicy,
+      blockedReason:
+        hasVaultPolicy || hasActivePolicy
+          ? undefined
+          : 'The vault only accepts an ACTIVE policy; a registered one is rejected with InsuranceVault__PolicyNotActive. Finish step 2 first.',
     },
     {
       id: 'authorize',
-      n: 3,
+      n: 4,
       label: 'Authorise the depositor',
       description: 'Grant the address that will pay the premium the role that permits it.',
       done: callerCanDeposit,
     },
     {
       id: 'premium',
-      n: 4,
+      n: 5,
       label: 'Deposit premium',
       description: 'Transfer the USDC premium into the vault, which starts UPR accrual.',
       done: premiumDone,

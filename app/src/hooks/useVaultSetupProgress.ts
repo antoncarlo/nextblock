@@ -4,7 +4,12 @@ import { useMemo } from 'react';
 import { useAccount, useReadContracts } from 'wagmi';
 import { INSURANCE_VAULT_ABI, PROTOCOL_ROLES_ABI } from '@/config/contracts';
 import { useAddresses } from '@/hooks/useAddresses';
+import { usePolicyCount, useAllPolicies } from '@/hooks/usePolicyRegistry';
 import { deriveSetupSteps, firstActionableStep, type SetupStep, type StepId } from '@/lib/vault-setup';
+
+/** PolicyRegistry.PolicyStatus — ACTIVE is the only status the vault accepts. */
+const POLICY_STATUS_REGISTERED = 0;
+const POLICY_STATUS_ACTIVE = 1;
 
 export type { SetupStep, StepId } from '@/lib/vault-setup';
 
@@ -36,6 +41,8 @@ export interface VaultSetupProgress {
   currentStep: StepId;
   /** Policy ids already added to this vault. */
   vaultPolicyIds: bigint[];
+  /** Policies registered but not yet ACTIVE — the vault would reject these. */
+  registeredPolicyIds: bigint[];
   /** The connected wallet holds the role that gates premium deposits. */
   callerCanDeposit: boolean;
   /** The connected wallet can grant that role (it administers the role). */
@@ -97,14 +104,38 @@ export function useVaultSetupProgress(vaultAddress: `0x${string}`): VaultSetupPr
   const premiumReceived =
     data?.[1]?.status === 'success' && typeof data[1].result === 'bigint' ? data[1].result : 0n;
 
+  // Registry-wide policy statuses: the vault only accepts an ACTIVE policy, so
+  // "a policy exists" and "a policy can be added" are different questions.
+  const { data: policyCount } = usePolicyCount();
+  const { data: policiesData, refetch: refetchPolicies } = useAllPolicies(policyCount as bigint | undefined);
+
+  const policyStatuses = useMemo(() => {
+    if (!policiesData) return [] as number[];
+    return policiesData
+      .filter((r) => r.status === 'success' && r.result)
+      .map((r) => Number((r.result as { status: number }).status));
+  }, [policiesData]);
+
+  /** Policies registered but not yet activated — what step 2 acts on. */
+  const registeredPolicyIds = useMemo(() => {
+    if (!policiesData) return [] as bigint[];
+    return policiesData
+      .filter((r) => r.status === 'success' && r.result)
+      .map((r) => r.result as { id: bigint; status: number })
+      .filter((p) => Number(p.status) === POLICY_STATUS_REGISTERED)
+      .map((p) => p.id);
+  }, [policiesData]);
+
   const steps = useMemo(
     () =>
       deriveSetupSteps({
+        hasRegisteredPolicy: policyStatuses.length > 0,
+        hasActivePolicy: policyStatuses.some((s) => s === POLICY_STATUS_ACTIVE),
         hasVaultPolicy: vaultPolicyIds.length > 0,
         callerCanDeposit,
         premiumReceived,
       }),
-    [vaultPolicyIds, callerCanDeposit, premiumReceived],
+    [policyStatuses, vaultPolicyIds, callerCanDeposit, premiumReceived],
   );
 
   const currentStep = useMemo(() => firstActionableStep(steps), [steps]);
@@ -113,12 +144,14 @@ export function useVaultSetupProgress(vaultAddress: `0x${string}`): VaultSetupPr
     steps,
     currentStep,
     vaultPolicyIds,
+    registeredPolicyIds,
     callerCanDeposit,
     callerCanGrantDeposit,
     loading: isLoading,
     refetch: () => {
       void refetch();
       void refetchRoles();
+      void refetchPolicies();
     },
   };
 }

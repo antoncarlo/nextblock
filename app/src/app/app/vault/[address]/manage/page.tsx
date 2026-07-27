@@ -21,7 +21,7 @@ import { formatUSDC } from '@/lib/formatting';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type Tab = 'register' | 'add' | 'premium' | 'authorize';
+type Tab = 'register' | 'activate' | 'add' | 'authorize' | 'premium';
 
 interface VerificationOption {
   value: number;
@@ -182,7 +182,9 @@ function RegisterPolicyTab() {
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-        <strong>Step 1 of 3.</strong> Register a new insurance policy in the global PolicyRegistry. After registration, you will receive a Policy ID — use it in the next step to add the policy to your vault.
+        <strong>Step 1 of 5.</strong> Register a new insurance policy in the global PolicyRegistry.
+        It is created as <code>REGISTERED</code>, not active — step 2 activates it, and only then
+        will a vault accept it.
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -377,11 +379,15 @@ function AddPolicyTab({ vaultAddress }: { vaultAddress: `0x${string}` }) {
       {/* Policy selector */}
       {policiesData && policiesData.length > 0 && (
         <div>
-          <label style={labelStyle}>Select from registered policies</label>
+          <label style={labelStyle}>Select from active policies</label>
           <div className="space-y-2 max-h-48 overflow-y-auto rounded-xl border border-gray-100 p-2">
             {policiesData.map((result, idx) => {
               if (result.status !== 'success' || !result.result) return null;
-              const p = result.result as { id: bigint; name: string; verificationType: number; coverageAmount: bigint; premiumAmount: bigint };
+              const p = result.result as { id: bigint; name: string; verificationType: number; coverageAmount: bigint; premiumAmount: bigint; status: number };
+              // The list used to offer every policy, including REGISTERED ones
+              // the vault rejects. Offering a choice that cannot succeed is how
+              // a curator ends up reading a gas-limit error.
+              if (Number(p.status) !== 1) return null;
               return (
                 <button
                   key={idx}
@@ -681,6 +687,125 @@ function DepositPremiumTab({ vaultAddress }: { vaultAddress: `0x${string}` }) {
   );
 }
 
+// ─── Tab: Activate Policy ────────────────────────────────────────────────────
+
+/**
+ * registerPolicy leaves a policy REGISTERED. The vault's addPolicy demands
+ * ACTIVE and reverts with InsuranceVault__PolicyNotActive otherwise — a state
+ * transition the interface had no way to perform at all, so the procedure could
+ * not be completed from the app.
+ */
+function ActivatePolicyTab({
+  registeredPolicyIds,
+  onDone,
+}: {
+  registeredPolicyIds: bigint[];
+  onDone: () => void;
+}) {
+  const addresses = useAddresses();
+  const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const [policyId, setPolicyId] = useState<string>('');
+
+  const chosen = policyId || (registeredPolicyIds[0]?.toString() ?? '');
+
+  return (
+    <div className="space-y-5">
+      <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+        <strong>Activation starts cover.</strong> It sets the policy&apos;s start time to now and
+        moves it from <code>REGISTERED</code> to <code>ACTIVE</code>. Only an active policy can be
+        added to a vault, and activation cannot be undone.
+      </div>
+
+      {registeredPolicyIds.length === 0 ? (
+        <p className="text-sm text-gray-500">
+          No policy is waiting for activation. Register one in step 1, or every registered policy is
+          already active.
+        </p>
+      ) : (
+        <>
+          <div>
+            <label
+              style={{
+                display: 'block',
+                fontSize: '12px',
+                fontWeight: 600,
+                color: '#6B7280',
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                marginBottom: '6px',
+                fontFamily: "'Inter', sans-serif",
+              }}
+            >
+              Policies awaiting activation
+            </label>
+            <div className="space-y-2">
+              {registeredPolicyIds.map((id) => {
+                const value = id.toString();
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setPolicyId(value)}
+                    style={{
+                      width: '100%',
+                      textAlign: 'left',
+                      padding: '10px 12px',
+                      borderRadius: 8,
+                      border: chosen === value ? '1.5px solid #1B3A6B' : '1px solid rgba(0,0,0,0.08)',
+                      background: chosen === value ? 'rgba(27,58,107,0.05)' : '#fff',
+                      cursor: 'pointer',
+                      fontFamily: "'Inter', sans-serif",
+                      fontSize: 13,
+                    }}
+                  >
+                    Policy #{value}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {error && (
+            <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error.message.slice(0, 200)}
+            </div>
+          )}
+
+          <button
+            type="button"
+            disabled={isPending || !chosen}
+            onClick={() => {
+              writeContract({
+                address: addresses.policyRegistry as `0x${string}`,
+                abi: POLICY_REGISTRY_ABI,
+                functionName: 'activatePolicy',
+                args: [BigInt(chosen)],
+              });
+              onDone();
+            }}
+            style={{
+              background: '#1B3A6B',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '12px 28px',
+              fontSize: '14px',
+              fontWeight: 600,
+              fontFamily: "'Inter', sans-serif",
+              cursor: isPending || !chosen ? 'not-allowed' : 'pointer',
+              opacity: isPending || !chosen ? 0.7 : 1,
+            }}
+          >
+            {isPending ? 'Confirm in wallet...' : `Activate policy #${chosen}`}
+          </button>
+
+          <TxStatus hash={hash} isPending={isPending} label="Policy activated" />
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─── Tab: Authorize Depositor ────────────────────────────────────────────────
 
 // No vault address: the permission is a protocol role, not vault-local state.
@@ -741,9 +866,22 @@ function AuthorizeDepositorTab({ canGrant, onDone }: { canGrant: boolean; onDone
     <form onSubmit={handleSubmit} className="space-y-5">
       <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
         <strong>Premium delegation.</strong> The vault admits a premium deposit only from an
-        address holding <code>PREMIUM_DEPOSITOR_ROLE</code>. Grant it to whoever will pay — the
-        insurer itself, a broker, or a delegated wallet. This grants nothing else: it does not
+        address holding <code>PREMIUM_DEPOSITOR_ROLE</code>. This grants nothing else: it does not
         confer vault management, and it cannot move capital already in the vault.
+      </div>
+
+      <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <strong>Read this before granting.</strong> In the production design a cedant pays through{' '}
+        <code>PremiumDistributor.receivePremium</code>, which splits the gross premium into the LP
+        quota, the protocol fee and the underwriting fee before forwarding anything to the vault.
+        The deployment grants this role to that distributor precisely so the split cannot be
+        skipped.
+        <br />
+        <br />
+        Granting it to a wallet enables a <em>direct</em> deposit into the vault, which bypasses the
+        split: no protocol fee, no underwriting fee, no per-portfolio accounting. That is
+        acceptable as a staging shortcut and wrong as a production path. The portfolio lifecycle
+        that the distributor route depends on has no interface yet.
       </div>
 
       {address && (
@@ -1087,6 +1225,12 @@ export default function ManageVaultPage() {
         }}
       >
         {activeTab === 'register' && <RegisterPolicyTab />}
+        {activeTab === 'activate' && (
+          <ActivatePolicyTab
+            registeredPolicyIds={progress.registeredPolicyIds}
+            onDone={progress.refetch}
+          />
+        )}
         {activeTab === 'add' && <AddPolicyTab vaultAddress={vaultAddress} />}
         {activeTab === 'authorize' && (
           <AuthorizeDepositorTab canGrant={progress.callerCanGrantDeposit} onDone={progress.refetch} />
