@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
@@ -8,12 +8,13 @@ import {
   INSURANCE_VAULT_ABI,
   POLICY_REGISTRY_ABI,
   PROTOCOL_ROLES_ABI,
-  MOCK_USDC_ABI,
 } from '@/config/contracts';
 import { useAddresses } from '@/hooks/useAddresses';
 import { useVaultInfo } from '@/hooks/useVaultData';
 import { useVaultSetupProgress } from '@/hooks/useVaultSetupProgress';
 import { SetupProgress } from '@/components/vault/SetupProgress';
+import { FundPolicyPanel } from '@/components/vault/FundPolicyPanel';
+import { VaultFeesPanel } from '@/components/vault/VaultFeesPanel';
 import { useLensVaultDashboard, LensDataStatus } from '@/hooks/useNextBlockLens';
 import { DataSourceBadge } from '@/components/shared/DataSourceBadge';
 import { useAllPolicies, usePolicyCount } from '@/hooks/usePolicyRegistry';
@@ -482,208 +483,6 @@ function AddPolicyTab({ vaultAddress }: { vaultAddress: `0x${string}` }) {
 
       <TxStatus hash={hash} isPending={isPending} label="Policy added to vault" />
     </form>
-  );
-}
-
-// ─── Tab: Deposit Premium ────────────────────────────────────────────────────
-
-function DepositPremiumTab({ vaultAddress }: { vaultAddress: `0x${string}` }) {
-  const addresses = useAddresses();
-  const { address } = useAccount();
-  const { writeContract: approveWrite, data: approveHash, isPending: approvePending } = useWriteContract();
-  const { writeContract: depositWrite, data: depositHash, isPending: depositPending, error } = useWriteContract();
-  const { isSuccess: approveSuccess } = useWaitForTransactionReceipt({ hash: approveHash });
-
-  const [policyId, setPolicyId] = useState('');
-  const [amount, setAmount] = useState('');
-
-  const { data: count } = usePolicyCount();
-  const { data: policiesData } = useAllPolicies(count);
-
-  const { data: usdcBalance } = useReadContract({
-    address: addresses.mockUSDC,
-    abi: MOCK_USDC_ABI,
-    functionName: 'balanceOf',
-    args: address ? [address] : undefined,
-    query: { enabled: !!address },
-  });
-
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    padding: '10px 14px',
-    border: '1px solid rgba(0,0,0,0.12)',
-    borderRadius: '8px',
-    fontSize: '14px',
-    fontFamily: "'Inter', sans-serif",
-    color: '#1a1a1a',
-    background: '#FAFAF8',
-    outline: 'none',
-  };
-
-  const labelStyle: React.CSSProperties = {
-    display: 'block',
-    fontSize: '12px',
-    fontWeight: 600,
-    color: '#6B7280',
-    letterSpacing: '0.06em',
-    textTransform: 'uppercase',
-    marginBottom: '6px',
-    fontFamily: "'Inter', sans-serif",
-  };
-
-  function handleApprove() {
-    approveWrite({
-      address: addresses.mockUSDC,
-      abi: MOCK_USDC_ABI,
-      functionName: 'approve',
-      args: [vaultAddress, parseUSDC(amount)],
-    });
-  }
-
-  function handleDeposit(e: React.FormEvent) {
-    e.preventDefault();
-    depositWrite({
-      address: vaultAddress,
-      abi: INSURANCE_VAULT_ABI,
-      functionName: 'depositPremium',
-      args: [BigInt(policyId), parseUSDC(amount)],
-    });
-  }
-
-  return (
-    <div className="space-y-5">
-      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-        <strong>Step 3 of 3.</strong> Deposit the USDC premium for a policy already added to this vault. Two transactions required: (1) approve USDC spend, (2) deposit premium. The premium activates the policy and starts the coverage period.
-      </div>
-
-      {usdcBalance !== undefined && (
-        <div className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3 text-sm text-gray-600">
-          Your USDC balance: <strong className="font-mono">{formatUSDC(usdcBalance as bigint)}</strong>
-        </div>
-      )}
-
-      {policiesData && policiesData.length > 0 && (
-        <div>
-          <label style={labelStyle}>Select policy</label>
-          <div className="space-y-2 max-h-40 overflow-y-auto rounded-xl border border-gray-100 p-2">
-            {policiesData.map((result, idx) => {
-              if (result.status !== 'success' || !result.result) return null;
-              const p = result.result as { id: bigint; name: string; premiumAmount: bigint };
-              return (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => {
-                    setPolicyId(p.id.toString());
-                    const premiumUsdc = Number(p.premiumAmount) / 1_000_000;
-                    setAmount(premiumUsdc.toString());
-                  }}
-                  style={{
-                    width: '100%',
-                    textAlign: 'left',
-                    padding: '10px 12px',
-                    borderRadius: '8px',
-                    border: policyId === p.id.toString() ? '1.5px solid #1B3A6B' : '1px solid rgba(0,0,0,0.08)',
-                    background: policyId === p.id.toString() ? 'rgba(27,58,107,0.05)' : '#fff',
-                    cursor: 'pointer',
-                    fontFamily: "'Inter', sans-serif",
-                  }}
-                >
-                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#1a1a1a' }}>
-                    #{p.id.toString()} — {p.name}
-                  </div>
-                  <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '2px' }}>
-                    Required premium: {formatUSDC(p.premiumAmount)}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      <form onSubmit={handleDeposit} className="space-y-4">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label style={labelStyle}>Policy ID</label>
-            <input
-              style={inputStyle}
-              type="number"
-              min="0"
-              step="1"
-              placeholder="e.g. 0"
-              value={policyId}
-              onChange={e => setPolicyId(e.target.value)}
-              required
-            />
-          </div>
-
-          <div>
-            <label style={labelStyle}>Amount (USDC)</label>
-            <input
-              style={inputStyle}
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="e.g. 5000"
-              value={amount}
-              onChange={e => setAmount(e.target.value)}
-              required
-            />
-          </div>
-        </div>
-
-        {error && (
-          <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error.message.slice(0, 200)}
-          </div>
-        )}
-
-        <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={handleApprove}
-            disabled={approvePending || !amount}
-            style={{
-              background: approveSuccess ? '#059669' : '#6B7280',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '12px 24px',
-              fontSize: '14px',
-              fontWeight: 600,
-              fontFamily: "'Inter', sans-serif",
-              cursor: approvePending || !amount ? 'not-allowed' : 'pointer',
-              opacity: approvePending || !amount ? 0.7 : 1,
-            }}
-          >
-            {approvePending ? 'Approving...' : approveSuccess ? 'Approved' : '1. Approve USDC'}
-          </button>
-
-          <button
-            type="submit"
-            disabled={depositPending || !approveSuccess || !policyId || !amount}
-            style={{
-              background: '#1B3A6B',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '12px 24px',
-              fontSize: '14px',
-              fontWeight: 600,
-              fontFamily: "'Inter', sans-serif",
-              cursor: depositPending || !approveSuccess || !policyId || !amount ? 'not-allowed' : 'pointer',
-              opacity: depositPending || !approveSuccess || !policyId || !amount ? 0.7 : 1,
-            }}
-          >
-            {depositPending ? 'Depositing...' : '2. Deposit Premium'}
-          </button>
-        </div>
-
-        <TxStatus hash={approveHash} isPending={approvePending} label="USDC approved" />
-        <TxStatus hash={depositHash} isPending={depositPending} label="Premium deposited — policy is now active" />
-      </form>
-    </div>
   );
 }
 
@@ -1235,7 +1034,23 @@ export default function ManageVaultPage() {
         {activeTab === 'authorize' && (
           <AuthorizeDepositorTab canGrant={progress.callerCanGrantDeposit} onDone={progress.refetch} />
         )}
-        {activeTab === 'premium' && <DepositPremiumTab vaultAddress={vaultAddress} />}
+        {activeTab === 'premium' && (
+          <FundPolicyPanel
+            vaultAddress={vaultAddress}
+            vaultPolicyIds={progress.vaultPolicyIds}
+            onDone={progress.refetch}
+          />
+        )}
+      </div>
+
+      {/* Fees sit outside the setup procedure: they accrue for the life of the
+          vault, not as a step you complete once. */}
+      <div style={{ marginTop: '24px' }}>
+        <VaultFeesPanel
+          vaultAddress={vaultAddress}
+          managementFeeBps={feeBps}
+          isOwner={progress.callerCanGrantDeposit}
+        />
       </div>
 
       {/* Back link */}
