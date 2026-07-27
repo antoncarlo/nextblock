@@ -7,10 +7,13 @@ import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadCont
 import {
   INSURANCE_VAULT_ABI,
   POLICY_REGISTRY_ABI,
+  PROTOCOL_ROLES_ABI,
   MOCK_USDC_ABI,
 } from '@/config/contracts';
 import { useAddresses } from '@/hooks/useAddresses';
 import { useVaultInfo } from '@/hooks/useVaultData';
+import { useVaultSetupProgress } from '@/hooks/useVaultSetupProgress';
+import { SetupProgress } from '@/components/vault/SetupProgress';
 import { useLensVaultDashboard, LensDataStatus } from '@/hooks/useNextBlockLens';
 import { DataSourceBadge } from '@/components/shared/DataSourceBadge';
 import { useAllPolicies, usePolicyCount } from '@/hooks/usePolicyRegistry';
@@ -680,10 +683,19 @@ function DepositPremiumTab({ vaultAddress }: { vaultAddress: `0x${string}` }) {
 
 // ─── Tab: Authorize Depositor ────────────────────────────────────────────────
 
-function AuthorizeDepositorTab({ vaultAddress }: { vaultAddress: `0x${string}` }) {
+// No vault address: the permission is a protocol role, not vault-local state.
+function AuthorizeDepositorTab({ canGrant, onDone }: { canGrant: boolean; onDone: () => void }) {
+  const { address } = useAccount();
+  const addresses = useAddresses();
   const { writeContract, data: hash, isPending, error } = useWriteContract();
   const [depositorAddress, setDepositorAddress] = useState('');
   const [authorized, setAuthorized] = useState(true);
+
+  const { data: depositRole } = useReadContract({
+    address: addresses.protocolRoles as `0x${string}`,
+    abi: PROTOCOL_ROLES_ABI,
+    functionName: 'PREMIUM_DEPOSITOR_ROLE',
+  });
 
   const inputStyle: React.CSSProperties = {
     width: '100%',
@@ -710,19 +722,51 @@ function AuthorizeDepositorTab({ vaultAddress }: { vaultAddress: `0x${string}` }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!depositRole) return;
+    // Grants the PROTOCOL role the vault actually checks. This used to call
+    // InsuranceVault.setAuthorizedPremiumDepositor, which writes a mapping that
+    // nothing reads — so "Depositor authorized, confirmed on-chain" was true of
+    // the transaction and false of the permission, and the deposit still
+    // reverted.
     writeContract({
-      address: vaultAddress,
-      abi: INSURANCE_VAULT_ABI,
-      functionName: 'setAuthorizedPremiumDepositor',
-      args: [depositorAddress as `0x${string}`, authorized],
+      address: addresses.protocolRoles as `0x${string}`,
+      abi: PROTOCOL_ROLES_ABI,
+      functionName: authorized ? 'grantRole' : 'revokeRole',
+      args: [depositRole as `0x${string}`, depositorAddress as `0x${string}`],
     });
+    onDone();
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-        <strong>Premium Delegation.</strong> Authorize a third-party address (e.g. a broker, a smart contract, or a delegated wallet) to deposit premiums on behalf of the insurer. This enables premium delegation without transferring vault manager rights.
+        <strong>Premium delegation.</strong> The vault admits a premium deposit only from an
+        address holding <code>PREMIUM_DEPOSITOR_ROLE</code>. Grant it to whoever will pay — the
+        insurer itself, a broker, or a delegated wallet. This grants nothing else: it does not
+        confer vault management, and it cannot move capital already in the vault.
       </div>
+
+      {address && (
+        <button
+          type="button"
+          onClick={() => setDepositorAddress(address)}
+          className="text-xs font-semibold underline"
+          style={{ color: '#1B3A6B' }}
+        >
+          Use my connected wallet ({address.slice(0, 6)}…{address.slice(-4)})
+        </button>
+      )}
+
+      {!canGrant && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          This wallet does not administer that role, so the grant would revert. It has to come from
+          protocol governance — build the operation in the{' '}
+          <Link href="/app/admin/governance" style={{ color: '#92400E', fontWeight: 600 }}>
+            governance console
+          </Link>
+          .
+        </div>
+      )}
 
       <div>
         <label style={labelStyle}>Depositor Address</label>
@@ -794,10 +838,14 @@ function AuthorizeDepositorTab({ vaultAddress }: { vaultAddress: `0x${string}` }
           opacity: isPending || !depositorAddress ? 0.7 : 1,
         }}
       >
-        {isPending ? 'Confirm in wallet...' : authorized ? 'Authorize Depositor' : 'Revoke Authorization'}
+        {isPending ? 'Confirm in wallet...' : authorized ? 'Grant deposit permission' : 'Revoke deposit permission'}
       </button>
 
-      <TxStatus hash={hash} isPending={isPending} label={authorized ? 'Depositor authorized' : 'Authorization revoked'} />
+      <TxStatus
+        hash={hash}
+        isPending={isPending}
+        label={authorized ? 'Deposit permission granted' : 'Deposit permission revoked'}
+      />
     </form>
   );
 }
@@ -809,7 +857,12 @@ export default function ManageVaultPage() {
   const vaultAddress = params.address as `0x${string}`;
   const { address, isConnected } = useAccount();
 
-  const [activeTab, setActiveTab] = useState<Tab>('register');
+  // The selected step is only an override: with nothing chosen the page shows
+  // the step the vault is actually up to, so opening this page mid-procedure
+  // lands where the work is rather than back at step 1.
+  const [chosenTab, setChosenTab] = useState<Tab | null>(null);
+  const progress = useVaultSetupProgress(vaultAddress);
+  const activeTab: Tab = chosenTab ?? progress.currentStep;
 
   const { data: vaultInfoRaw } = useVaultInfo(vaultAddress);
   const vaultInfo = vaultInfoRaw as unknown as [string, `0x${string}`, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint] | undefined;
@@ -830,13 +883,6 @@ export default function ManageVaultPage() {
   const isManager = isConnected && address && vaultManager
     ? address.toLowerCase() === vaultManager.toLowerCase()
     : false;
-
-  const tabs: { id: Tab; label: string; description: string }[] = [
-    { id: 'register', label: '1. Register Policy', description: 'Create a new policy in the global registry' },
-    { id: 'add', label: '2. Add to Vault', description: 'Allocate a registered policy to this vault' },
-    { id: 'premium', label: '3. Deposit Premium', description: 'Deposit USDC premium to activate a policy' },
-    { id: 'authorize', label: 'Authorize Depositor', description: 'Delegate premium deposits to another address' },
-  ];
 
   if (!isConnected) {
     return (
@@ -1003,47 +1049,33 @@ export default function ManageVaultPage() {
         The remaining {(Number(bufferBps) / 100).toFixed(1)}% is reserved as the liquidity buffer.
       </div>
 
-      {/* Tabs */}
-      <div
-        style={{
-          display: 'flex',
-          gap: '4px',
-          marginBottom: '24px',
-          background: 'rgba(255,255,255,0.85)',
-          border: '1px solid rgba(0,0,0,0.06)',
-          borderRadius: '12px',
-          padding: '4px',
-        }}
-      >
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id)}
+      {/* The procedure, in order, with what is blocking each step */}
+      <SetupProgress steps={progress.steps} active={activeTab} onSelect={setChosenTab} />
+
+      {/* A step that cannot succeed says so before it shows a form, so nothing
+          here invites a transaction the chain would reject. */}
+      {(() => {
+        const step = progress.steps.find((s) => s.id === activeTab);
+        if (!step?.blockedReason || step.done) return null;
+        return (
+          <div
+            role="status"
             style={{
-              flex: 1,
-              padding: '10px 8px',
-              borderRadius: '8px',
-              border: 'none',
-              background: activeTab === tab.id ? '#1B3A6B' : 'transparent',
-              color: activeTab === tab.id ? '#fff' : '#6B7280',
-              fontSize: '12px',
-              fontWeight: 600,
+              marginBottom: 16,
+              padding: '12px 14px',
+              borderRadius: 12,
+              border: '1px solid rgba(180,83,9,0.35)',
+              background: 'rgba(180,83,9,0.06)',
+              color: '#92400E',
+              fontSize: 13,
+              lineHeight: 1.6,
               fontFamily: "'Inter', sans-serif",
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              textAlign: 'center',
             }}
           >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Tab description */}
-      <p style={{ fontSize: '13px', color: '#9CA3AF', fontFamily: "'Inter', sans-serif", marginBottom: '20px' }}>
-        {tabs.find(t => t.id === activeTab)?.description}
-      </p>
+            <strong>Step {step.n} is not ready.</strong> {step.blockedReason}
+          </div>
+        );
+      })()}
 
       {/* Tab content */}
       <div
@@ -1056,8 +1088,10 @@ export default function ManageVaultPage() {
       >
         {activeTab === 'register' && <RegisterPolicyTab />}
         {activeTab === 'add' && <AddPolicyTab vaultAddress={vaultAddress} />}
+        {activeTab === 'authorize' && (
+          <AuthorizeDepositorTab canGrant={progress.callerCanGrantDeposit} onDone={progress.refetch} />
+        )}
         {activeTab === 'premium' && <DepositPremiumTab vaultAddress={vaultAddress} />}
-        {activeTab === 'authorize' && <AuthorizeDepositorTab vaultAddress={vaultAddress} />}
       </div>
 
       {/* Back link */}
