@@ -17,7 +17,7 @@ chats, or files in this repo. All commands below run from `contracts/`.
 
 ```bash
 forge build                 # compiles clean on main
-forge test                  # 592 passed / 0 failed expected
+forge test                  # 591 passed / 0 failed expected
 forge fmt --check           # no drift
 ```
 

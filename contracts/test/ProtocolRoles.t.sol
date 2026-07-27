@@ -240,9 +240,6 @@ contract ProtocolRolesTest is Test {
         vm.startPrank(attacker);
 
         vm.expectRevert(abi.encodeWithSelector(InsuranceVault.InsuranceVault__UnauthorizedCaller.selector, attacker));
-        vault.setAuthorizedPremiumDepositor(attacker, true);
-
-        vm.expectRevert(abi.encodeWithSelector(InsuranceVault.InsuranceVault__UnauthorizedCaller.selector, attacker));
         vault.claimFees(attacker);
 
         vm.expectRevert(abi.encodeWithSelector(InsuranceVault.InsuranceVault__UnauthorizedCaller.selector, attacker));

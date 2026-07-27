@@ -97,8 +97,6 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
     string public vaultName;
     /// @notice Syndicate manager address (operational owner).
     address public vaultManager;
-    /// @notice Addresses allowed to push premiums (the distributor).
-    mapping(address => bool) public authorizedPremiumDepositors;
 
     // --- References ---
     /// @notice Policy registry + protocol clock source.
@@ -176,8 +174,6 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
     event PolicyExpired(uint256 indexed policyId);
     /// @notice Emitted when accrued management fees are collected.
     event FeesCollected(address indexed recipient, uint256 amount);
-    /// @notice Emitted when a premium depositor is authorized or revoked.
-    event PremiumDepositorUpdated(address indexed depositor, bool authorized);
     /// @notice Emitted when the deposit cap changes.
     event DepositCapUpdated(uint256 newCap);
     /// @notice Emitted when capital is earmarked to a portfolio.
@@ -733,17 +729,6 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
     function setDepositCap(uint256 newCap) external onlyProtocolRole(OWNER_ROLE) {
         depositCap = newCap;
         emit DepositCapUpdated(newCap);
-    }
-
-    // --- Role Management ---
-
-    /// @notice Set or revoke premium depositor flag. Only OWNER_ROLE.
-    /// @dev DEPRECATED: informational mirror kept for frontend ABI compatibility.
-    ///      The on-chain gate for depositPremium() is PREMIUM_DEPOSITOR_ROLE in
-    ///      ProtocolRoles; this mapping no longer grants deposit rights.
-    function setAuthorizedPremiumDepositor(address depositor, bool authorized) external onlyProtocolRole(OWNER_ROLE) {
-        authorizedPremiumDepositors[depositor] = authorized;
-        emit PremiumDepositorUpdated(depositor, authorized);
     }
 
     // --- Fee Management ---

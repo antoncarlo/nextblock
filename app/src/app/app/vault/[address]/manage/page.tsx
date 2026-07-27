@@ -647,11 +647,10 @@ function AuthorizeDepositorTab({ canGrant, onDone }: { canGrant: boolean; onDone
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!depositRole) return;
-    // Grants the PROTOCOL role the vault actually checks. This used to call
-    // InsuranceVault.setAuthorizedPremiumDepositor, which writes a mapping that
-    // nothing reads — so "Depositor authorized, confirmed on-chain" was true of
-    // the transaction and false of the permission, and the deposit still
-    // reverted.
+    // Grants the protocol role the vault actually checks. This used to write a
+    // vault-local mapping that nothing read, so the confirmation was true of the
+    // transaction and false of the permission. That mapping has since been
+    // removed from the contract entirely.
     writeContract({
       address: addresses.protocolRoles as `0x${string}`,
       abi: PROTOCOL_ROLES_ABI,

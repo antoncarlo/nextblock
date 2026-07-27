@@ -1031,25 +1031,6 @@ export const INSURANCE_VAULT_ABI = [
   },
   {
     "type": "function",
-    "name": "authorizedPremiumDepositors",
-    "inputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "balanceOf",
     "inputs": [
       {
@@ -1946,24 +1927,6 @@ export const INSURANCE_VAULT_ABI = [
   },
   {
     "type": "function",
-    "name": "setAuthorizedPremiumDepositor",
-    "inputs": [
-      {
-        "name": "depositor",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "authorized",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "setClaimManager",
     "inputs": [
       {
@@ -2625,25 +2588,6 @@ export const INSURANCE_VAULT_ABI = [
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "PremiumDepositorUpdated",
-    "inputs": [
-      {
-        "name": "depositor",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "authorized",
-        "type": "bool",
-        "indexed": false,
-        "internalType": "bool"
       }
     ],
     "anonymous": false
