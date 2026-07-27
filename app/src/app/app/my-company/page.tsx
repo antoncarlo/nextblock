@@ -6,6 +6,7 @@ import { getWalletName } from '@/config/knownWallets';
 import { useVaultAddresses, useVaultInfo } from '@/hooks/useVaultData';
 import { ClaimLifecyclePanel } from '@/components/claims/ClaimLifecyclePanel';
 import { PortfolioPanel } from '@/components/portfolio/PortfolioPanel';
+import { PremiumRoutePanel } from '@/components/portfolio/PremiumRoutePanel';
 import { CedantPathSteps } from '@/components/shared/CedantPathSteps';
 // ─── Vault card per la compagnia ──────────────────────────────────────────────────
 function CompanyVaultCard({ address }: { address: string }) {
@@ -304,6 +305,9 @@ export default function MyCompanyPage() {
             <CedantPathSteps active={3} />
           </div>
           <PortfolioPanel mode="cedant" />
+          <div className="mt-6">
+            <PremiumRoutePanel mode="cedant" />
+          </div>
         </div>
 
         {/* Claim lifecycle (cedant submit and tracking; role-aware) */}

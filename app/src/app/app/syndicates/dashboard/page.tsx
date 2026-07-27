@@ -12,6 +12,7 @@ import { useVaultAddresses } from '@/hooks/useVaultData';
 import { useLensVaultDashboards, LensDataStatus } from '@/hooks/useNextBlockLens';
 import { DataSourceBadge } from '@/components/shared/DataSourceBadge';
 import { PortfolioPanel } from '@/components/portfolio/PortfolioPanel';
+import { PremiumRoutePanel } from '@/components/portfolio/PremiumRoutePanel';
 import { CurationBook } from '@/components/syndicate/CurationBook';
 import { formatUSDC } from '@/lib/formatting';
 
@@ -706,6 +707,9 @@ export default function CuratorDashboardPage() {
         {/* Portfolio onboarding review queue (Syndicate) */}
         <div style={{ maxWidth: '1200px', margin: '24px auto 0', padding: '0 40px 48px' }}>
           <PortfolioPanel mode="curator" />
+          <div className="mt-6">
+            <PremiumRoutePanel mode="curator" />
+          </div>
         </div>
 
       </div>

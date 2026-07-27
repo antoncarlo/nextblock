@@ -307,8 +307,7 @@ contract InsuranceVaultTest is Test {
     }
 
     function test_depositPremium_unauthorizedCaller_reverts() public {
-        // depositPremium now checks: msg.sender == owner() || authorizedPremiumDepositors[msg.sender]
-        // "nobody" is neither owner nor authorized depositor, so it should revert
+        // The sole gate is PREMIUM_DEPOSITOR_ROLE, which "nobody" does not hold.
         vm.prank(nobody);
         vm.expectRevert();
         vaultA.depositPremium(0, 1_000e6);
@@ -362,42 +361,34 @@ contract InsuranceVaultTest is Test {
         vm.stopPrank();
     }
 
-    function test_setAuthorizedPremiumDepositor() public {
-        // Legacy informational mapping (ABI compat): toggling works, OWNER_ROLE gated,
-        // but it does NOT grant deposit rights (PREMIUM_DEPOSITOR_ROLE does).
+    function test_onlyTheRoleGrantsDepositRights() public {
+        // The vault used to carry an `authorizedPremiumDepositors` mapping that
+        // was written and never read, so authorising through it granted nothing.
+        // It has been removed; this asserts the permission it pretended to give
+        // is genuinely governed by the role, and by the role alone.
         address depositor = makeAddr("depositor");
 
-        // Only OWNER_ROLE can set
         vm.prank(admin);
-        vaultA.setAuthorizedPremiumDepositor(depositor, true);
-        assertTrue(vaultA.authorizedPremiumDepositors(depositor));
-
-        // OWNER_ROLE can revoke
-        vm.prank(admin);
-        vaultA.setAuthorizedPremiumDepositor(depositor, false);
-        assertFalse(vaultA.authorizedPremiumDepositors(depositor));
-
-        // Non-owner cannot set
-        vm.prank(nobody);
-        vm.expectRevert(abi.encodeWithSelector(InsuranceVault.InsuranceVault__UnauthorizedCaller.selector, nobody));
-        vaultA.setAuthorizedPremiumDepositor(depositor, true);
-    }
-
-    function test_legacyDepositorMapping_doesNotGrantDepositRights() public {
-        // The mapping alone must NOT allow premium deposits (role is the sole gate)
-        address depositor = makeAddr("legacyDepositor");
-        vm.prank(admin);
-        vaultA.setAuthorizedPremiumDepositor(depositor, true);
-
-        vm.startPrank(admin);
         usdc.mint(depositor, 1_000e6);
-        vm.stopPrank();
 
         vm.startPrank(depositor);
         usdc.approve(address(vaultA), 1_000e6);
         vm.expectRevert(abi.encodeWithSelector(InsuranceVault.InsuranceVault__UnauthorizedCaller.selector, depositor));
         vaultA.depositPremium(0, 1_000e6);
         vm.stopPrank();
+
+        // Granting the role — and nothing else — opens the call. The role id is
+        // read first: it is itself an external call, and would otherwise consume
+        // the prank meant for grantRole.
+        bytes32 depositorRole = protocolRoles.PREMIUM_DEPOSITOR_ROLE();
+        vm.prank(admin);
+        protocolRoles.grantRole(depositorRole, depositor);
+
+        vm.prank(depositor);
+        vaultA.depositPremium(0, 1_000e6);
+
+        (,, uint256 premium,,,) = vaultA.vaultPolicies(0);
+        assertEq(premium, PREMIUM_2500 + 1_000e6, "premium booked once the role is held");
     }
 
     // =========== FEE MECHANICS ===========
