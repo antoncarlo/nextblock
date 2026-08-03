@@ -16,7 +16,7 @@ import {
 import { DataSourceBadge } from '@/components/shared/DataSourceBadge';
 import { useEmailSession } from '@/hooks/useEmailSession';
 import { useSetWhitelist } from '@/hooks/useComplianceAdmin';
-import { useWhitelistStatus } from '@/hooks/useWhitelistStatus';
+import { useWhitelistStatuses } from '@/hooks/useWhitelistStatuses';
 
 /**
  * KYB review queue for the KYC Operator.
@@ -257,7 +257,7 @@ export function KybReviewQueue() {
   // The database status and the chain can disagree, and only the chain governs
   // what the applicant may do. Approving here whitelists nobody, so an approved
   // row that is still not allowed on-chain has unfinished work behind it.
-  const whitelistStatus = useWhitelistStatus(readyApps.map((a) => a.wallet_address));
+  const whitelistStatus = useWhitelistStatuses(readyApps.map((a) => a.wallet_address));
   const awaitingWhitelist = readyApps.filter(
     (a) => a.status === 'approved' && whitelistStatus.isAllowed(a.wallet_address) === false,
   );
@@ -472,6 +472,7 @@ export function KybReviewQueue() {
                             type="button"
                             disabled={
                               !isConnected ||
+                              !whitelist.callerIsOperator ||
                               isProtocolContract(app.wallet_address) ||
                               whitelist.isPending ||
                               whitelist.isConfirming
@@ -486,7 +487,9 @@ export function KybReviewQueue() {
                               ? 'Connect a wallet to whitelist'
                               : isProtocolContract(app.wallet_address)
                                 ? 'Cannot whitelist — this is a protocol contract'
-                                : whitelistTarget === app.wallet_address.toLowerCase() &&
+                                : !whitelist.callerIsOperator
+                                  ? 'This wallet is not the KYC Operator'
+                                  : whitelistTarget === app.wallet_address.toLowerCase() &&
                                     (whitelist.isPending || whitelist.isConfirming)
                                   ? 'Whitelisting…'
                                   : 'Whitelist on-chain now'}
@@ -500,7 +503,7 @@ export function KybReviewQueue() {
                             </>
                           )}
                           {whitelistTarget === app.wallet_address.toLowerCase() && whitelist.error && (
-                            <span className="text-xs text-red-700">Transaction rejected (wallet must hold KYC_OPERATOR_ROLE).</span>
+                            <span className="text-xs text-red-700">{whitelist.error}</span>
                           )}
                           {!isConnected && (
                             <span className="text-xs text-gray-500">Connect the KYC Operator wallet to whitelist directly.</span>

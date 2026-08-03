@@ -22,7 +22,7 @@ import { useAddresses } from '@/hooks/useAddresses';
  * "not whitelisted" for a wallet whose state could not be read would invite
  * someone to re-send a transaction that was never needed.
  */
-export function useWhitelistStatus(wallets: readonly string[]) {
+export function useWhitelistStatuses(wallets: readonly string[]) {
   const { complianceRegistry } = useAddresses();
 
   const unique = useMemo(() => {

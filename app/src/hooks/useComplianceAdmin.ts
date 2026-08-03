@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import {
+  useAccount,
   useChainId,
   useReadContract,
   useReadContracts,
@@ -12,6 +13,7 @@ import { COMPLIANCE_REGISTRY_ABI, PROTOCOL_ROLES_ABI, isDeployed } from '@/confi
 import { useAddresses } from './useAddresses';
 import { ROLE_IDS } from './useProtocolAccess';
 import { isValidAddress } from '@/lib/compliance/whitelist';
+import { useTxOutcome } from './useTxOutcome';
 
 /**
  * ComplianceRegistry whitelist read/write model for the LP onboarding admin
@@ -81,12 +83,30 @@ export function useWhitelistStatus(target: string | undefined, connected: string
 
 /** setWhitelist writer: chain-guarded, real wagmi. Gate enablement on KYC_OPERATOR in the UI. */
 export function useSetWhitelist(onDone?: () => void) {
-  const { complianceRegistry } = useAddresses();
+  const { complianceRegistry, protocolRoles } = useAddresses();
   const chainId = useChainId();
+  const { address: connected } = useAccount();
   const isWrongChain = chainId !== REQUIRED_CHAIN_ID;
 
+  // Pre-flight. The registry demands KYC_OPERATOR_ROLE, and without this check
+  // the wallet signs, the chain reverts, gas is spent and the interface reports
+  // nothing — which is exactly what happened when a wallet holding Cedant and
+  // Curator roles was used to whitelist itself.
+  const { data: hasOperatorRole } = useReadContract({
+    address: protocolRoles,
+    abi: PROTOCOL_ROLES_ABI,
+    functionName: 'hasRole',
+    args: connected ? [ROLE_IDS.KYC_OPERATOR, connected] : undefined,
+    query: { enabled: !!connected && isDeployed(protocolRoles) },
+  });
+  const callerIsOperator = hasOperatorRole === true;
+
   const { writeContract, data: txHash, isPending, error, reset } = useWriteContract();
-  const { isSuccess, isLoading: isConfirming } = useWaitForTransactionReceipt({ hash: txHash });
+  const { isLoading: isConfirming } = useWaitForTransactionReceipt({ hash: txHash });
+  // Success is what the RECEIPT says, not merely that a receipt arrived. A
+  // reverted transaction produces one too, and reporting that as done is how a
+  // green tick appeared over a registry that still said false.
+  const outcome = useTxOutcome(txHash);
   const [guardError, setGuardError] = useState<string | null>(null);
 
   const setWhitelist = useCallback(
@@ -94,6 +114,12 @@ export function useSetWhitelist(onDone?: () => void) {
       setGuardError(null);
       if (chainId !== REQUIRED_CHAIN_ID) {
         setGuardError(WRONG_CHAIN_MESSAGE);
+        return;
+      }
+      if (connected && hasOperatorRole === false) {
+        setGuardError(
+          `${connected.slice(0, 6)}…${connected.slice(-4)} does not hold KYC_OPERATOR_ROLE. The registry would reject this write, so it is not sent — connect the operator wallet.`,
+        );
         return;
       }
       writeContract(
@@ -106,17 +132,28 @@ export function useSetWhitelist(onDone?: () => void) {
         { onSuccess: () => onDone?.() },
       );
     },
-    [chainId, complianceRegistry, writeContract, onDone],
+    [chainId, connected, hasOperatorRole, complianceRegistry, writeContract, onDone],
   );
 
   return {
     setWhitelist,
     isWrongChain,
+    /** The connected wallet may actually perform this write. */
+    callerIsOperator,
     isPending,
     isConfirming,
-    isSuccess,
+    /** Receipt-confirmed success. Never true for a reverted transaction. */
+    isSuccess: outcome.confirmed,
+    /** Mined and failed: gas spent, registry unchanged. */
+    isReverted: outcome.reverted,
     txHash,
-    error: guardError ?? (error ? error.message.split('\n')[0] : null),
+    error:
+      guardError ??
+      (outcome.reverted
+        ? 'The transaction was mined but reverted — the registry rejected it and nothing changed.'
+        : error
+          ? error.message.split('\n')[0]
+          : null),
     reset: () => {
       setGuardError(null);
       reset();
