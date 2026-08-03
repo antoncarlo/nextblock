@@ -456,7 +456,14 @@ export function KybReviewQueue() {
 
                     {app.status === 'approved' && (
                       <div className="rounded-lg bg-gray-50 p-3">
-                        <p className="mb-1 font-semibold text-gray-700">Next step — whitelist on ComplianceRegistry</p>
+                        {/* What completes an approval depends on the applicant.
+                            A Reinsurer and a Syndicate are finished by a role
+                            grant on ProtocolRoles; an LP is finished by a
+                            whitelist entry on a different contract entirely.
+                            Saying so is the difference between "approved" and
+                            "approved and able to do anything". */}
+                        <CompletionGuide applicantType={app.applicant_type} />
+                        <p className="mb-1 font-semibold text-gray-700">Whitelist on ComplianceRegistry</p>
                         <div className="mb-3 flex flex-wrap items-center gap-2">
                           <button
                             type="button"
@@ -527,4 +534,38 @@ function WhitelistRefresh({ onSuccess }: { onSuccess: () => void }) {
     onSuccess();
   }, [onSuccess]);
   return null;
+}
+
+/**
+ * What actually completes an approval, per applicant.
+ *
+ * The three participants are approved the same way and finished in two
+ * different places, which is what makes an approved LP look broken next to an
+ * approved Reinsurer. A Reinsurer and a Syndicate are completed by a role grant
+ * on ProtocolRoles — the app then reads `hasRole` and lets them work. An
+ * Institutional LP has no role: eligibility to hold nbUSDC is a whitelist entry
+ * on ComplianceRegistry, read as `canReceive`. Grant the LP a role and nothing
+ * changes; whitelist the LP and everything does.
+ */
+function CompletionGuide({ applicantType }: { applicantType: KybApplicantType }) {
+  const copy: Record<KybApplicantType, { needs: string; why: string }> = {
+    cedant: {
+      needs: 'AUTHORIZED_CEDANT_ROLE on ProtocolRoles',
+      why: 'A cedant is recognised by the role. Whitelisting also matters if this address is to receive claim payouts, but the role is what opens submission.',
+    },
+    curator: {
+      needs: 'UNDERWRITING_CURATOR_ROLE on ProtocolRoles',
+      why: 'A syndicate is recognised by the role — it gates vault creation and curation.',
+    },
+    lp: {
+      needs: 'a whitelist entry on ComplianceRegistry — not a role',
+      why: 'There is no LP role. The vault asks canReceive before minting a share, so an LP granted protocol roles but not whitelisted still cannot deposit. This is the step that is easy to miss.',
+    },
+  };
+  const c = copy[applicantType];
+  return (
+    <div className="mb-3 rounded-lg border border-blue-200 bg-blue-50 p-2 text-[11px] leading-5 text-blue-900">
+      <strong>{KYB_APPLICANT_TYPE_LABELS[applicantType]} — completed by {c.needs}.</strong> {c.why}
+    </div>
+  );
 }
