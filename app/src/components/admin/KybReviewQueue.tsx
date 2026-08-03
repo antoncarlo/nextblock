@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAccount, useSignMessage } from 'wagmi';
 import { encodeFunctionData } from 'viem';
 import { NEXTBLOCK_ADDRESSES } from '@/config/generated/addressBook';
@@ -16,6 +16,7 @@ import {
 import { DataSourceBadge } from '@/components/shared/DataSourceBadge';
 import { useEmailSession } from '@/hooks/useEmailSession';
 import { useSetWhitelist } from '@/hooks/useComplianceAdmin';
+import { useWhitelistStatus } from '@/hooks/useWhitelistStatus';
 
 /**
  * KYB review queue for the KYC Operator.
@@ -29,6 +30,14 @@ import { useSetWhitelist } from '@/hooks/useComplianceAdmin';
  * closes the loop in one click: a direct setWhitelist write from the connected
  * KYC-Operator wallet (the ComplianceRegistry enforces the role on-chain), with
  * the Safe calldata still shown as the governance-grade alternative.
+ *
+ * That distinction used to be stated here and nowhere the reviewer could see
+ * it. The queue showed the database status alone, so an application marked
+ * "approved" read as finished while the wallet remained unable to hold a share
+ * — and the whitelist button sat inside a collapsed row. Every row now carries
+ * the on-chain answer (`canReceive`) beside the database one, and an approved
+ * application that is not yet whitelisted is called out above the list. The two
+ * disagree exactly when it matters most, which is why both are shown.
  */
 
 interface KybAppRow {
@@ -245,6 +254,14 @@ export function KybReviewQueue() {
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
 
+  // The database status and the chain can disagree, and only the chain governs
+  // what the applicant may do. Approving here whitelists nobody, so an approved
+  // row that is still not allowed on-chain has unfinished work behind it.
+  const whitelistStatus = useWhitelistStatus(readyApps.map((a) => a.wallet_address));
+  const awaitingWhitelist = readyApps.filter(
+    (a) => a.status === 'approved' && whitelistStatus.isAllowed(a.wallet_address) === false,
+  );
+
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-6">
       <div className="mb-1 flex items-center justify-between">
@@ -305,6 +322,24 @@ export function KybReviewQueue() {
           {queue.apps.length === 0 && (
             <p className="text-xs text-gray-400">No applications on record.</p>
           )}
+
+          {awaitingWhitelist.length > 0 && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
+              <p className="font-semibold">
+                {awaitingWhitelist.length} approved application
+                {awaitingWhitelist.length === 1 ? '' : 's'} still not whitelisted on-chain
+              </p>
+              <p className="mt-1">
+                Approving here records a decision; it does not touch the ComplianceRegistry. Until
+                the whitelist write lands, the applicant cannot deposit, hold shares, or act as an
+                Institutional LP — whatever protocol roles they may also hold. Open the row and
+                press <strong>Whitelist on-chain now</strong>.
+              </p>
+              <p className="mt-1 font-mono text-[11px]">
+                {awaitingWhitelist.map((a) => a.wallet_address).join(' · ')}
+              </p>
+            </div>
+          )}
           {sortedApps.map(app => {
             const sc = STATUS_COLORS[app.status];
             const appEvents = queue.events.filter(e => e.application_id === app.id);
@@ -331,11 +366,36 @@ export function KybReviewQueue() {
                       </span>
                     </div>
                   </div>
-                  <span
-                    className="rounded-full px-2 py-0.5 text-xs font-semibold"
-                    style={{ background: sc.bg, color: sc.color }}
-                  >
-                    {app.status.replace('_', ' ')}
+                  <span className="flex shrink-0 items-center gap-2">
+                    {/* On-chain truth alongside the database status, because the
+                        two disagree exactly when it matters most. */}
+                    {(() => {
+                      const allowed = whitelistStatus.isAllowed(app.wallet_address);
+                      if (allowed === undefined) return null;
+                      return (
+                        <span
+                          className="rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                          style={
+                            allowed
+                              ? { background: '#D1FAE5', color: '#047857' }
+                              : { background: '#FEF3C7', color: '#92400E' }
+                          }
+                          title={
+                            allowed
+                              ? 'ComplianceRegistry.canReceive is true — the wallet may hold shares'
+                              : 'ComplianceRegistry.canReceive is false — the wallet cannot hold shares yet'
+                          }
+                        >
+                          {allowed ? 'on-chain ✓' : 'not whitelisted'}
+                        </span>
+                      );
+                    })()}
+                    <span
+                      className="rounded-full px-2 py-0.5 text-xs font-semibold"
+                      style={{ background: sc.bg, color: sc.color }}
+                    >
+                      {app.status.replace('_', ' ')}
+                    </span>
                   </span>
                 </button>
 
@@ -412,7 +472,12 @@ export function KybReviewQueue() {
                               : 'Whitelist on-chain now'}
                           </button>
                           {whitelistTarget === app.wallet_address.toLowerCase() && whitelist.isSuccess && (
-                            <span className="text-xs font-semibold text-emerald-700">Whitelisted ✓ — the applicant can now operate.</span>
+                            <>
+                              <span className="text-xs font-semibold text-emerald-700">Whitelisted ✓ — the applicant can now operate.</span>
+                              {/* Re-read, or the row badge keeps asserting the
+                                  state that was true a moment ago. */}
+                              <WhitelistRefresh onSuccess={whitelistStatus.refetch} />
+                            </>
                           )}
                           {whitelistTarget === app.wallet_address.toLowerCase() && whitelist.error && (
                             <span className="text-xs text-red-700">Transaction rejected (wallet must hold KYC_OPERATOR_ROLE).</span>
@@ -446,4 +511,20 @@ export function KybReviewQueue() {
       )}
     </div>
   );
+}
+
+/**
+ * Fires the whitelist re-read once, when the write confirms. A component
+ * rather than an inline effect because it mounts only on success, which is
+ * exactly the condition — no guard flag needed, and nothing runs on the rows
+ * that were not touched.
+ */
+function WhitelistRefresh({ onSuccess }: { onSuccess: () => void }) {
+  const fired = useRef(false);
+  useEffect(() => {
+    if (fired.current) return;
+    fired.current = true;
+    onSuccess();
+  }, [onSuccess]);
+  return null;
 }
