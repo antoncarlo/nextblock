@@ -465,18 +465,31 @@ export function KybReviewQueue() {
                         <CompletionGuide applicantType={app.applicant_type} />
                         <p className="mb-1 font-semibold text-gray-700">Whitelist on ComplianceRegistry</p>
                         <div className="mb-3 flex flex-wrap items-center gap-2">
+                          {/* A disabled button gives no feedback at all, so the
+                              reason it cannot act goes ON it. Pressing something
+                              that silently does nothing reads as a broken app. */}
                           <button
                             type="button"
-                            disabled={!isConnected || whitelist.isPending || whitelist.isConfirming}
+                            disabled={
+                              !isConnected ||
+                              isProtocolContract(app.wallet_address) ||
+                              whitelist.isPending ||
+                              whitelist.isConfirming
+                            }
                             onClick={() => {
                               setWhitelistTarget(app.wallet_address.toLowerCase());
                               whitelist.setWhitelist(app.wallet_address as `0x${string}`, true);
                             }}
                             className="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-800 disabled:bg-gray-200 disabled:text-gray-400"
                           >
-                            {whitelistTarget === app.wallet_address.toLowerCase() && (whitelist.isPending || whitelist.isConfirming)
-                              ? 'Whitelisting…'
-                              : 'Whitelist on-chain now'}
+                            {!isConnected
+                              ? 'Connect a wallet to whitelist'
+                              : isProtocolContract(app.wallet_address)
+                                ? 'Cannot whitelist — this is a protocol contract'
+                                : whitelistTarget === app.wallet_address.toLowerCase() &&
+                                    (whitelist.isPending || whitelist.isConfirming)
+                                  ? 'Whitelisting…'
+                                  : 'Whitelist on-chain now'}
                           </button>
                           {whitelistTarget === app.wallet_address.toLowerCase() && whitelist.isSuccess && (
                             <>
@@ -567,5 +580,25 @@ function CompletionGuide({ applicantType }: { applicantType: KybApplicantType })
     <div className="mb-3 rounded-lg border border-blue-200 bg-blue-50 p-2 text-[11px] leading-5 text-blue-900">
       <strong>{KYB_APPLICANT_TYPE_LABELS[applicantType]} — completed by {c.needs}.</strong> {c.why}
     </div>
+  );
+}
+
+/**
+ * True when an application's wallet is one of the protocol's own contracts.
+ *
+ * Two LP applications arrived carrying the ComplianceRegistry's address as the
+ * applicant wallet — almost certainly copied from the "target:" line of the
+ * governance-alternative block on this very panel. Approving one and pressing
+ * whitelist would have added a protocol contract to the compliance whitelist:
+ * harmless in effect, wrong in the record, and confusing to everyone who read
+ * it afterwards.
+ *
+ * The check is on the address book rather than on-chain code detection,
+ * because the point is not "is this a contract" — it is "is this us".
+ */
+function isProtocolContract(wallet: string): boolean {
+  const w = wallet.toLowerCase();
+  return Object.values(NEXTBLOCK_ADDRESSES).some(
+    (v) => typeof v === 'string' && /^0x[0-9a-fA-F]{40}$/.test(v) && v.toLowerCase() === w,
   );
 }
