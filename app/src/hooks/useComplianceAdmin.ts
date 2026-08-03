@@ -160,3 +160,78 @@ export function useSetWhitelist(onDone?: () => void) {
     },
   };
 }
+
+/**
+ * setKycExpiry writer.
+ *
+ * `canReceive` requires a whitelist entry AND an expiry in the future. There
+ * was no interface for the second half, so an operator could whitelist an
+ * applicant, watch the transaction confirm, and find the wallet still unable to
+ * receive — with nothing to explain why. An unset expiry reads as 0, and 0 is
+ * always in the past.
+ */
+export function useSetKycExpiry(onDone?: () => void) {
+  const { complianceRegistry, protocolRoles } = useAddresses();
+  const chainId = useChainId();
+  const { address: connected } = useAccount();
+
+  const { data: hasOperatorRole } = useReadContract({
+    address: protocolRoles,
+    abi: PROTOCOL_ROLES_ABI,
+    functionName: 'hasRole',
+    args: connected ? [ROLE_IDS.KYC_OPERATOR, connected] : undefined,
+    query: { enabled: !!connected && isDeployed(protocolRoles) },
+  });
+
+  const { writeContract, data: txHash, isPending, error, reset } = useWriteContract();
+  const { isLoading: isConfirming } = useWaitForTransactionReceipt({ hash: txHash });
+  const outcome = useTxOutcome(txHash);
+  const [guardError, setGuardError] = useState<string | null>(null);
+
+  const setKycExpiry = useCallback(
+    (user: `0x${string}`, expiryUnixSeconds: bigint) => {
+      setGuardError(null);
+      if (chainId !== REQUIRED_CHAIN_ID) {
+        setGuardError(WRONG_CHAIN_MESSAGE);
+        return;
+      }
+      if (connected && hasOperatorRole === false) {
+        setGuardError(
+          `${connected.slice(0, 6)}…${connected.slice(-4)} does not hold KYC_OPERATOR_ROLE. The registry would reject this write, so it is not sent.`,
+        );
+        return;
+      }
+      writeContract(
+        {
+          address: complianceRegistry,
+          abi: COMPLIANCE_REGISTRY_ABI,
+          functionName: 'setKycExpiry',
+          args: [user, expiryUnixSeconds],
+        },
+        { onSuccess: () => onDone?.() },
+      );
+    },
+    [chainId, connected, hasOperatorRole, complianceRegistry, writeContract, onDone],
+  );
+
+  return {
+    setKycExpiry,
+    callerIsOperator: hasOperatorRole === true,
+    isPending,
+    isConfirming,
+    isSuccess: outcome.confirmed,
+    isReverted: outcome.reverted,
+    txHash,
+    error:
+      guardError ??
+      (outcome.reverted
+        ? 'The transaction was mined but reverted — the registry rejected it and nothing changed.'
+        : error
+          ? error.message.split('\n')[0]
+          : null),
+    reset: () => {
+      setGuardError(null);
+      reset();
+    },
+  };
+}
