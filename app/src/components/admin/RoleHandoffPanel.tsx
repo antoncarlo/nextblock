@@ -6,6 +6,7 @@ import { useProtocolAccess } from '@/hooks/useProtocolAccess';
 import { useAddresses } from '@/hooks/useAddresses';
 import { isDeployed } from '@/config/contracts';
 import { useRoleStatus, useGrantRole } from '@/hooks/useRoleAdmin';
+import { LpEligibilityControls, LP_ELIGIBILITY_KEY } from '@/components/admin/LpEligibilityControls';
 import {
   GRANTABLE_ROLES,
   grantableRoleByKey,
@@ -358,10 +359,13 @@ function GrantControls({
           {GRANTABLE_ROLES.map(r => (
             <option key={r.key} value={r.key}>{r.label}</option>
           ))}
+          {/* Sits with the roles because that is where an operator looks for
+              the third participant, but it is compliance, not a role. */}
+          <option value={LP_ELIGIBILITY_KEY}>Institutional LP (eligibility)</option>
         </select>
 
         {/* Live on-chain status chips */}
-        {validAccount && role && (
+        {validAccount && role && roleKey !== LP_ELIGIBILITY_KEY && (
           <>
             {status.hasRole === undefined ? (
               <Chip text="Role: …" bg="#F3F4F6" color="#4B5563" />
@@ -371,17 +375,25 @@ function GrantControls({
               <Chip text="Role: not granted" bg="#FEF2F2" color="#B91C1C" />
             )}
             {status.complianceDeployed && (
+              // Says "eligible", not "whitelisted": this reads canReceive,
+              // which also demands an unexpired KYC date. Labelling it
+              // "Whitelist: no" for a wallet that IS whitelisted sends the
+              // operator to re-run a write that already succeeded.
               status.canReceive === undefined ? (
-                <Chip text="Whitelist: …" bg="#F3F4F6" color="#4B5563" />
+                <Chip text="LP eligibility: …" bg="#F3F4F6" color="#4B5563" />
               ) : status.canReceive ? (
-                <Chip text="Whitelist: yes" bg="#EFF6FF" color="#1D4ED8" />
+                <Chip text="LP eligible: yes" bg="#EFF6FF" color="#1D4ED8" />
               ) : (
-                <Chip text="Whitelist: no" bg="#FFF7ED" color="#C2410C" />
+                <Chip text="LP eligible: no" bg="#FFF7ED" color="#C2410C" />
               )
             )}
           </>
         )}
       </div>
+
+      {roleKey === LP_ELIGIBILITY_KEY && (
+        <LpEligibilityControls account={account} isValidAccount={validAccount} />
+      )}
 
       {role && <p className="text-xs text-gray-500">{role.description}</p>}
 
