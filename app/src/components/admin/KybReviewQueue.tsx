@@ -15,8 +15,8 @@ import {
 } from '@/lib/kyb/schema';
 import { DataSourceBadge } from '@/components/shared/DataSourceBadge';
 import { useEmailSession } from '@/hooks/useEmailSession';
-import { useSetWhitelist } from '@/hooks/useComplianceAdmin';
-import { useWhitelistStatuses } from '@/hooks/useWhitelistStatuses';
+import { useSetWhitelist, useSetKycExpiry } from '@/hooks/useComplianceAdmin';
+import { useWhitelistStatuses, eligibilityLabel, type Eligibility } from '@/hooks/useWhitelistStatuses';
 
 /**
  * KYB review queue for the KYC Operator.
@@ -122,6 +122,7 @@ export function KybReviewQueue() {
   // wallet must hold KYC_OPERATOR_ROLE — the registry enforces it on-chain;
   // this button is a convenience over the WhitelistPanel / Safe path.
   const whitelist = useSetWhitelist();
+  const kyc = useSetKycExpiry();
   const [whitelistTarget, setWhitelistTarget] = useState<string | null>(null);
 
   const fetchList = useCallback(
@@ -330,10 +331,10 @@ export function KybReviewQueue() {
                 {awaitingWhitelist.length === 1 ? '' : 's'} still not whitelisted on-chain
               </p>
               <p className="mt-1">
-                Approving here records a decision; it does not touch the ComplianceRegistry. Until
-                the whitelist write lands, the applicant cannot deposit, hold shares, or act as an
-                Institutional LP — whatever protocol roles they may also hold. Open the row and
-                press <strong>Whitelist on-chain now</strong>.
+                Approving here records a decision; it does not touch the ComplianceRegistry.
+                Eligibility needs <strong>two</strong> writes: a whitelist entry and a KYC expiry
+                in the future — an unset expiry reads as 0, which is always in the past, so
+                whitelisting alone changes nothing. Open a row to see which one is missing.
               </p>
               <p className="mt-1 font-mono text-[11px]">
                 {awaitingWhitelist.map((a) => a.wallet_address).join(' · ')}
@@ -370,23 +371,26 @@ export function KybReviewQueue() {
                     {/* On-chain truth alongside the database status, because the
                         two disagree exactly when it matters most. */}
                     {(() => {
-                      const allowed = whitelistStatus.isAllowed(app.wallet_address);
-                      if (allowed === undefined) return null;
+                      // Name the failing condition. "not eligible" sent someone
+                      // to whitelist a wallet that was already whitelisted and
+                      // only lacked a KYC expiry.
+                      const e = whitelistStatus.get(app.wallet_address);
+                      if (e === undefined) return null;
                       return (
                         <span
                           className="rounded-full px-2 py-0.5 text-[11px] font-semibold"
                           style={
-                            allowed
+                            e.canReceive
                               ? { background: '#D1FAE5', color: '#047857' }
                               : { background: '#FEF3C7', color: '#92400E' }
                           }
                           title={
-                            allowed
+                            e.canReceive
                               ? 'ComplianceRegistry.canReceive is true — the wallet may hold shares'
-                              : 'ComplianceRegistry.canReceive is false — the wallet cannot hold shares yet'
+                              : `canReceive is false — whitelisted: ${e.whitelisted}, kycExpiry: ${e.kycExpiry.toString()}`
                           }
                         >
-                          {allowed ? 'on-chain ✓' : 'not whitelisted'}
+                          {eligibilityLabel(e.reason)}
                         </span>
                       );
                     })()}
@@ -494,6 +498,12 @@ export function KybReviewQueue() {
                                   ? 'Whitelisting…'
                                   : 'Whitelist on-chain now'}
                           </button>
+                          <KycExpiryButton
+                            wallet={app.wallet_address}
+                            eligibility={whitelistStatus.get(app.wallet_address)}
+                            kyc={kyc}
+                            onDone={whitelistStatus.refetch}
+                          />
                           {whitelistTarget === app.wallet_address.toLowerCase() && whitelist.isSuccess && (
                             <>
                               <span className="text-xs font-semibold text-emerald-700">Whitelisted ✓ — the applicant can now operate.</span>
@@ -603,5 +613,69 @@ function isProtocolContract(wallet: string): boolean {
   const w = wallet.toLowerCase();
   return Object.values(NEXTBLOCK_ADDRESSES).some(
     (v) => typeof v === 'string' && /^0x[0-9a-fA-F]{40}$/.test(v) && v.toLowerCase() === w,
+  );
+}
+
+/**
+ * The second half of eligibility.
+ *
+ * `canReceive` needs a whitelist entry AND `kycExpiry >= now`. An unset expiry
+ * is 0, which is always in the past, so a successful whitelist write on its own
+ * leaves the applicant exactly as unable to hold a share as before — the state
+ * that cost real time to diagnose here.
+ *
+ * The button only appears once the whitelist is in place, because that is the
+ * order the registry cares about and offering both at once invites setting an
+ * expiry on a wallet nobody has admitted.
+ */
+function KycExpiryButton({
+  wallet,
+  eligibility,
+  kyc,
+  onDone,
+}: {
+  wallet: string;
+  eligibility: Eligibility | undefined;
+  kyc: ReturnType<typeof useSetKycExpiry>;
+  onDone: () => void;
+}) {
+  const [pressed, setPressed] = useState(false);
+
+  if (!eligibility || !eligibility.whitelisted || eligibility.canReceive) return null;
+
+  const expired = eligibility.kycExpiry > 0n;
+  // One year from the moment of the click, computed at press time rather than
+  // during render: the clock is not a pure input.
+  const grant = () => {
+    setPressed(true);
+    kyc.setKycExpiry(wallet as `0x${string}`, BigInt(Math.floor(Date.now() / 1000) + 365 * 86_400));
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        disabled={!kyc.callerIsOperator || kyc.isPending || kyc.isConfirming}
+        onClick={grant}
+        className="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-800 disabled:bg-gray-200 disabled:text-gray-400"
+      >
+        {!kyc.callerIsOperator
+          ? 'This wallet is not the KYC Operator'
+          : kyc.isPending || kyc.isConfirming
+            ? 'Setting KYC expiry…'
+            : expired
+              ? 'Renew KYC expiry (1 year)'
+              : 'Set KYC expiry (1 year) — required'}
+      </button>
+      {pressed && kyc.isSuccess && (
+        <>
+          <span className="text-xs font-semibold text-emerald-700">
+            KYC expiry set — the applicant is now eligible.
+          </span>
+          <WhitelistRefresh onSuccess={onDone} />
+        </>
+      )}
+      {pressed && kyc.error && <span className="text-xs text-red-700">{kyc.error}</span>}
+    </>
   );
 }
