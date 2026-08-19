@@ -11,6 +11,7 @@ import {
 } from '@/lib/audit/decode';
 import { NEXTBLOCK_ADDRESSES, NEXTBLOCK_CHAIN_ID } from '@/config/generated/addressBook';
 import { logApiError } from '@/lib/api-log';
+import { createChainClient, isUpstreamUnavailable } from '@/lib/server/chain-client';
 
 /**
  * Claim audit-trail refresh — server-cron entrypoint.
@@ -35,10 +36,6 @@ import { logApiError } from '@/lib/api-log';
 
 const REORG_SAFETY = 5n;
 const MAX_BLOCK_RANGE_PER_RUN = 5_000n; // RPC providers cap eth_getLogs; chunk if behind.
-
-function rpcUrl(): string {
-  return process.env.BASE_SEPOLIA_RPC_URL ?? 'https://sepolia.base.org';
-}
 
 interface IndexedRecord {
   claim_id: number;
@@ -71,7 +68,7 @@ export async function POST(request: NextRequest) {
   const supabase = getSupabaseServerClient();
   if (!supabase) return NextResponse.json({ error: 'audit backend unavailable' }, { status: 503 });
 
-  const client = createPublicClient({ chain: baseSepolia, transport: http(rpcUrl()) });
+  const client = createChainClient();
   const chainId = NEXTBLOCK_CHAIN_ID;
   const claimManager = NEXTBLOCK_ADDRESSES.claimManager.toLowerCase() as `0x${string}`;
   const claimReceipt = NEXTBLOCK_ADDRESSES.claimReceipt.toLowerCase() as `0x${string}`;
@@ -81,6 +78,9 @@ export async function POST(request: NextRequest) {
     latest = await client.getBlockNumber();
   } catch (err) {
     logApiError('audit/claims/refresh', 'block_number_failed');
+    if (isUpstreamUnavailable(err)) {
+      return NextResponse.json({ error: 'rpc unavailable', transient: true }, { status: 503 });
+    }
     return NextResponse.json({ error: 'rpc unavailable' }, { status: 502 });
   }
   const safeTo = latest > REORG_SAFETY ? latest - REORG_SAFETY : 0n;

@@ -54,16 +54,20 @@ jobs:
         run: |
           curl -sS --fail-with-body --max-time 30 --retry 2 --retry-delay 5 \
             "$APP_URL/api/observability/health"
+      # These two refreshes are idempotent and high-water-marked, so a run
+      # that cannot reach the chain loses nothing — the next tick, five
+      # minutes later, does the work. They therefore tolerate a TRANSIENT
+      # upstream failure (HTTP 503 carrying "transient":true) instead of
+      # failing the job and mailing the owner.
+      #
+      # This is not alert suppression: the health check above still fails the
+      # workflow when the app itself is unwell. What it stops is an alarm
+      # firing every time a shared public RPC has a bad minute — the kind
+      # that trains people to ignore the mail, which is worse than no alarm.
       - name: Refresh in-app notifications
-        run: |
-          curl -sS -X POST --fail-with-body --max-time 60 --retry 2 --retry-delay 5 \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            "$APP_URL/api/notifications/refresh"
+        run: bash .github/scripts/cron-post.sh "$APP_URL/api/notifications/refresh" "${{ secrets.CRON_SECRET }}"
       - name: Refresh claims audit trail
-        run: |
-          curl -sS -X POST --fail-with-body --max-time 60 --retry 2 --retry-delay 5 \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            "$APP_URL/api/audit/claims/refresh"
+        run: bash .github/scripts/cron-post.sh "$APP_URL/api/audit/claims/refresh" "${{ secrets.CRON_SECRET }}"
 
   ai-refresh:
     name: AI assessor refresh (15m)
