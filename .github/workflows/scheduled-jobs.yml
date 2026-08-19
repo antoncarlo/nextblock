@@ -41,6 +41,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      # The refresh steps below call a script from this repository, so the
+      # job needs the file. Only that directory is fetched: the workflow has
+      # no reason to pull the app or the contracts, and a scheduled job that
+      # clones everything every five minutes is waste with a blast radius.
+      - name: Fetch the cron helper
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/scripts
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
       - name: Guard — CRON_SECRET must be armed
         run: |
           if [ -z "${{ secrets.CRON_SECRET }}" ]; then
