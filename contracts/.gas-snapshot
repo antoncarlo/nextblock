@@ -336,6 +336,7 @@ NavShareOracleTest:test_priceCollateral_soleDepositorSharesEqualNav() (gas: 4258
 NavShareOracleTest:test_priceCollateral_staleNav_reverts() (gas: 427326)
 NavShareOracleTest:test_tryPrice_invalidWhenNoNav() (gas: 365757)
 NavShareOracleTest:test_tryPrice_validAfterPublish() (gas: 427284)
+NegativeAuthorityTest:test_negativeAuthorityMatrix() (gas: 4088882)
 NextBlockLensTest:test_adapterDashboard_lifecycle() (gas: 253534)
 NextBlockLensTest:test_bordereauDashboard_noneThenFinalized() (gas: 300240)
 NextBlockLensTest:test_claimDashboard_lifecycle() (gas: 1028645)
