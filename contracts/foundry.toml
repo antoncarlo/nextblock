@@ -37,3 +37,30 @@ seed = "0x4e455854424c4f434b"
 runs = 256
 depth = 100
 fail_on_revert = false
+
+# Exploratory nightly profile. Long sequences find the states a hundred-step
+# run never reaches: the agent suite's first finding needed a deposit, an
+# allocation and a redemption in that order, and depth is what makes such
+# orderings likely rather than lucky.
+[profile.deep.invariant]
+runs = 5000
+depth = 500
+fail_on_revert = false
+shrink_run_limit = 5000
+
+[profile.deep.fuzz]
+runs = 5000
+seed = "0x4e455854424c4f434b"
+
+# Negative-perimeter profile: every revert is a failure. This is what exposes a
+# misconfigured handler — a sequence that ought to be valid but reverts means
+# the harness is burning its budget on rejected calls and proving nothing. Run
+# it against suites whose handlers are written to stay inside the rules.
+[profile.strict.invariant]
+runs = 512
+depth = 50
+fail_on_revert = true
+
+[profile.strict.fuzz]
+runs = 256
+seed = "0x4e455854424c4f434b"
