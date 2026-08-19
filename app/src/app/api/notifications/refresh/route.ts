@@ -8,6 +8,7 @@ import { NEXTBLOCK_ADDRESSES } from '@/config/generated/addressBook';
 import { logApiError } from '@/lib/api-log';
 import { getEmailProvider } from '@/lib/email/provider';
 import { renderNotificationEmail } from '@/lib/email/templates';
+import { createChainClient, isUpstreamUnavailable } from '@/lib/server/chain-client';
 
 /**
  * Notification refresh — server-cron entrypoint.
@@ -92,10 +93,6 @@ const GET_CLAIM_DASHBOARD_ABI = [
 
 const DATA_STATUS_AVAILABLE = 1;
 
-function rpcUrl(): string {
-  return process.env.BASE_SEPOLIA_RPC_URL ?? 'https://sepolia.base.org';
-}
-
 export async function POST(request: NextRequest) {
   if (!verifyCronSecret(request.headers.get('authorization'))) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
@@ -105,7 +102,7 @@ export async function POST(request: NextRequest) {
 
   const lens = NEXTBLOCK_ADDRESSES.lens as `0x${string}`;
   const claimManager = NEXTBLOCK_ADDRESSES.claimManager as `0x${string}`;
-  const client = createPublicClient({ chain: baseSepolia, transport: http(rpcUrl()) });
+  const client = createChainClient();
 
   let total: bigint;
   try {
@@ -114,8 +111,17 @@ export async function POST(request: NextRequest) {
       abi: GET_CLAIM_COUNT_ABI,
       functionName: 'getClaimCount',
     });
-  } catch {
+  } catch (err) {
     logApiError('notifications/refresh', 'claim_count_failed');
+    // An endpoint outage is not a fault of ours and needs no human: the next
+    // scheduled run repeats the work, which is idempotent. Say which kind of
+    // failure it was so the caller can decide whether to raise an alarm.
+    if (isUpstreamUnavailable(err)) {
+      return NextResponse.json(
+        { error: 'on-chain read unavailable', transient: true },
+        { status: 503 },
+      );
+    }
     return NextResponse.json({ error: 'on-chain read unavailable' }, { status: 502 });
   }
 
