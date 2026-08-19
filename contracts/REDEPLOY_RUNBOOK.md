@@ -3,9 +3,11 @@
 **Why.** The staging contracts on Base Sepolia predate the real-spine work on
 `main`: the deployed `PolicyRegistry` has no `lockRealTime()` (verified on
 2026-07-03 — `clockLocked()` reverts on `0x2Bf1…f1a2`) and the deployed
-`VaultAllocator` still carries the removed demo split. A truthful
-(re)insurance test needs a fresh generation, the one-way real-time lock, and
-governance moved off the deployer EOA.
+`VaultAllocator` still carries the removed demo split, and the redemption
+queue is bound to a vault holding zero shares, which is why withdrawals fail.
+A truthful (re)insurance test needs a fresh generation and governance moved
+off the deployer EOA. The one-way real-time lock comes later, on purpose —
+see section 2.
 
 **Who runs this.** The OWNER, with the deployer key. The key is entered only
 in the owner's own terminal/UI — it must never transit assistant tooling,
@@ -44,7 +46,42 @@ forge script script/DeployRedemptionQueue.s.sol \
 
 Record the printed `queue:` address.
 
-## 2. Lock real time (one-way — the truthful-test switch)
+## 2. Do NOT lock real time yet
+
+`lockRealTime()` is **irreversible** and belongs at the end of the
+demonstration phase, not here. Locking it now costs the ability to show the
+protocol working end to end, and buys nothing that cannot be bought later
+with one transaction.
+
+What the mutable clock actually governs is narrow. Only `InsuranceVault` and
+`PolicyRegistry` read `registry.currentTime()`; everything else already runs
+on `block.timestamp` and is unaffected either way — claim dispute windows,
+NAV staleness, KYC expiry, redemption epochs, portfolio expiry. Inside those
+two it governs exactly three things:
+
+| Governed by the mutable clock | Consequence of locking |
+|---|---|
+| Premium earning (UPR recognition) | a six-month treaty takes six months to earn |
+| Management fee accrual | fees accrue in real time |
+| Policy expiry | policies expire on the wall clock |
+
+Those three are what turn a received premium into visible yield. With the
+clock locked, a day of staging moves the NAV in the fourth decimal, and two
+asset managers stay indistinguishable for weeks — the platform is alive and
+looks frozen.
+
+With it unlocked, one transaction takes a portfolio through its whole life:
+premium fully earned, fees accrued, policy expired, capacity released, LPs
+redeeming against a return you can read. The numbers are produced by the
+real protocol; only the clock moved.
+
+**The limit is what those numbers may be called.** An owner who can move the
+clock can move the earnings, so nothing produced in this phase is a track
+record and none of it may be shown to an investor as one. It is an
+engineering instrument for finding faults, and that is all it is.
+
+Lock it when the numbers have convinced you and you want them to become
+evidence:
 
 ```bash
 POLICY_REGISTRY=$(python -c "import json;print(json.load(open('deployments/84532-staging.json'))['policyRegistry'])")
@@ -52,12 +89,12 @@ POLICY_REGISTRY=$(python -c "import json;print(json.load(open('deployments/84532
 cast send "$POLICY_REGISTRY" "lockRealTime()" \
   --rpc-url "$BASE_SEPOLIA_RPC_URL" --private-key "$PRIVATE_KEY"
 
-# verify — must print true; advanceTime() now reverts forever
+# verify — must print true; advanceTime() reverts forever after this
 cast call "$POLICY_REGISTRY" "clockLocked()(bool)" --rpc-url "$BASE_SEPOLIA_RPC_URL"
 ```
 
-After this, premium earning / UPR / fee accrual / policy expiry run on the
-real block clock; nobody (owner included) can fast-forward.
+After that, premium earning, UPR, fee accrual and policy expiry run on the
+real block clock and nobody — the owner included — can fast-forward.
 
 ## 3. Governance migration (Safe + timelock)
 
@@ -133,7 +170,10 @@ branch → PR → merge (auto-deploys the frontend).
 
 ```bash
 forge script script/SanityCheck.s.sol --rpc-url "$BASE_SEPOLIA_RPC_URL"
-cast call "$POLICY_REGISTRY" "clockLocked()(bool)" --rpc-url "$BASE_SEPOLIA_RPC_URL"   # true
+
+# Expected FALSE at this stage: the clock stays movable through the
+# demonstration phase and is locked deliberately afterwards (section 2).
+cast call "$POLICY_REGISTRY" "clockLocked()(bool)" --rpc-url "$BASE_SEPOLIA_RPC_URL"
 ```
 
 UI: connect as admin → /app/admin shows the new lens status; an LP deposit +
