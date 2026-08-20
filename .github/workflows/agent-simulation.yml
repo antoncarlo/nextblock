@@ -1,0 +1,133 @@
+name: agent-simulation
+
+# The deep multi-agent campaign. Kept out of the pull-request path on purpose:
+# the standard profile already runs the same invariants on every PR through
+# `forge test`, and the deep profile trades roughly twenty times the runtime for
+# sequences long enough to reach states a short run never builds up to. That is
+# worth a nightly, not worth adding half an hour to every review.
+#
+# The artefact this produces is the input to the audit evidence pack. A campaign
+# whose output is read once and discarded proves the protocol held that night
+# and nothing about the night before.
+
+on:
+  schedule:
+    # 03:00 UTC — after the day's merges have landed, before anyone reads it.
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'Foundry profile (deep is the nightly default; strict fails on any revert)'
+        required: false
+        default: 'deep'
+        type: choice
+        options:
+          - deep
+          - strict
+          - ci
+      runs:
+        description: 'Invariant runs. Blank uses the profile default — for deep that is 5000, roughly five hours.'
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  campaign:
+    name: campaign (${{ inputs.profile || 'deep' }})
+    runs-on: ubuntu-latest
+    # Measured rather than guessed: 19 invariants at 256 runs took 786 seconds
+    # on this hardware, and cost is linear in runs. The deep profile's own 5000
+    # would be close to five hours — inside GitHub's six-hour ceiling, but not
+    # by enough to survive a slow runner or another invariant being added.
+    #
+    # So the nightly caps runs at 1000 (roughly fifty minutes, four times the
+    # pull-request campaign) and the full profile stays available on manual
+    # dispatch, where somebody is watching. A ceiling generous enough that a
+    # run is never killed mid-sequence: a campaign that dies without writing
+    # its counterexample proves nothing at all.
+    timeout-minutes: 330
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Build
+        working-directory: contracts
+        run: forge build
+
+      # The perimeter matrix and the reachability guard run first and cheaply.
+      # If a key has gained a role it should not hold, or the harness has gone
+      # hollow, the campaign that follows would be asserting over the wrong
+      # world and its green would mean nothing.
+      - name: Negative authority matrix
+        working-directory: contracts
+        run: forge test --match-contract NegativeAuthorityTest -vv
+
+      - name: Deep campaign
+        working-directory: contracts
+        env:
+          FOUNDRY_PROFILE: ${{ inputs.profile || 'deep' }}
+          # Empty on manual dispatch means "use the profile", which is how the
+          # full 5000-run campaign is reached deliberately.
+          FOUNDRY_INVARIANT_RUNS: ${{ inputs.runs || (github.event_name == 'schedule' && '1000' || '') }}
+        run: |
+          set -o pipefail
+          forge test --match-contract ProtocolInvariantTest -vv 2>&1 | tee campaign.log
+
+      # Written whether the campaign passed or failed: a counterexample is the
+      # most valuable thing this job can produce, and losing it because the step
+      # before went red would defeat the purpose of running at all.
+      - name: Machine-readable results
+        if: always()
+        working-directory: contracts
+        env:
+          FOUNDRY_PROFILE: ${{ inputs.profile || 'deep' }}
+          # Deliberately the cheap profile: this pass exists to produce a
+          # machine-readable shape, not to search again. Repeating a five-hour
+          # campaign to reformat its result would double the bill for nothing.
+          FOUNDRY_INVARIANT_RUNS: '64'
+        run: forge test --match-contract ProtocolInvariantTest --json > campaign.json || true
+
+      - name: Upload campaign evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-simulation-${{ github.run_number }}
+          path: |
+            contracts/campaign.log
+            contracts/campaign.json
+          retention-days: 90
+
+      # Read from the log rather than recomputed, so the summary cannot disagree
+      # with the run it describes.
+      - name: Summary
+        if: always()
+        working-directory: contracts
+        run: |
+          {
+            echo "## Agent simulation — ${{ inputs.profile || 'deep' }}"
+            echo
+            if grep -qE '^\[FAIL' campaign.log; then
+              echo "**A counterexample was found.** The shrunk sequence is in the artefact."
+              echo
+              echo '```'
+              grep -A 12 -E '^\[FAIL' campaign.log | head -60
+              echo '```'
+            else
+              echo "No counterexample."
+            fi
+            echo
+            echo '```'
+            grep -E '^\[PASS|Suite result' campaign.log || echo 'no result line in the log'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

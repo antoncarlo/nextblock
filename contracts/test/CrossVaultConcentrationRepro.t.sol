@@ -13,6 +13,7 @@ import {MockUSDC} from "../src/MockUSDC.sol";
 import {MockOracle} from "../src/MockOracle.sol";
 import {InsuranceVault} from "../src/InsuranceVault.sol";
 import {VaultAllocator} from "../src/VaultAllocator.sol";
+import {VaultFactory} from "../src/VaultFactory.sol";
 
 /// @title CrossVaultConcentrationRepro
 /// @author Anton Carlo Santoro
@@ -161,7 +162,78 @@ contract CrossVaultConcentrationReproTest is Test {
         assertGt(allocatorC.cedantExposure(address(vaultB), cedant), 0, "vault B carries the same exposure");
     }
 
+    /// @notice Without a registry the absolute cedant ceiling binds one vault at
+    ///         a time, so two vaults can each take the whole of it.
+    /// @dev The failure mode percentages do not have. A percentage limit
+    ///      self-normalises across vaults; an absolute one does not, so a
+    ///      ceiling meant to cap what the protocol owes a counterparty caps
+    ///      only what each vault owes it.
+    function test_absoluteCedantCeilingIsPerVaultWithoutARegistry() public {
+        uint256 ceiling = 100_000e6;
+        vm.prank(governance);
+        allocatorC.setAbsoluteExposureCaps(ceiling, ceiling);
+
+        _fund(vaultA);
+        _fund(vaultB);
+
+        _allocate(vaultA, pidA, ceiling);
+        _allocate(vaultB, pidB, ceiling);
+
+        assertEq(
+            allocatorC.cedantExposure(address(vaultA), cedant) + allocatorC.cedantExposure(address(vaultB), cedant),
+            ceiling * 2,
+            "the protocol owes this counterparty twice the stated ceiling"
+        );
+    }
+
+    /// @notice With a registry the ceiling means what it says.
+    function test_theRegistryMakesTheCeilingProtocolWide() public {
+        VaultFactory factory = _factoryHolding();
+
+        uint256 ceiling = 100_000e6;
+        vm.startPrank(governance);
+        allocatorC.setAbsoluteExposureCaps(ceiling, ceiling);
+        allocatorC.setVaultFactory(address(factory));
+        vm.stopPrank();
+
+        _fund(vaultA);
+        _fund(vaultB);
+
+        // The first vault takes the whole allowance.
+        _allocate(vaultA, pidA, ceiling);
+        assertEq(allocatorC.protocolCedantExposure(address(vaultA), cedant), ceiling, "the allowance is used up");
+
+        // The second is refused for the smallest amount there is, because the
+        // counterparty already has everything the protocol will give it.
+        vm.prank(allocatorKey);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                VaultAllocator.VaultAllocator__CedantExposureCapExceeded.selector, cedant, ceiling + 1, ceiling
+            )
+        );
+        allocatorC.proposeAllocation(address(vaultB), pidB, 1);
+    }
+
     // --- helpers ---
+
+    /// @dev A factory cannot mint the vaults this test already built, so a
+    ///      stub standing in for the registry is the honest instrument: what is
+    ///      under test is the allocator reading a list of vaults, not the
+    ///      factory's own deployment path, which VaultFactory.t.sol covers.
+    function _factoryHolding() internal returns (VaultFactory) {
+        address[] memory vaults = new address[](2);
+        vaults[0] = address(vaultA);
+        vaults[1] = address(vaultB);
+        VaultRegistryStub stub = new VaultRegistryStub(vaults);
+        return VaultFactory(address(stub));
+    }
+
+    function _allocate(InsuranceVault v, uint256 pid, uint256 amount) internal {
+        vm.prank(allocatorKey);
+        uint256 propId = allocatorC.proposeAllocation(address(v), pid, amount);
+        vm.prank(allocatorKey);
+        allocatorC.executeAllocation(propId);
+    }
 
     function _vault(string memory name, string memory symbol) internal returns (InsuranceVault v) {
         v = new InsuranceVault(
@@ -232,5 +304,23 @@ contract CrossVaultConcentrationReproTest is Test {
         uint256 propId = allocatorC.proposeAllocation(address(v), pid, amount);
         vm.prank(allocatorKey);
         allocatorC.executeAllocation(propId);
+    }
+}
+
+/// @notice Minimal stand-in exposing only the vault list the allocator reads.
+/// @dev Deliberately not a full VaultFactory. The allocator depends on one
+///      function; a stub makes that dependency visible instead of burying it
+///      inside a deployment the test does not care about.
+contract VaultRegistryStub {
+    address[] private vaults;
+
+    constructor(address[] memory vaults_) {
+        for (uint256 i; i < vaults_.length; ++i) {
+            vaults.push(vaults_[i]);
+        }
+    }
+
+    function getVaults() external view returns (address[] memory) {
+        return vaults;
     }
 }

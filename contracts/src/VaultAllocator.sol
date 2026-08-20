@@ -5,6 +5,7 @@ import {ProtocolRoles, ProtocolRoleConstants} from "./ProtocolRoles.sol";
 import {PortfolioRegistry} from "./PortfolioRegistry.sol";
 import {InsuranceVault} from "./InsuranceVault.sol";
 import {NavOracle} from "./NavOracle.sol";
+import {VaultFactory} from "./VaultFactory.sol";
 
 /// @title VaultAllocator
 /// @author Anton Carlo Santoro
@@ -94,7 +95,17 @@ contract VaultAllocator is ProtocolRoleConstants {
     ///      protocols on this chain express caps this way.
     uint256 public maxPortfolioExposure;
     /// @notice Absolute per-cedant exposure ceiling in asset units (0 = unset).
+    /// @dev Protocol-wide when `vaultFactory` is set, per-vault otherwise. The
+    ///      distinction is the whole value of the number: percentage limits
+    ///      self-normalise across vaults, because if every vault satisfies
+    ///      e_i <= L * b_i then sum(e_i) <= L * sum(b_i). An absolute ceiling
+    ///      does not — N vaults each at the ceiling carry N times it — so a
+    ///      ceiling meant to cap what the protocol owes one counterparty has to
+    ///      be measured across every vault, or it caps nothing.
     uint256 public maxCedantExposure;
+
+    /// @notice Vault registry used to aggregate cedant exposure (0 = per-vault only).
+    VaultFactory public vaultFactory;
 
     /// @notice Monotonic id of the next proposal.
     uint256 public nextProposalId;
@@ -121,6 +132,8 @@ contract VaultAllocator is ProtocolRoleConstants {
     event ConcentrationLimitsUpdated(uint256 maxPortfolioBps, uint256 maxCedantBps);
     /// @notice Emitted when the absolute exposure ceilings change.
     event AbsoluteExposureCapsUpdated(uint256 maxPortfolioExposure, uint256 maxCedantExposure);
+    /// @notice Emitted when the vault registry backing aggregation changes.
+    event VaultFactorySet(address indexed vaultFactory);
     /// @notice Emitted when the advisory NAV oracle is set or disabled.
     event NavOracleSet(address indexed navOracle);
     /// @notice Emitted when the proposal TTL changes.
@@ -222,6 +235,15 @@ contract VaultAllocator is ProtocolRoleConstants {
         maxPortfolioExposure = portfolioCap;
         maxCedantExposure = cedantCap;
         emit AbsoluteExposureCapsUpdated(portfolioCap, cedantCap);
+    }
+
+    /// @notice Set the vault registry used to aggregate exposure across vaults.
+    /// @dev Optional. Without it `maxCedantExposure` binds one vault at a time,
+    ///      which is a weaker promise than the name suggests and is why this
+    ///      exists. Left unset, behaviour is unchanged.
+    function setVaultFactory(address vaultFactory_) external onlyProtocolRole(OWNER_ROLE) {
+        vaultFactory = VaultFactory(vaultFactory_);
+        emit VaultFactorySet(vaultFactory_);
     }
 
     /// @notice Set or disable (address(0)) the advisory NAV oracle.
@@ -371,6 +393,22 @@ contract VaultAllocator is ProtocolRoleConstants {
 
     /// @notice Current per-cedant exposure of a vault, computed live from the
     ///         vault and the registry (no duplicated accounting state).
+    /// @notice Total exposure to one cedant across every vault the factory knows.
+    /// @dev Falls back to the single vault when no registry is configured, so
+    ///      the caller gets the widest view available rather than a revert.
+    ///      `getVaults()` grows with the protocol; this is a view, and the
+    ///      allocation path calls it once per proposal, which is the same order
+    ///      of work `cedantExposure` already does per vault.
+    function protocolCedantExposure(address fallbackVault, address cedant) public view returns (uint256 total) {
+        if (address(vaultFactory) == address(0)) {
+            return cedantExposure(fallbackVault, cedant);
+        }
+        address[] memory vaults = vaultFactory.getVaults();
+        for (uint256 i; i < vaults.length; ++i) {
+            total += cedantExposure(vaults[i], cedant);
+        }
+    }
+
     // --- Passive breach reporting ---
 
     /// @notice Whether a bucket sits above its percentage threshold today.
@@ -513,8 +551,15 @@ contract VaultAllocator is ProtocolRoleConstants {
         if (maxPortfolioExposure != 0 && wouldBePortfolio > maxPortfolioExposure) {
             revert VaultAllocator__PortfolioExposureCapExceeded(portfolioId, wouldBePortfolio, maxPortfolioExposure);
         }
-        if (maxCedantExposure != 0 && wouldBeCedant > maxCedantExposure) {
-            revert VaultAllocator__CedantExposureCapExceeded(cedant, wouldBeCedant, maxCedantExposure);
+        if (maxCedantExposure != 0) {
+            // Measured across every vault when a registry is configured. Without
+            // it the ceiling would bind each vault separately and the protocol
+            // could owe one counterparty a multiple of the stated figure.
+            uint256 wouldBeProtocol =
+                address(vaultFactory) == address(0) ? wouldBeCedant : protocolCedantExposure(vault, cedant) + amount;
+            if (wouldBeProtocol > maxCedantExposure) {
+                revert VaultAllocator__CedantExposureCapExceeded(cedant, wouldBeProtocol, maxCedantExposure);
+            }
         }
     }
 
