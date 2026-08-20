@@ -15,6 +15,7 @@ import { useVaultSetupProgress } from '@/hooks/useVaultSetupProgress';
 import { SetupProgress } from '@/components/vault/SetupProgress';
 import { FundPolicyPanel } from '@/components/vault/FundPolicyPanel';
 import { VaultFeesPanel } from '@/components/vault/VaultFeesPanel';
+import { ConcentrationPanel } from '@/components/vault/ConcentrationPanel';
 import { useLensVaultDashboard, LensDataStatus } from '@/hooks/useNextBlockLens';
 import { DataSourceBadge } from '@/components/shared/DataSourceBadge';
 import { useAllPolicies, usePolicyCount } from '@/hooks/usePolicyRegistry';
@@ -1050,6 +1051,12 @@ export default function ManageVaultPage() {
           managementFeeBps={feeBps}
           isOwner={progress.callerCanGrantDeposit}
         />
+      </div>
+
+      {/* Concentration sits alongside fees rather than inside the setup steps:
+          it is a standing state of the book, not a task to complete. */}
+      <div style={{ marginTop: '24px' }}>
+        <ConcentrationPanel vaultAddress={vaultAddress} />
       </div>
 
       {/* Back link */}

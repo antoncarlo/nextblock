@@ -17,11 +17,22 @@ import {VaultAllocator} from "../../src/VaultAllocator.sol";
 import {NavOracle} from "../../src/NavOracle.sol";
 import {AIAssessor} from "../../src/AIAssessor.sol";
 import {ClaimManager} from "../../src/ClaimManager.sol";
+import {ProtocolTimelock} from "../../src/ProtocolTimelock.sol";
+import {VaultFactory} from "../../src/VaultFactory.sol";
+import {VaultDeployer} from "../../src/VaultDeployer.sol";
 
 import {LpAgent} from "./handlers/LpAgent.sol";
 import {AllocatorAgent} from "./handlers/AllocatorAgent.sol";
 import {CommitteeAgent} from "./handlers/CommitteeAgent.sol";
 import {SentinelAgent} from "./handlers/SentinelAgent.sol";
+import {CedantAgent} from "./handlers/CedantAgent.sol";
+import {KycAgent} from "./handlers/KycAgent.sol";
+import {PremiumAgent} from "./handlers/PremiumAgent.sol";
+import {OracleAgent} from "./handlers/OracleAgent.sol";
+import {CuratorAgent} from "./handlers/CuratorAgent.sol";
+import {KeeperAgent} from "./handlers/KeeperAgent.sol";
+import {GovernanceAgent} from "./handlers/GovernanceAgent.sol";
+import {FactoryAgent} from "./handlers/FactoryAgent.sol";
 
 /// @title ProtocolInvariantTest
 /// @author Anton Carlo Santoro
@@ -51,6 +62,10 @@ contract ProtocolInvariantTest is Test {
     PremiumDistributor internal distributor;
     VaultAllocator internal allocatorC;
     AIAssessor internal assessor;
+    NavOracle internal navOracle;
+    ProtocolTimelock internal timelock;
+    VaultFactory internal factory;
+    InsuranceVault internal rogueVault;
     ClaimManager internal claims;
 
     // --- Agents ---
@@ -58,6 +73,14 @@ contract ProtocolInvariantTest is Test {
     AllocatorAgent internal allocatorAgent;
     CommitteeAgent internal committeeAgent;
     SentinelAgent internal sentinelAgent;
+    CedantAgent internal cedantAgent;
+    KycAgent internal kycAgent;
+    PremiumAgent internal premiumAgent;
+    OracleAgent internal oracleAgent;
+    CuratorAgent internal curatorAgent;
+    KeeperAgent internal keeperAgent;
+    GovernanceAgent internal governanceAgent;
+    FactoryAgent internal factoryAgent;
 
     // --- Keys: one role each, never shared ---
     address internal governance = makeAddr("A1_governance");
@@ -66,11 +89,19 @@ contract ProtocolInvariantTest is Test {
     address internal sentinelKey = makeAddr("A4_sentinel");
     address internal committeeKey = makeAddr("A5_committee");
     address internal cedantKey = makeAddr("A6_cedant");
+    address internal cedantKeyB = makeAddr("A6_cedant_b");
+    address internal premiumKey = makeAddr("A7_premium_depositor");
     address internal kycKey = makeAddr("A8_kyc");
+    address internal oracleKey = makeAddr("A9_oracle_node");
     address internal outsider = makeAddr("outsider_notWhitelisted");
+
+    /// @notice A12 runs unprivileged: several of them, so "the caller was the
+    ///         beneficiary" cannot hold by accident.
+    address[] internal keepers;
 
     address[] internal lps;
     uint256[] internal portfolioIds;
+    uint256[] internal policyIds;
 
     /// @notice Keys the role-separation invariant checks for overlap.
     address[] internal allKeys;
@@ -89,7 +120,11 @@ contract ProtocolInvariantTest is Test {
         compliance = new ComplianceRegistry(address(roles));
         portfolios = new PortfolioRegistry(address(roles));
         distributor = new PremiumDistributor(address(usdc), address(roles), address(portfolios));
-        allocatorC = new VaultAllocator(address(roles), address(portfolios), address(0));
+        navOracle = new NavOracle(address(roles), address(portfolios));
+        // Wired at construction rather than through a later setter: passing
+        // address(0) here disables the freshness guard entirely, which is how
+        // the invariant covering it sat green without ever being consulted.
+        allocatorC = new VaultAllocator(address(roles), address(portfolios), address(navOracle));
         assessor = new AIAssessor(address(roles));
         claims = new ClaimManager(address(roles), address(portfolios), address(assessor), address(receipts));
 
@@ -101,7 +136,10 @@ contract ProtocolInvariantTest is Test {
         roles.grantRole(roles.SENTINEL_ROLE(), sentinelKey);
         roles.grantRole(roles.CLAIMS_COMMITTEE_ROLE(), committeeKey);
         roles.grantRole(roles.AUTHORIZED_CEDANT_ROLE(), cedantKey);
+        roles.grantRole(roles.AUTHORIZED_CEDANT_ROLE(), cedantKeyB);
         roles.grantRole(roles.KYC_OPERATOR_ROLE(), kycKey);
+        roles.grantRole(roles.PREMIUM_DEPOSITOR_ROLE(), premiumKey);
+        roles.grantRole(roles.ORACLE_ROLE(), oracleKey);
 
         // Contract-held roles: the allocator contract executes allocations, the
         // distributor pushes premiums. Neither is a human key.
@@ -127,7 +165,66 @@ contract ProtocolInvariantTest is Test {
             })
         );
 
+        // Governance proposes and executes; the timelock is what actually holds
+        // OWNER_ROLE for the parameter changes A1 puts through it. The
+        // deployer keeps the role too — Phase 2 (renounce) has not run, and
+        // pretending otherwise here would test a deployment that does not exist.
+        address[] memory proposers = new address[](1);
+        proposers[0] = governance;
+        address[] memory executors = new address[](1);
+        executors[0] = governance;
+        timelock = new ProtocolTimelock(1 hours, proposers, executors, address(0));
+        roles.grantRole(roles.OWNER_ROLE(), address(timelock));
+
+        VaultDeployer deployer = new VaultDeployer();
+        factory = new VaultFactory(
+            address(usdc),
+            address(policies),
+            address(oracle),
+            address(receipts),
+            address(roles),
+            address(compliance),
+            address(portfolios),
+            address(deployer)
+        );
+        deployer.bindFactory(address(factory));
+
+        // The registry is what turns the absolute cedant ceiling from a
+        // per-vault figure into a protocol-wide one. Wiring it here is what
+        // puts that aggregation under the campaign rather than under a
+        // fixed-number test.
+        allocatorC.setVaultFactory(address(factory));
+        // Generous enough that ordinary allocation is not strangled, tight
+        // enough that a counterparty accumulating across several vaults runs
+        // into it. A ceiling nothing ever approaches is not being tested.
+        allocatorC.setAbsoluteExposureCaps(2_000_000e6, 5_000_000e6);
+
         receipts.setAuthorizedMinter(address(vault), true);
+
+        // A working vault the factory never made. Deployed here rather than
+        // faked, because the question A10 asks is whether the allocator cares
+        // about the registry — a malformed address would revert on any call
+        // and answer nothing.
+        rogueVault = new InsuranceVault(
+            InsuranceVault.VaultInitParams({
+                asset: IERC20(address(usdc)),
+                name: "Unregistered",
+                symbol: "nbROGUE",
+                vaultName: "Unregistered",
+                owner: governance,
+                vaultManager: curator,
+                bufferRatioBps: 2_000,
+                managementFeeBps: 0,
+                registry: address(policies),
+                oracle: address(oracle),
+                claimReceipt: address(receipts),
+                protocolRoles: address(roles),
+                complianceRegistry: address(compliance),
+                portfolioRegistry: address(portfolios)
+            })
+        );
+        rogueVault.setVaultAllocator(address(allocatorC));
+        receipts.setAuthorizedMinter(address(rogueVault), true);
         receipts.setAuthorizedMinter(address(claims), true);
         vault.setClaimManager(address(claims));
         vault.setVaultAllocator(address(allocatorC));
@@ -135,6 +232,7 @@ contract ProtocolInvariantTest is Test {
 
         _whitelistLps();
         _seedPortfolios();
+        _seedPolicies();
         _deployAgents();
         _registerKeys();
 
@@ -143,13 +241,95 @@ contract ProtocolInvariantTest is Test {
         targetContract(address(allocatorAgent));
         targetContract(address(committeeAgent));
         targetContract(address(sentinelAgent));
+        targetContract(address(cedantAgent));
+        targetContract(address(kycAgent));
+        targetContract(address(premiumAgent));
+        targetContract(address(oracleAgent));
+        targetContract(address(curatorAgent));
+        targetContract(address(keeperAgent));
+        targetContract(address(governanceAgent));
+        targetContract(address(factoryAgent));
+
+        _assertWorldIsLive();
 
         targetSender(allocatorKey);
         targetSender(sentinelKey);
         targetSender(committeeKey);
+        targetSender(cedantKey);
+        targetSender(kycKey);
+        targetSender(premiumKey);
+        targetSender(oracleKey);
+        targetSender(curator);
+        targetSender(governance);
+        targetSender(keepers[0]);
     }
 
     // --- Fixture helpers ---
+
+    /// @notice Refuse to start a campaign the invariants cannot fail.
+    ///
+    /// @dev Both defects found so far were of one kind: an invariant asserting
+    ///      over a state the run never reached. Portfolios were approved and
+    ///      never activated, so `submitClaim` refused every call and the claim
+    ///      invariants ran against an empty set; the allocator was built with a
+    ///      zero oracle address, so the freshness guard returned on its first
+    ///      line. Both reported green for weeks.
+    ///
+    ///      That failure mode is invisible by construction — a passing test
+    ///      looks the same whether it proved something or nothing — so it needs
+    ///      a check that runs before the campaign rather than a reviewer who
+    ///      remembers to look. Every condition below is one an invariant
+    ///      depends on to be able to fail at all. If one stops holding, the
+    ///      suite refuses to run instead of quietly going hollow.
+    function _assertWorldIsLive() internal view {
+        // I-29: a zero oracle address makes the freshness guard unreachable.
+        assertTrue(address(allocatorC.navOracle()) != address(0), "live: the allocator has no oracle to consult");
+        assertGt(navOracle.minConfidenceBps(), 0, "live: a zero confidence floor cannot be breached");
+
+        // I-33/34/35: claims are refused outright unless a book is on risk.
+        uint256 live;
+        uint256 total = portfolios.nextPortfolioId();
+        for (uint256 pid; pid < total; ++pid) {
+            if (portfolios.getPortfolio(pid).status == PortfolioRegistry.PortfolioStatus.ACTIVE) live += 1;
+        }
+        assertGt(live, 0, "live: no portfolio is on risk, so no claim can be filed");
+
+        // I-35 needs the crossed case to exist: two cedants, two distinct books.
+        assertTrue(cedantKey != cedantKeyB, "live: one cedant cannot claim on another's book");
+        assertTrue(
+            portfolios.getPortfolio(portfolioIds[0]).cedant != portfolios.getPortfolio(portfolioIds[2]).cedant,
+            "live: both books belong to the same cedant"
+        );
+
+        // I-40/41/42: premium cannot be paid into a vault holding no policies.
+        (,,,,,,,,, uint256 policyCount) = vault.getVaultInfo();
+        assertGt(policyCount, 0, "live: the vault holds no policy to receive premium");
+
+        // I-36/37/39: an LP that cannot deposit cannot later be trapped.
+        assertGt(lps.length, 0, "live: no institutional LP exists");
+        assertTrue(compliance.canReceive(lps[0]), "live: the LPs cannot subscribe");
+        assertGt(vault.maxDeposit(lps[0]), 0, "live: the vault accepts no deposit");
+
+        // I-24/43/45: each key must hold its own role and no other's, or the
+        // separation invariants are asserting over keys that were never armed.
+        assertTrue(roles.hasRole(roles.UNDERWRITING_CURATOR_ROLE(), curator), "live: the curator holds no role");
+        assertTrue(roles.hasRole(roles.ALLOCATOR_ROLE(), allocatorKey), "live: the allocator holds no role");
+        assertTrue(roles.hasRole(roles.SENTINEL_ROLE(), sentinelKey), "live: the sentinel holds no role");
+        assertTrue(roles.hasRole(roles.CLAIMS_COMMITTEE_ROLE(), committeeKey), "live: the committee holds no role");
+        assertTrue(roles.hasRole(roles.ORACLE_ROLE(), oracleKey), "live: the oracle node holds no role");
+        assertTrue(roles.hasRole(roles.PREMIUM_DEPOSITOR_ROLE(), premiumKey), "live: the depositor holds no role");
+        assertTrue(roles.hasRole(roles.KYC_OPERATOR_ROLE(), kycKey), "live: the KYC operator holds no role");
+
+        // I-48: a timelock that holds no authority queues nothing worth waiting
+        // for, and a zero delay is a delay that cannot be jumped early.
+        assertTrue(roles.hasRole(roles.OWNER_ROLE(), address(timelock)), "live: the timelock holds no authority");
+        assertGt(timelock.getMinDelay(), 0, "live: the timelock imposes no delay");
+
+        // I-46: keepers must be unprivileged and distinct from the cedants they
+        // settle for, or "the caller was not the beneficiary" holds by accident.
+        assertGt(keepers.length, 1, "live: a single keeper cannot show payout routing");
+        assertTrue(keepers[0] != cedantKey && keepers[0] != cedantKeyB, "live: the keeper is also a claimant");
+    }
 
     function _whitelistLps() internal {
         uint64 kycUntil = uint64(block.timestamp + 3650 days);
@@ -176,14 +356,41 @@ contract ProtocolInvariantTest is Test {
     ///      the sequence. Short tenors are what let a run actually finish a
     ///      contract rather than only ever opening one.
     function _seedPortfolios() internal {
-        portfolioIds.push(_approvedPortfolio("Sim Weekly", COVERAGE_B, 7 days));
-        portfolioIds.push(_approvedPortfolio("Sim Monthly", COVERAGE_B, 30 days));
-        portfolioIds.push(_approvedPortfolio("Sim Quarterly", COVERAGE_A, 90 days));
-        portfolioIds.push(_approvedPortfolio("Sim Annual", COVERAGE_A, 365 days));
+        portfolioIds.push(_approvedPortfolio("Sim Weekly", COVERAGE_B, 7 days, cedantKey));
+        portfolioIds.push(_approvedPortfolio("Sim Monthly", COVERAGE_B, 30 days, cedantKey));
+        portfolioIds.push(_approvedPortfolio("Sim Quarterly", COVERAGE_A, 90 days, cedantKeyB));
+        portfolioIds.push(_approvedPortfolio("Sim Annual", COVERAGE_A, 365 days, cedantKeyB));
     }
 
-    function _approvedPortfolio(string memory name, uint256 coverage, uint64 tenor) internal returns (uint256 pid) {
+    /// @dev Premium cannot be paid into a vault that holds no policies, and a
+    ///      vault whose assets never move makes every accounting invariant an
+    ///      assertion about a flat line. Three policies of different tenors, so
+    ///      the unearned reserve is released at three different rates.
+    function _seedPolicies() internal {
+        policyIds.push(_activePolicy("Sim Policy Short", 1_000_000e6, 30 days, 1_000));
+        policyIds.push(_activePolicy("Sim Policy Mid", 2_000_000e6, 180 days, 3_000));
+        policyIds.push(_activePolicy("Sim Policy Long", 3_000_000e6, 365 days, 6_000));
+    }
+
+    function _activePolicy(string memory name, uint256 coverage, uint256 duration, uint256 weightBps)
+        internal
+        returns (uint256 policyId)
+    {
         vm.prank(cedantKey);
+        policyId = policies.registerPolicy(
+            name, PolicyRegistry.VerificationType.ON_CHAIN, coverage, coverage / 20, duration, cedantKey, int256(0)
+        );
+        vm.prank(curator);
+        policies.activatePolicy(policyId);
+        vm.prank(curator);
+        vault.addPolicy(policyId, weightBps);
+    }
+
+    function _approvedPortfolio(string memory name, uint256 coverage, uint64 tenor, address owner_)
+        internal
+        returns (uint256 pid)
+    {
+        vm.prank(owner_);
         pid = portfolios.submitPortfolio(
             PortfolioRegistry.SubmissionParams({
                 name: name,
@@ -202,6 +409,14 @@ contract ProtocolInvariantTest is Test {
         portfolios.startReview(pid);
         vm.prank(curator);
         portfolios.approvePortfolio(pid, 6_500);
+
+        // Activation is not decoration. `submitClaim` refuses any portfolio that
+        // is not ACTIVE, PAUSED or EXPIRED, so an approved-but-inactive book
+        // makes every claim revert for the wrong reason and leaves the claim
+        // invariants asserting over an empty set. Left out, the suite reports
+        // green on a protocol nobody ever asked for money from.
+        vm.prank(curator);
+        portfolios.activatePortfolio(pid);
     }
 
     function _deployAgents() internal {
@@ -209,6 +424,28 @@ contract ProtocolInvariantTest is Test {
         allocatorAgent = new AllocatorAgent(vault, allocatorC, portfolios, allocatorKey, portfolioIds);
         committeeAgent = new CommitteeAgent(claims, vault, portfolios, committeeKey);
         sentinelAgent = new SentinelAgent(claims, IERC20(address(usdc)), sentinelKey);
+
+        address[] memory cedants = new address[](2);
+        cedants[0] = cedantKey;
+        cedants[1] = cedantKeyB;
+        uint256[] memory owned = new uint256[](2);
+        owned[0] = portfolioIds[0]; // cedantKey
+        owned[1] = portfolioIds[2]; // cedantKeyB
+        cedantAgent = new CedantAgent(claims, portfolios, vault, cedants, owned);
+
+        kycAgent = new KycAgent(compliance, vault, kycKey, lps);
+        premiumAgent = new PremiumAgent(vault, usdc, premiumKey, policyIds);
+        oracleAgent = new OracleAgent(navOracle, assessor, vault, claims, oracleKey, portfolioIds);
+        curatorAgent = new CuratorAgent(portfolios, navOracle, vault, allocatorC, claims, curator);
+
+        keepers.push(makeAddr("A12_keeper_a"));
+        keepers.push(makeAddr("A12_keeper_b"));
+        keeperAgent = new KeeperAgent(claims, portfolios, allocatorC, usdc, keepers);
+
+        governanceAgent =
+            new GovernanceAgent(timelock, allocatorC, vault, claims, navOracle, usdc, governance, outsider);
+
+        factoryAgent = new FactoryAgent(factory, allocatorC, portfolios, usdc, curator, outsider, rogueVault, lps);
     }
 
     function _registerKeys() internal {
@@ -218,6 +455,9 @@ contract ProtocolInvariantTest is Test {
         allKeys.push(sentinelKey);
         allKeys.push(committeeKey);
         allKeys.push(cedantKey);
+        allKeys.push(cedantKeyB);
+        allKeys.push(premiumKey);
+        allKeys.push(oracleKey);
         allKeys.push(kycKey);
     }
 
@@ -332,8 +572,12 @@ contract ProtocolInvariantTest is Test {
     ///      enough that completeness costs nothing, and a sampled check would
     ///      miss the single malformed claim that matters.
     function invariant_claimStateMachine() public view {
+        // Claim ids start at zero and `getClaimCount` returns the next id, so
+        // the last valid id is total - 1. Iterating from one to total reads one
+        // past the end and reverts on an empty slot; that went unnoticed while
+        // the portfolios stayed inactive and this set was always empty.
         uint256 total = claims.getClaimCount();
-        for (uint256 id = 1; id <= total; ++id) {
+        for (uint256 id = 0; id < total; ++id) {
             ClaimManager.Claim memory c = claims.getClaim(id);
             if (c.requestedAmount == 0) continue;
 
@@ -384,6 +628,284 @@ contract ProtocolInvariantTest is Test {
     function invariant_complianceGateHolds() public view {
         assertFalse(lpAgent.complianceGateBreached(), "I-36: a non-whitelisted address received shares");
         assertEq(vault.balanceOf(outsider), 0, "I-36: outsider holds shares");
+    }
+
+    // ============================================================
+    // I-35 — a claim belongs to the portfolio's own cedant
+    // ============================================================
+
+    /// @notice Every claim on record was filed by the cedant of its portfolio.
+    /// @dev The agent tries the crossed case on every run: cedant B filing
+    ///      against cedant A's portfolio. If that ever succeeded, a party could
+    ///      draw on a vault through exposure it never ceded — which is theft
+    ///      wearing the shape of a claim.
+    function invariant_claimOnlyByOwningCedant() public view {
+        assertFalse(cedantAgent.claimedOnForeignPortfolio(), "I-35: a cedant claimed on another's portfolio");
+        assertFalse(cedantAgent.overCoverageAccepted(), "I-35: a claim above the coverage limit was accepted");
+
+        // Claim ids start at zero and `getClaimCount` returns the next id, so
+        // the last valid id is total - 1. Iterating from one to total reads one
+        // past the end and reverts on an empty slot; that went unnoticed while
+        // the portfolios stayed inactive and this set was always empty.
+        uint256 total = claims.getClaimCount();
+        for (uint256 id = 0; id < total; ++id) {
+            ClaimManager.Claim memory c = claims.getClaim(id);
+            if (c.requestedAmount == 0) continue;
+            assertEq(
+                c.claimant,
+                portfolios.getPortfolio(c.portfolioId).cedant,
+                "I-35: claimant is not the portfolio's registered cedant"
+            );
+        }
+    }
+
+    // ============================================================
+    // I-36 / I-37 — compliance never traps capital
+    // ============================================================
+
+    /// @notice An investor pushed out of compliance keeps a way out.
+    ///
+    /// @dev This is the invariant with a legal edge rather than only a
+    ///      technical one. Revoking a whitelist entry or letting a KYC date
+    ///      lapse must stop an investor from ACQUIRING more, and must not stop
+    ///      them from LEAVING. A protocol that freezes a professional
+    ///      investor's capital over an administrative expiry has a contractual
+    ///      exposure that no amount of correct accounting repairs.
+    ///
+    ///      Asserted through the vault's own view of what the holder may take
+    ///      out, so it measures the exit that exists rather than the one the
+    ///      test would like to exist.
+    function invariant_kycRevocationNeverTrapsFunds() public view {
+        (,,,,,,, uint256 buffer,,) = vault.getVaultInfo();
+        address[] memory holders = kycAgent.holders();
+
+        for (uint256 i; i < holders.length; ++i) {
+            address lp = holders[i];
+            uint256 shares = vault.balanceOf(lp);
+            if (shares == 0) continue;
+            if (compliance.canReceive(lp)) continue;
+
+            // The door in is shut. That part is the whole point of the gate.
+            assertEq(vault.maxDeposit(lp), 0, "I-36: a non-compliant holder could still deposit");
+
+            // A sentinel block is a deliberate freeze and may shut the exit; an
+            // expired KYC date or a withdrawn whitelist entry is administrative
+            // and may not. Anything else is a protocol keeping money it has no
+            // claim to.
+            if (compliance.isBlocked(lp)) continue;
+
+            // Stated as an equality rather than "greater than zero", because the
+            // weaker form passes on a vault whose buffer happens to be full and
+            // proves nothing. What must hold is that the exit is computed from
+            // the position and the buffer alone — compliance status must not
+            // appear in that arithmetic at all.
+            uint256 owed = vault.convertToAssets(shares);
+            uint256 expected = owed < buffer ? owed : buffer;
+            assertEq(vault.maxWithdraw(lp), expected, "I-37: compliance status reduced a holder's exit");
+        }
+    }
+
+    // ============================================================
+    // I-40 / I-41 — premium is a liability before it is a yield
+    // ============================================================
+
+    /// @notice Unearned premium never exceeds the premium actually collected.
+    /// @dev The reserve is what the vault still owes in cover it has not yet
+    ///      provided. If it ever exceeded what came in, the vault would be
+    ///      reserving against money it never received; if it went negative it
+    ///      would be recognising cover it has not earned. Both are the same
+    ///      mistake seen from opposite sides, and both show up here.
+    function invariant_uprNeverExceedsPremiumCollected() public view {
+        (, uint256 unearned,,,,,,) = vault.getVaultAccounting();
+        assertLe(unearned, vault.totalPremiumReceived(), "I-40: unearned reserve exceeds the premium ever collected");
+    }
+
+    /// @notice Premium recognition is monotonic: collected premium only rises.
+    /// @dev Asserted against the agent's own tally rather than the vault's, so
+    ///      the two ledgers have to agree. A vault that credited premium the
+    ///      agent never paid, or lost premium the agent did pay, fails here even
+    ///      though its internal arithmetic would be self-consistent.
+    function invariant_premiumLedgerAgreesWithPayer() public view {
+        assertGe(
+            vault.totalPremiumReceived(),
+            premiumAgent.ghostPremiumPaid(),
+            "I-41: the vault booked less premium than the payer transferred"
+        );
+    }
+
+    /// @notice Paying premium in confers no right to take assets out.
+    /// @dev The depositor role touches the vault's balance on every call, which
+    ///      is precisely why the traffic must be proved to run one way.
+    function invariant_premiumDepositorNeverWithdraws() public view {
+        assertFalse(premiumAgent.depositorWithdrewAssets(), "I-42: the premium depositor withdrew assets");
+        assertFalse(premiumAgent.paidIntoUnknownPolicy(), "I-42: premium was credited to a policy the vault lacks");
+    }
+
+    // ============================================================
+    // I-43 — the attestor advises and nothing more
+    // ============================================================
+
+    /// @notice The oracle node never gains business authority over the book.
+    ///
+    /// @dev AIAssessor's own header states the contract has no authority. That
+    ///      sentence is worth what the attempts against it are worth, and the
+    ///      agent makes those attempts on every run: approving a claim,
+    ///      withdrawing assets, sweeping fees.
+    ///
+    ///      The balance check is the blunt one and the most useful. An advisory
+    ///      contract that has come to hold USDC has stopped being advisory,
+    ///      whatever its access control says.
+    function invariant_attestorHasNoAuthority() public view {
+        assertFalse(oracleAgent.oracleApprovedClaim(), "I-43: the oracle node approved a claim");
+        assertFalse(oracleAgent.oracleMovedFunds(), "I-43: the oracle node moved vault assets");
+        assertEq(usdc.balanceOf(address(assessor)), 0, "I-43: the advisory assessor holds assets");
+        assertEq(usdc.balanceOf(address(navOracle)), 0, "I-43: the NAV oracle holds assets");
+    }
+
+    /// @notice The oracle's published guards are not negotiable by the publisher.
+    /// @dev Confidence below the floor and an unsourced attestation must both be
+    ///      refused. An attestor able to waive its own floor has a floor only in
+    ///      the documentation.
+    function invariant_attestationGuardsHold() public view {
+        assertFalse(oracleAgent.lowConfidenceAccepted(), "I-43: an attestation below the confidence floor was accepted");
+        assertFalse(oracleAgent.zeroSourceHashAccepted(), "I-43: an unsourced attestation was accepted");
+    }
+
+    // ============================================================
+    // I-44 / I-45 — the underwriting state machine
+    // ============================================================
+
+    /// @notice No book goes on risk without having been underwritten.
+    ///
+    /// @dev `expectedLossBps` is written in one place only — `approvePortfolio`
+    ///      — so a non-zero value on a book that is on risk is durable evidence
+    ///      it passed through review. Status alone cannot show this: a book that
+    ///      is PAUSED today may have been ACTIVE yesterday, and the registry
+    ///      keeps no history.
+    ///
+    ///      This holds as a suite invariant rather than a protocol one. The
+    ///      contract does permit approval at a score of zero; the agents never
+    ///      do it, so within this run a zero on a live book means the review
+    ///      step was skipped. Stated plainly because an invariant whose truth
+    ///      depends on the harness should say so rather than be mistaken for a
+    ///      guarantee the contract makes.
+    function invariant_onRiskImpliesUnderwritten() public view {
+        assertFalse(curatorAgent.activatedWithoutReview(), "I-44: a book went on risk without review");
+
+        uint256 total = portfolios.nextPortfolioId();
+        for (uint256 pid; pid < total; ++pid) {
+            PortfolioRegistry.Portfolio memory pf = portfolios.getPortfolio(pid);
+            if (
+                pf.status == PortfolioRegistry.PortfolioStatus.ACTIVE
+                    || pf.status == PortfolioRegistry.PortfolioStatus.PAUSED
+            ) {
+                assertTrue(pf.expectedLossBps != 0, "I-44: a live book carries no underwriting decision");
+            }
+        }
+    }
+
+    /// @notice The curator decides what is written, never where money goes.
+    /// @dev The most concentrated power in the protocol, and so the one whose
+    ///      edges are worth asserting one by one. A curator holding the
+    ///      allocator's lever could approve a book and fund it with nobody else
+    ///      in the loop; holding the committee's could approve the claim against
+    ///      it too.
+    function invariant_curatorStaysInsideUnderwriting() public view {
+        assertFalse(curatorAgent.curatorAllocatedCapital(), "I-45: the curator allocated capital");
+        assertFalse(curatorAgent.curatorApprovedClaim(), "I-45: the curator approved a claim");
+        assertFalse(curatorAgent.curatorPausedRisk(), "I-45: the curator pulled a sentinel lever");
+    }
+
+    // ============================================================
+    // I-46 / I-47 — the keeper is a utility, not a claimant
+    // ============================================================
+
+    /// @notice Anyone may settle a claim; only the claimant is ever paid.
+    ///
+    /// @dev `executeClaim` is permissionless by design, so safety cannot rest on
+    ///      who calls it. What must hold is that calling it moves value to the
+    ///      claimant on record and to nobody else — otherwise a public utility
+    ///      function is a withdrawal with extra steps, callable by the one kind
+    ///      of address an attacker certainly controls.
+    function invariant_keeperCannotRedirectPayout() public view {
+        assertFalse(keeperAgent.keeperGainedValue(), "I-46: a keeper gained value by settling a claim");
+        assertFalse(keeperAgent.payoutWentToWrongParty(), "I-46: a payout did not reach the claimant");
+        assertFalse(keeperAgent.frozenClaimExecuted(), "I-46: a frozen claim was settled");
+    }
+
+    // ============================================================
+    // I-48 / I-49 — governance is slow, and stays outside the money
+    // ============================================================
+
+    /// @notice A queued change cannot be executed before its delay has run.
+    /// @dev The one claim the timelock exists to make. LPs are told they will
+    ///      see a rule change coming; a delay that can be jumped makes that a
+    ///      statement about the documentation rather than the contract.
+    function invariant_timelockCannotBeJumped() public view {
+        assertFalse(governanceAgent.executedBeforeMaturity(), "I-48: an operation executed before it matured");
+        assertFalse(governanceAgent.strangerScheduled(), "I-48: an address without proposer rights queued work");
+    }
+
+    /// @notice Governance changes the rules and never touches the book.
+    /// @dev Not a matter of announcing these powers slowly — they are powers
+    ///      that should be unreachable. Moving LP capital and deciding a claim
+    ///      are the two that would make every other limit decorative.
+    function invariant_governanceStaysOutOfTheBook() public view {
+        assertFalse(governanceAgent.governanceMovedFunds(), "I-49: governance moved LP capital");
+        assertFalse(governanceAgent.governanceDecidedClaim(), "I-49: governance decided a claim or set the NAV");
+    }
+
+    // ============================================================
+    // I-50 / I-51 — one factory, and a ceiling that spans it
+    // ============================================================
+
+    /// @notice Only the curator's role stands up vaults the protocol recognises.
+    /// @dev A registered vault is a claim on the protocol's name and, since the
+    ///      allocator now aggregates exposure across the registry, a claim on
+    ///      how much room a counterparty has left. If any address could add to
+    ///      that list, the ceiling would be enforced over a set the attacker
+    ///      writes.
+    function invariant_onlyCuratorsCreateRegisteredVaults() public view {
+        assertFalse(factoryAgent.strangerCreatedVault(), "I-50: an unauthorised address created a vault");
+    }
+
+    /// @notice The absolute cedant ceiling holds across every registered vault.
+    ///
+    /// @dev The invariant the multi-vault agent exists for. Percentage limits
+    ///      self-normalise — if each vault satisfies e_i <= L * b_i then the
+    ///      aggregate ratio is at most L — but an absolute ceiling does not, so
+    ///      this is the one that would silently stop meaning anything as vaults
+    ///      are added.
+    ///
+    ///      Measured over the registry rather than over the vaults this test
+    ///      happens to know about, because the registry is what the allocator
+    ///      itself consults. If a vault were created that the allocator could
+    ///      not see, the two would disagree and this would still read as green.
+    function invariant_cedantCeilingSpansEveryVault() public view {
+        uint256 ceiling = allocatorC.maxCedantExposure();
+        if (ceiling == 0) return;
+
+        address[] memory vaults = factory.getVaults();
+        uint256 total = portfolios.nextPortfolioId();
+
+        for (uint256 pid; pid < total; ++pid) {
+            address cedant = portfolios.getPortfolio(pid).cedant;
+            if (cedant == address(0)) continue;
+
+            uint256 exposure;
+            for (uint256 i; i < vaults.length; ++i) {
+                exposure += allocatorC.cedantExposure(vaults[i], cedant);
+            }
+            // Deliberately the registry and nothing else. The suite's own vault
+            // predates the factory and is not registered, and neither is the
+            // rogue one — the allocator does not count them when it enforces
+            // the ceiling, so counting them here would assert something the
+            // protocol never promised and fail on behaviour that is documented
+            // and accepted (see CrossVaultConcentrationRepro). An invariant
+            // must measure the claim being made, not a stronger one nobody
+            // implemented.
+            assertLe(exposure, ceiling, "I-51: one cedant holds more than the protocol ceiling");
+        }
     }
 
     // ============================================================

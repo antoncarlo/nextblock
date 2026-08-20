@@ -5,6 +5,7 @@ import {ProtocolRoles, ProtocolRoleConstants} from "./ProtocolRoles.sol";
 import {PortfolioRegistry} from "./PortfolioRegistry.sol";
 import {InsuranceVault} from "./InsuranceVault.sol";
 import {NavOracle} from "./NavOracle.sol";
+import {VaultFactory} from "./VaultFactory.sol";
 
 /// @title VaultAllocator
 /// @author Anton Carlo Santoro
@@ -86,6 +87,26 @@ contract VaultAllocator is ProtocolRoleConstants {
     /// @notice Per-cedant concentration limit (bps of the investable base).
     uint256 public maxCedantConcentrationBps;
 
+    /// @notice Absolute per-portfolio exposure ceiling in asset units (0 = unset).
+    /// @dev The binding constraint. A percentage of the investable base moves
+    ///      when the base moves, so an allocation that was compliant when made
+    ///      can sit above the limit after an LP redeems, without anyone having
+    ///      acted. An absolute figure does not move, which is why lending
+    ///      protocols on this chain express caps this way.
+    uint256 public maxPortfolioExposure;
+    /// @notice Absolute per-cedant exposure ceiling in asset units (0 = unset).
+    /// @dev Protocol-wide when `vaultFactory` is set, per-vault otherwise. The
+    ///      distinction is the whole value of the number: percentage limits
+    ///      self-normalise across vaults, because if every vault satisfies
+    ///      e_i <= L * b_i then sum(e_i) <= L * sum(b_i). An absolute ceiling
+    ///      does not — N vaults each at the ceiling carry N times it — so a
+    ///      ceiling meant to cap what the protocol owes one counterparty has to
+    ///      be measured across every vault, or it caps nothing.
+    uint256 public maxCedantExposure;
+
+    /// @notice Vault registry used to aggregate cedant exposure (0 = per-vault only).
+    VaultFactory public vaultFactory;
+
     /// @notice Monotonic id of the next proposal.
     uint256 public nextProposalId;
     mapping(uint256 => AllocationProposal) private _proposals;
@@ -109,6 +130,10 @@ contract VaultAllocator is ProtocolRoleConstants {
     event AllocationExpired(uint256 indexed proposalId);
     /// @notice Emitted when the concentration limits change.
     event ConcentrationLimitsUpdated(uint256 maxPortfolioBps, uint256 maxCedantBps);
+    /// @notice Emitted when the absolute exposure ceilings change.
+    event AbsoluteExposureCapsUpdated(uint256 maxPortfolioExposure, uint256 maxCedantExposure);
+    /// @notice Emitted when the vault registry backing aggregation changes.
+    event VaultFactorySet(address indexed vaultFactory);
     /// @notice Emitted when the advisory NAV oracle is set or disabled.
     event NavOracleSet(address indexed navOracle);
     /// @notice Emitted when the proposal TTL changes.
@@ -135,6 +160,10 @@ contract VaultAllocator is ProtocolRoleConstants {
     error VaultAllocator__PortfolioConcentrationExceeded(uint256 portfolioId, uint256 wouldBe, uint256 limit);
     /// @notice Allocation would exceed the per-cedant concentration limit.
     error VaultAllocator__CedantConcentrationExceeded(address cedant, uint256 wouldBe, uint256 limit);
+    /// @notice Allocation would push a portfolio past its absolute ceiling.
+    error VaultAllocator__PortfolioExposureCapExceeded(uint256 portfolioId, uint256 wouldBe, uint256 cap);
+    /// @notice Allocation would push a cedant past its absolute ceiling.
+    error VaultAllocator__CedantExposureCapExceeded(address cedant, uint256 wouldBe, uint256 cap);
     /// @notice The advisory oracle guard blocks new allocations for this vault.
     error VaultAllocator__OracleBlocked(address vault);
     /// @notice Split weights must sum to BASIS_POINTS.
@@ -182,6 +211,39 @@ contract VaultAllocator is ProtocolRoleConstants {
         maxPortfolioConcentrationBps = maxPortfolioBps;
         maxCedantConcentrationBps = maxCedantBps;
         emit ConcentrationLimitsUpdated(maxPortfolioBps, maxCedantBps);
+    }
+
+    /// @notice Set the absolute exposure ceilings, in asset units.
+    /// @dev Gated on OWNER_ROLE because OWNER_ROLE is what the ProtocolTimelock
+    ///      holds: routing it here is what makes the change announced rather
+    ///      than instant. The underwriting curator proposes through the Safe;
+    ///      the timelock is what executes.
+    ///
+    ///      Zero leaves a ceiling unset, which keeps existing deployments
+    ///      working exactly as before this was added. An unset ceiling is not a
+    ///      safe default, only a compatible one — a deployment meant to rely on
+    ///      absolute caps has to set them.
+    /// @param portfolioCap Maximum exposure to one portfolio (0 = unset).
+    /// @param cedantCap Maximum exposure to one cedant (0 = unset).
+    function setAbsoluteExposureCaps(uint256 portfolioCap, uint256 cedantCap) external onlyProtocolRole(OWNER_ROLE) {
+        // A cedant ceiling below the portfolio ceiling could never bind in the
+        // intended order: a single book would be refused before the cedant
+        // aggregate ever was.
+        if (portfolioCap != 0 && cedantCap != 0 && cedantCap < portfolioCap) {
+            revert VaultAllocator__InvalidParams();
+        }
+        maxPortfolioExposure = portfolioCap;
+        maxCedantExposure = cedantCap;
+        emit AbsoluteExposureCapsUpdated(portfolioCap, cedantCap);
+    }
+
+    /// @notice Set the vault registry used to aggregate exposure across vaults.
+    /// @dev Optional. Without it `maxCedantExposure` binds one vault at a time,
+    ///      which is a weaker promise than the name suggests and is why this
+    ///      exists. Left unset, behaviour is unchanged.
+    function setVaultFactory(address vaultFactory_) external onlyProtocolRole(OWNER_ROLE) {
+        vaultFactory = VaultFactory(vaultFactory_);
+        emit VaultFactorySet(vaultFactory_);
     }
 
     /// @notice Set or disable (address(0)) the advisory NAV oracle.
@@ -329,8 +391,100 @@ contract VaultAllocator is ProtocolRoleConstants {
         return v.totalPortfolioAllocated() + v.underwritingCapacity();
     }
 
-    /// @notice Current per-cedant exposure of a vault, computed live from the
-    ///         vault and the registry (no duplicated accounting state).
+    /// @notice Total exposure to one cedant across every vault the factory knows.
+    /// @dev Falls back to the single vault when no registry is configured, so
+    ///      the caller gets the widest view available rather than a revert.
+    ///      `getVaults()` grows with the protocol; this is a view, and the
+    ///      allocation path calls it once per proposal, which is the same order
+    ///      of work `cedantExposure` already does per vault.
+    function protocolCedantExposure(address fallbackVault, address cedant) public view returns (uint256 total) {
+        if (address(vaultFactory) == address(0)) {
+            return cedantExposure(fallbackVault, cedant);
+        }
+        address[] memory vaults = vaultFactory.getVaults();
+        for (uint256 i; i < vaults.length; ++i) {
+            total += cedantExposure(vaults[i], cedant);
+        }
+    }
+
+    // --- Passive breach reporting ---
+
+    /// @notice Whether a bucket sits above its percentage threshold today.
+    ///
+    /// @dev A passive breach is a limit exceeded without anyone having acted:
+    ///      the exposure did not grow, the investable base shrank underneath it
+    ///      when LPs redeemed. Insurance regulation treats this as a distinct
+    ///      state from an active breach and does not require a forced unwind —
+    ///      the obligation is to stop adding and to return inside the limit as
+    ///      a priority, taking account of investors' interests.
+    ///
+    ///      This protocol follows that shape. Nothing here reverts, blocks a
+    ///      redemption, or unwinds a position. Adding to a breaching bucket is
+    ///      already impossible, because `_checkAllocationGuards` compares
+    ///      current-plus-new against the limit and current alone is already
+    ///      past it. What this adds is the ability to see the state and say so,
+    ///      rather than leaving it to be inferred from a failed transaction.
+    ///
+    ///      Unwinding is deliberately not forced. Deallocating from a live
+    ///      treaty withdraws the collateral behind cover that has already been
+    ///      written; it moves the problem from concentration to solvency
+    ///      instead of solving it. Concentration here is corrected by writing
+    ///      no more and letting tenor run off.
+    ///
+    /// @param vault The vault to inspect.
+    /// @param portfolioId The book whose bucket is being read.
+    /// @return portfolioBreached Portfolio exposure is above its percentage threshold.
+    /// @return cedantBreached Cedant exposure is above its percentage threshold.
+    /// @return portfolioExcess Amount by which the portfolio bucket is over (0 if not).
+    /// @return cedantExcess Amount by which the cedant bucket is over (0 if not).
+    function passiveBreachStatus(address vault, uint256 portfolioId)
+        external
+        view
+        returns (bool portfolioBreached, bool cedantBreached, uint256 portfolioExcess, uint256 cedantExcess)
+    {
+        return _breachOf(vault, portfolioId);
+    }
+
+    /// @notice Single-flag form of `passiveBreachStatus`, for callers that only
+    ///         need to know whether to show the badge.
+    function isInPassiveBreach(address vault, uint256 portfolioId) external view returns (bool) {
+        (bool p, bool c,,) = _breachOf(vault, portfolioId);
+        return p || c;
+    }
+
+    /// @dev The shared computation. Kept internal so the flag form does not have
+    ///      to call the tuple form through `this`, which would be a real CALL
+    ///      into this same contract: it costs gas the view has no reason to
+    ///      spend, and discarding two of its four returns is the kind of thing
+    ///      static analysis is right to object to.
+    function _breachOf(address vault, uint256 portfolioId)
+        internal
+        view
+        returns (bool portfolioBreached, bool cedantBreached, uint256 portfolioExcess, uint256 cedantExcess)
+    {
+        uint256 base = investableBase(vault);
+
+        uint256 held = InsuranceVault(vault).portfolioAllocation(portfolioId);
+        uint256 portfolioLimit = base * maxPortfolioConcentrationBps / BASIS_POINTS;
+        if (held > portfolioLimit) {
+            portfolioBreached = true;
+            portfolioExcess = held - portfolioLimit;
+        }
+
+        address cedant = portfolioRegistry.getPortfolio(portfolioId).cedant;
+        uint256 exposure = cedantExposure(vault, cedant);
+        uint256 cedantLimit = base * maxCedantConcentrationBps / BASIS_POINTS;
+        if (exposure > cedantLimit) {
+            cedantBreached = true;
+            cedantExcess = exposure - cedantLimit;
+        }
+    }
+
+    /// @notice Current per-cedant exposure of a single vault, computed live from
+    ///         the vault and the registry (no duplicated accounting state).
+    /// @dev Scoped to one vault by design. `protocolCedantExposure` is the
+    ///      aggregate; keeping them separate means a caller has to say which
+    ///      question it is asking.
     function cedantExposure(address vault, address cedant) public view returns (uint256 exposure) {
         InsuranceVault v = InsuranceVault(vault);
         uint256[] memory pids = v.getAllocatedPortfolios();
@@ -403,6 +557,25 @@ contract VaultAllocator is ProtocolRoleConstants {
         uint256 cedantLimit = base * maxCedantConcentrationBps / BASIS_POINTS;
         if (wouldBeCedant > cedantLimit) {
             revert VaultAllocator__CedantConcentrationExceeded(cedant, wouldBeCedant, cedantLimit);
+        }
+
+        // 4. Absolute ceilings, checked last because they are the ones that do
+        //    not move. The percentage limits above still govern the shape of a
+        //    single allocation relative to the vault; these govern how much of
+        //    one name the book may hold at all, and a redemption cannot loosen
+        //    or tighten them.
+        if (maxPortfolioExposure != 0 && wouldBePortfolio > maxPortfolioExposure) {
+            revert VaultAllocator__PortfolioExposureCapExceeded(portfolioId, wouldBePortfolio, maxPortfolioExposure);
+        }
+        if (maxCedantExposure != 0) {
+            // Measured across every vault when a registry is configured. Without
+            // it the ceiling would bind each vault separately and the protocol
+            // could owe one counterparty a multiple of the stated figure.
+            uint256 wouldBeProtocol =
+                address(vaultFactory) == address(0) ? wouldBeCedant : protocolCedantExposure(vault, cedant) + amount;
+            if (wouldBeProtocol > maxCedantExposure) {
+                revert VaultAllocator__CedantExposureCapExceeded(cedant, wouldBeProtocol, maxCedantExposure);
+            }
         }
     }
 
