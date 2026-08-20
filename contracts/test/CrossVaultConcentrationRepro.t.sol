@@ -214,6 +214,39 @@ contract CrossVaultConcentrationReproTest is Test {
         allocatorC.proposeAllocation(address(vaultB), pidB, 1);
     }
 
+    /// @notice Capital in a vault outside the registry is outside the ceiling.
+    /// @dev Asked rather than assumed. The allocator has no notion of which
+    ///      vaults are legitimate — `proposeAllocation` takes an address — so
+    ///      the question is what the aggregate ceiling actually covers.
+    ///
+    ///      It covers the registry and nothing else, and that is defensible
+    ///      rather than a hole: the exposure that escapes belongs to capital
+    ///      that was never in a protocol vault, so it is not the protocol's
+    ///      LPs who carry it. Worth stating explicitly all the same, because
+    ///      "the protocol will not owe one counterparty more than X" is a
+    ///      sentence someone will read as covering every vault they can see.
+    function test_theCeilingCoversTheRegistryAndNothingElse() public {
+        InsuranceVault outside = _vaultOutsideTheRegistry();
+
+        VaultFactory registry = _factoryHolding();
+        vm.startPrank(governance);
+        allocatorC.setVaultFactory(address(registry));
+        vm.stopPrank();
+
+        _fund(vaultA);
+        _fundVault(outside);
+
+        _allocate(vaultA, pidA, 100_000e6);
+        _allocate(outside, pidA, 100_000e6);
+
+        assertGt(allocatorC.cedantExposure(address(outside), cedant), 0, "the unregistered vault carries exposure");
+        assertEq(
+            allocatorC.protocolCedantExposure(address(vaultA), cedant),
+            allocatorC.cedantExposure(address(vaultA), cedant),
+            "the aggregate counts registered vaults only"
+        );
+    }
+
     // --- helpers ---
 
     /// @dev A factory cannot mint the vaults this test already built, so a
@@ -226,6 +259,22 @@ contract CrossVaultConcentrationReproTest is Test {
         vaults[1] = address(vaultB);
         VaultRegistryStub stub = new VaultRegistryStub(vaults);
         return VaultFactory(address(stub));
+    }
+
+    /// @dev A working vault with identical wiring, simply never registered.
+    ///      A malformed address would revert on any call and prove nothing.
+    function _vaultOutsideTheRegistry() internal returns (InsuranceVault v) {
+        vm.startPrank(governance);
+        v = _vault("Outside", "nbOUT");
+        vm.stopPrank();
+    }
+
+    function _fundVault(InsuranceVault v) internal {
+        usdc.mint(lp, CAPITAL_PER_VAULT);
+        vm.startPrank(lp);
+        usdc.approve(address(v), CAPITAL_PER_VAULT);
+        v.deposit(CAPITAL_PER_VAULT, lp);
+        vm.stopPrank();
     }
 
     function _allocate(InsuranceVault v, uint256 pid, uint256 amount) internal {

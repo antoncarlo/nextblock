@@ -391,8 +391,6 @@ contract VaultAllocator is ProtocolRoleConstants {
         return v.totalPortfolioAllocated() + v.underwritingCapacity();
     }
 
-    /// @notice Current per-cedant exposure of a vault, computed live from the
-    ///         vault and the registry (no duplicated accounting state).
     /// @notice Total exposure to one cedant across every vault the factory knows.
     /// @dev Falls back to the single vault when no registry is configured, so
     ///      the caller gets the widest view available rather than a revert.
@@ -469,6 +467,11 @@ contract VaultAllocator is ProtocolRoleConstants {
         return p || c;
     }
 
+    /// @notice Current per-cedant exposure of a single vault, computed live from
+    ///         the vault and the registry (no duplicated accounting state).
+    /// @dev Scoped to one vault by design. `protocolCedantExposure` is the
+    ///      aggregate; keeping them separate means a caller has to say which
+    ///      question it is asking.
     function cedantExposure(address vault, address cedant) public view returns (uint256 exposure) {
         InsuranceVault v = InsuranceVault(vault);
         uint256[] memory pids = v.getAllocatedPortfolios();
