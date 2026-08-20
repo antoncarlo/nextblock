@@ -18,6 +18,8 @@ import {NavOracle} from "../../src/NavOracle.sol";
 import {AIAssessor} from "../../src/AIAssessor.sol";
 import {ClaimManager} from "../../src/ClaimManager.sol";
 import {ProtocolTimelock} from "../../src/ProtocolTimelock.sol";
+import {VaultFactory} from "../../src/VaultFactory.sol";
+import {VaultDeployer} from "../../src/VaultDeployer.sol";
 
 import {LpAgent} from "./handlers/LpAgent.sol";
 import {AllocatorAgent} from "./handlers/AllocatorAgent.sol";
@@ -30,6 +32,7 @@ import {OracleAgent} from "./handlers/OracleAgent.sol";
 import {CuratorAgent} from "./handlers/CuratorAgent.sol";
 import {KeeperAgent} from "./handlers/KeeperAgent.sol";
 import {GovernanceAgent} from "./handlers/GovernanceAgent.sol";
+import {FactoryAgent} from "./handlers/FactoryAgent.sol";
 
 /// @title ProtocolInvariantTest
 /// @author Anton Carlo Santoro
@@ -61,6 +64,8 @@ contract ProtocolInvariantTest is Test {
     AIAssessor internal assessor;
     NavOracle internal navOracle;
     ProtocolTimelock internal timelock;
+    VaultFactory internal factory;
+    InsuranceVault internal rogueVault;
     ClaimManager internal claims;
 
     // --- Agents ---
@@ -75,6 +80,7 @@ contract ProtocolInvariantTest is Test {
     CuratorAgent internal curatorAgent;
     KeeperAgent internal keeperAgent;
     GovernanceAgent internal governanceAgent;
+    FactoryAgent internal factoryAgent;
 
     // --- Keys: one role each, never shared ---
     address internal governance = makeAddr("A1_governance");
@@ -170,7 +176,55 @@ contract ProtocolInvariantTest is Test {
         timelock = new ProtocolTimelock(1 hours, proposers, executors, address(0));
         roles.grantRole(roles.OWNER_ROLE(), address(timelock));
 
+        VaultDeployer deployer = new VaultDeployer();
+        factory = new VaultFactory(
+            address(usdc),
+            address(policies),
+            address(oracle),
+            address(receipts),
+            address(roles),
+            address(compliance),
+            address(portfolios),
+            address(deployer)
+        );
+        deployer.bindFactory(address(factory));
+
+        // The registry is what turns the absolute cedant ceiling from a
+        // per-vault figure into a protocol-wide one. Wiring it here is what
+        // puts that aggregation under the campaign rather than under a
+        // fixed-number test.
+        allocatorC.setVaultFactory(address(factory));
+        // Generous enough that ordinary allocation is not strangled, tight
+        // enough that a counterparty accumulating across several vaults runs
+        // into it. A ceiling nothing ever approaches is not being tested.
+        allocatorC.setAbsoluteExposureCaps(2_000_000e6, 5_000_000e6);
+
         receipts.setAuthorizedMinter(address(vault), true);
+
+        // A working vault the factory never made. Deployed here rather than
+        // faked, because the question A10 asks is whether the allocator cares
+        // about the registry — a malformed address would revert on any call
+        // and answer nothing.
+        rogueVault = new InsuranceVault(
+            InsuranceVault.VaultInitParams({
+                asset: IERC20(address(usdc)),
+                name: "Unregistered",
+                symbol: "nbROGUE",
+                vaultName: "Unregistered",
+                owner: governance,
+                vaultManager: curator,
+                bufferRatioBps: 2_000,
+                managementFeeBps: 0,
+                registry: address(policies),
+                oracle: address(oracle),
+                claimReceipt: address(receipts),
+                protocolRoles: address(roles),
+                complianceRegistry: address(compliance),
+                portfolioRegistry: address(portfolios)
+            })
+        );
+        rogueVault.setVaultAllocator(address(allocatorC));
+        receipts.setAuthorizedMinter(address(rogueVault), true);
         receipts.setAuthorizedMinter(address(claims), true);
         vault.setClaimManager(address(claims));
         vault.setVaultAllocator(address(allocatorC));
@@ -194,6 +248,7 @@ contract ProtocolInvariantTest is Test {
         targetContract(address(curatorAgent));
         targetContract(address(keeperAgent));
         targetContract(address(governanceAgent));
+        targetContract(address(factoryAgent));
 
         _assertWorldIsLive();
 
@@ -389,6 +444,8 @@ contract ProtocolInvariantTest is Test {
 
         governanceAgent =
             new GovernanceAgent(timelock, allocatorC, vault, claims, navOracle, usdc, governance, outsider);
+
+        factoryAgent = new FactoryAgent(factory, allocatorC, portfolios, usdc, curator, outsider, rogueVault, lps);
     }
 
     function _registerKeys() internal {
@@ -796,6 +853,59 @@ contract ProtocolInvariantTest is Test {
     function invariant_governanceStaysOutOfTheBook() public view {
         assertFalse(governanceAgent.governanceMovedFunds(), "I-49: governance moved LP capital");
         assertFalse(governanceAgent.governanceDecidedClaim(), "I-49: governance decided a claim or set the NAV");
+    }
+
+    // ============================================================
+    // I-50 / I-51 — one factory, and a ceiling that spans it
+    // ============================================================
+
+    /// @notice Only the curator's role stands up vaults the protocol recognises.
+    /// @dev A registered vault is a claim on the protocol's name and, since the
+    ///      allocator now aggregates exposure across the registry, a claim on
+    ///      how much room a counterparty has left. If any address could add to
+    ///      that list, the ceiling would be enforced over a set the attacker
+    ///      writes.
+    function invariant_onlyCuratorsCreateRegisteredVaults() public view {
+        assertFalse(factoryAgent.strangerCreatedVault(), "I-50: an unauthorised address created a vault");
+    }
+
+    /// @notice The absolute cedant ceiling holds across every registered vault.
+    ///
+    /// @dev The invariant the multi-vault agent exists for. Percentage limits
+    ///      self-normalise — if each vault satisfies e_i <= L * b_i then the
+    ///      aggregate ratio is at most L — but an absolute ceiling does not, so
+    ///      this is the one that would silently stop meaning anything as vaults
+    ///      are added.
+    ///
+    ///      Measured over the registry rather than over the vaults this test
+    ///      happens to know about, because the registry is what the allocator
+    ///      itself consults. If a vault were created that the allocator could
+    ///      not see, the two would disagree and this would still read as green.
+    function invariant_cedantCeilingSpansEveryVault() public view {
+        uint256 ceiling = allocatorC.maxCedantExposure();
+        if (ceiling == 0) return;
+
+        address[] memory vaults = factory.getVaults();
+        uint256 total = portfolios.nextPortfolioId();
+
+        for (uint256 pid; pid < total; ++pid) {
+            address cedant = portfolios.getPortfolio(pid).cedant;
+            if (cedant == address(0)) continue;
+
+            uint256 exposure;
+            for (uint256 i; i < vaults.length; ++i) {
+                exposure += allocatorC.cedantExposure(vaults[i], cedant);
+            }
+            // Deliberately the registry and nothing else. The suite's own vault
+            // predates the factory and is not registered, and neither is the
+            // rogue one — the allocator does not count them when it enforces
+            // the ceiling, so counting them here would assert something the
+            // protocol never promised and fail on behaviour that is documented
+            // and accepted (see CrossVaultConcentrationRepro). An invariant
+            // must measure the claim being made, not a stronger one nobody
+            // implemented.
+            assertLe(exposure, ceiling, "I-51: one cedant holds more than the protocol ceiling");
+        }
     }
 
     // ============================================================

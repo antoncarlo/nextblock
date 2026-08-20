@@ -442,6 +442,26 @@ contract VaultAllocator is ProtocolRoleConstants {
         view
         returns (bool portfolioBreached, bool cedantBreached, uint256 portfolioExcess, uint256 cedantExcess)
     {
+        return _breachOf(vault, portfolioId);
+    }
+
+    /// @notice Single-flag form of `passiveBreachStatus`, for callers that only
+    ///         need to know whether to show the badge.
+    function isInPassiveBreach(address vault, uint256 portfolioId) external view returns (bool) {
+        (bool p, bool c,,) = _breachOf(vault, portfolioId);
+        return p || c;
+    }
+
+    /// @dev The shared computation. Kept internal so the flag form does not have
+    ///      to call the tuple form through `this`, which would be a real CALL
+    ///      into this same contract: it costs gas the view has no reason to
+    ///      spend, and discarding two of its four returns is the kind of thing
+    ///      static analysis is right to object to.
+    function _breachOf(address vault, uint256 portfolioId)
+        internal
+        view
+        returns (bool portfolioBreached, bool cedantBreached, uint256 portfolioExcess, uint256 cedantExcess)
+    {
         uint256 base = investableBase(vault);
 
         uint256 held = InsuranceVault(vault).portfolioAllocation(portfolioId);
@@ -458,13 +478,6 @@ contract VaultAllocator is ProtocolRoleConstants {
             cedantBreached = true;
             cedantExcess = exposure - cedantLimit;
         }
-    }
-
-    /// @notice Single-flag form of `passiveBreachStatus`, for callers that only
-    ///         need to know whether to show the badge.
-    function isInPassiveBreach(address vault, uint256 portfolioId) external view returns (bool) {
-        (bool p, bool c,,) = this.passiveBreachStatus(vault, portfolioId);
-        return p || c;
     }
 
     /// @notice Current per-cedant exposure of a single vault, computed live from
