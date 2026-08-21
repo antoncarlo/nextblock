@@ -12,6 +12,7 @@
  */
 
 import { readFileSync, writeFileSync } from 'node:fs';
+import { basename } from 'node:path';
 
 const [, , logPath, outPath = 'docs/audit/EVIDENCE_PACK.md'] = process.argv;
 
@@ -59,7 +60,9 @@ const revertRate = ((totalReverts / totalCalls) * 100).toFixed(2);
 const lines = [
   '# Agent simulation — evidence pack',
   '',
-  `Generated from \`${logPath}\` on ${new Date().toISOString().slice(0, 10)}.`,
+  // The basename only: a full path embeds one machine's directory layout into
+  // a committed document, and says nothing an auditor can use.
+  `Generated from \`${basename(logPath)}\` on ${new Date().toISOString().slice(0, 10)}.`,
   'Every figure below is read from the campaign log rather than transcribed.',
   '',
   '## Result',
