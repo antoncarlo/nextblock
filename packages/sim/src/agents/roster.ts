@@ -153,19 +153,33 @@ const PLANNERS: Record<string, Planner> = {
   },
 
   /** A6 — the ceding parties. */
-  A6: (state, rng, addr) => {
+  A6: (state, rng, addr, self) => {
     const active = pick(state.portfolios.active, rng);
+    // A book this cedant did not cede — the only basis on which the foreign
+    // claim can honestly be attempted. With a single cedant there is none, and
+    // the action simply is not generated rather than firing against an own book
+    // and reporting a false permit.
+    const foreign = state.portfolios.active.find((pid) => {
+      const owner = state.portfolioCedant.get(pid);
+      return owner !== undefined && owner.toLowerCase() !== self.address.toLowerCase();
+    });
+
     return [
       ok(addr.portfolios, 'submitPortfolio', [], 3, 'a cedant offers a new book'),
       ...(active !== undefined
         ? [
             ok(addr.claims, 'submitClaim', [addr.vault, active, 25_000n], 5, 'a cedant files a claim on its own book'),
-            // The most consequential denial in the protocol: a cedant able to
-            // claim on a book it never ceded can drain a vault through exposure
-            // it never took on.
-            denied(addr.claims, 'submitClaim', [addr.vault, active, 25_000n], 'NotPortfolioCedant', 4, "a cedant files on another's book"),
-            denied(addr.claims, 'submitClaim', [addr.vault, active, 10_000_000_000n], 'ExceedsCoverage', 3, 'a cedant claims above the coverage limit'),
+            // A claim comfortably past any book's coverage. The books this
+            // harness submits carry a 1,000,000 USDC limit; 1,000,000,000 USDC
+            // is a thousand times that, so the refusal is the coverage ceiling
+            // and not some smaller bound reached first.
+            denied(addr.claims, 'submitClaim', [addr.vault, active, 1_000_000_000_000_000n], 'ExceedsCoverage', 3, 'a cedant claims above the coverage limit'),
           ]
+        : []),
+      // The most consequential denial in the protocol: a cedant able to claim on
+      // a book it never ceded can drain a vault through exposure it never took on.
+      ...(foreign !== undefined
+        ? [denied(addr.claims, 'submitClaim', [addr.vault, foreign, 25_000n], 'NotPortfolioCedant', 4, "a cedant files on another's book")]
         : []),
     ];
   },
@@ -195,10 +209,19 @@ const PLANNERS: Record<string, Planner> = {
     denied(addr.claims, 'approveClaim', [0n, 1_000n], 'UnauthorizedRole', 2, 'the attestor decides a claim'),
   ],
 
-  /** A10 — the vault factory. */
+  /**
+   * A10 — the vault factory.
+   *
+   * Only the positive action lives here. "A stranger stands up a vault" was
+   * removed deliberately: in this model an agent signs with its own identity,
+   * and A10 must hold the curator role to create a vault at all, so an agent
+   * that can sign the stranger action is by construction not a stranger. The
+   * unauthorised-caller perimeter is a different actor's job, and it is already
+   * proved exhaustively by the 315-cell NegativeAuthority matrix in Foundry —
+   * expressing it here would only produce a false permit.
+   */
   A10: (_state, rng, addr) => [
     ok(addr.factory, 'createVault', [rng.int(1_000, 5_000)], 1, 'the curator stands up a vault'),
-    denied(addr.factory, 'createVault', [2_000], 'UnauthorizedRole', 2, 'a stranger stands up a vault'),
   ],
 
   /**
@@ -230,6 +253,7 @@ const PLANNERS: Record<string, Planner> = {
   /** A12 — the permissionless keeper. Holds no role at all. */
   A12: (state, rng, addr) => {
     const approved = pick(state.claims.approved, rng);
+    const active = pick(state.portfolios.active, rng);
     return [
       ...(approved !== undefined
         ? [ok(addr.claims, 'executeClaim', [approved], 6, 'a keeper settles an approved claim')]
@@ -238,6 +262,13 @@ const PLANNERS: Record<string, Planner> = {
         ? [
             denied(addr.claims, 'executeClaim', [state.claims.pending[0]], 'InvalidStatus', 3, 'a keeper settles a claim that was never approved'),
           ]
+        : []),
+      // Retiring a book is permissionless by design, and the adversarial case
+      // is trying it early: the harness's books carry a long tenor, so an
+      // attempt now must be refused for not having matured. That the keeper can
+      // call it at all, and that calling it early changes nothing, is the point.
+      ...(active !== undefined
+        ? [denied(addr.portfolios, 'markExpired', [active], 'NotYetExpired', 3, 'a keeper retires a book before its cover has run out')]
         : []),
     ];
   },

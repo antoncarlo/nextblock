@@ -4,6 +4,8 @@ import { foundry } from 'viem/chains';
 
 import type { ChainClient } from '../runner.ts';
 import type { PlannedAction, ProtocolState } from '../agents/types.ts';
+import { encodeAction, type EncodeContext } from '../abi/encode.ts';
+import type { Addresses } from '../agents/roster.ts';
 
 /**
  * The chain adapter, kept in its own file and out of the run loop.
@@ -74,9 +76,15 @@ const USDC_ABI = parseAbi(['function balanceOf(address) view returns (uint256)']
  * point the harness at a real RPC, which is exactly why the guard is not
  * optional and not here.
  */
-export function makeAnvilClient(rpcUrl: string, dep: Deployment): ChainClient {
+export function makeAnvilClient(
+  rpcUrl: string,
+  dep: Deployment,
+  addr: Addresses,
+  lpTarget: Address,
+): ChainClient {
   const publicClient = createPublicClient({ chain: foundry, transport: http(rpcUrl) });
 
+  let salt = 0n;
   const wallets = new Map<Address, ReturnType<typeof createWalletClient>>();
   for (const key of ANVIL_KEYS) {
     const account = privateKeyToAccount(key);
@@ -104,16 +112,18 @@ export function makeAnvilClient(rpcUrl: string, dep: Deployment): ChainClient {
       const underReview: bigint[] = [];
       const approved: bigint[] = [];
       const active: bigint[] = [];
+      const portfolioCedant = new Map<bigint, Address>();
 
       for (let id = 0n; id < total; id++) {
-        const pf = await publicClient.readContract({
+        const pf = (await publicClient.readContract({
           address: dep.portfolioRegistry,
           abi: PORTFOLIOS_ABI,
           functionName: 'getPortfolio',
           args: [id],
-        });
-        // Status is the fourteenth field of the struct.
-        const status = Number((pf as readonly unknown[])[13]);
+        })) as readonly unknown[];
+        // Field 1 is the cedant, field 13 the status.
+        portfolioCedant.set(id, pf[1] as Address);
+        const status = Number(pf[13]);
         if (status === 0) submitted.push(id);
         else if (status === 1) underReview.push(id);
         else if (status === 2) approved.push(id);
@@ -144,6 +154,7 @@ export function makeAnvilClient(rpcUrl: string, dep: Deployment): ChainClient {
         blockTimestamp: block.timestamp,
         vaults: [dep.vault],
         portfolios: { submitted, underReview, approved, active },
+        portfolioCedant,
         claims: { pending: claimIds, approved: claimIds },
         accounting: new Map([
           [dep.vault, { totalAssets: assets, totalShares: shares, availableBuffer: buffer, deployed }],
@@ -158,16 +169,28 @@ export function makeAnvilClient(rpcUrl: string, dep: Deployment): ChainClient {
         return { status: 'reverted', error: `no signer configured for ${from}` };
       }
 
+      const block = await publicClient.getBlock();
+      const ctx: EncodeContext = { self: from, lpTarget, timestamp: block.timestamp, salt: salt++ };
+
+      let encoded;
       try {
-        // Simulated rather than sent blind: a simulation surfaces the revert
-        // reason, and the reason is what distinguishes a correct refusal from
-        // a wrong one. Sending first and reading a receipt would give a status
-        // bit and nothing to compare an expectation against.
+        encoded = encodeAction(action, addr, ctx);
+      } catch (e) {
+        // An encoding gap is the harness's fault, not the protocol's, and must
+        // be surfaced as such rather than sent as an empty call.
+        return { status: 'reverted', error: `HARNESS: ${e instanceof Error ? e.message : String(e)}` };
+      }
+
+      try {
+        // Sent to the real target with real calldata. viem throws on revert and
+        // carries the reason, which is what separates a correct refusal from a
+        // wrong one — the whole basis on which an action is graded.
         const hash = await wallet.sendTransaction({
-          to: action.contract,
-          data: '0x',
+          to: encoded.address,
+          data: encoded.data,
           value: 0n,
         } as never);
+        await publicClient.waitForTransactionReceipt({ hash });
         return { status: 'success', txHash: hash };
       } catch (e) {
         return { status: 'reverted', error: e instanceof Error ? e.message : String(e) };

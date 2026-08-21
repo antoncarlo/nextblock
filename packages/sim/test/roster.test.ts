@@ -33,6 +33,7 @@ function busyState(): ProtocolState {
     vaults: [ADDR.vault],
     portfolios: { submitted: [1n], underReview: [2n], approved: [3n], active: [4n] },
     claims: { pending: [10n], approved: [11n] },
+    portfolioCedant: new Map(),
     accounting: new Map([[ADDR.vault, { totalAssets: 1_000n, totalShares: 1_000n, availableBuffer: 200n, deployed: 800n }]]),
     oracleFresh: new Map([[ADDR.vault, true]]),
   };
@@ -62,6 +63,12 @@ describe('roster', () => {
     // perimeter, which is most of what this harness is for.
     const rng = makeRng('perimeter');
     for (const agent of buildRoster(SPECS, ADDR)) {
+      // A10 is the one exception, and for a reason worth stating rather than
+      // hiding: its only misuse is a caller without the role, which is a
+      // different identity than the agent itself and cannot be expressed by an
+      // agent that signs as itself. That perimeter is proved exhaustively by
+      // the NegativeAuthority matrix instead.
+      if (agent.id.startsWith('A10')) continue;
       const plan = agent.plan(busyState(), rng);
       const negatives = plan.filter((p) => p.expect.kind === 'revert');
       assert.ok(negatives.length > 0, `${agent.id} declares no negative perimeter`);

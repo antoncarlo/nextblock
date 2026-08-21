@@ -61,6 +61,10 @@ export interface ProtocolState {
     pending: readonly bigint[];
     approved: readonly bigint[];
   };
+  /** Cedant that ceded each portfolio, so "another's book" can be found rather
+   *  than assumed. Without it the foreign-claim perimeter cannot be expressed
+   *  by an agent that signs as itself, and would produce a false permit. */
+  portfolioCedant: ReadonlyMap<bigint, `0x${string}`>;
   /** Per-vault accounting, keyed by vault address. */
   accounting: ReadonlyMap<
     `0x${string}`,

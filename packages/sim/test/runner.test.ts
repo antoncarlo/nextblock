@@ -33,6 +33,7 @@ function emptyProtocolState(): ProtocolState {
     vaults: [VAULT],
     portfolios: { submitted: [], underReview: [], approved: [], active: [] },
     claims: { pending: [], approved: [] },
+    portfolioCedant: new Map(),
     accounting: new Map(),
     oracleFresh: new Map(),
   };
