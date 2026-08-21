@@ -5,7 +5,8 @@
   "author": "Anton Carlo Santoro",
   "description": "NextBlock root workspace: repo-level checks for frontend (app) and smart contracts (contracts).",
   "workspaces": [
-    "app"
+    "app",
+    "packages/sim"
   ],
   "scripts": {
     "build": "npm --prefix app run build",
@@ -25,7 +26,9 @@
     "audit:contracts:coverage": "cd contracts && forge coverage --report summary",
     "ci:contracts": "npm run ci:contracts:fmt && npm run ci:contracts:build && npm run ci:contracts:test",
     "ci": "npm run ci:frontend && npm run ci:contracts",
-    "ci:frontend:e2e": "npm --prefix app run test:e2e"
+    "ci:frontend:e2e": "npm --prefix app run test:e2e",
+    "ci:sim:test": "npm --workspace @nextblock/sim run test",
+    "ci:sim:typecheck": "npm --workspace @nextblock/sim run typecheck"
   },
   "overrides": {
     "@coinbase/cdp-sdk": {

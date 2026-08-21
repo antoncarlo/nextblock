@@ -73,6 +73,35 @@ jobs:
         working-directory: contracts
         run: forge test --match-contract NegativeAuthorityTest -vv
 
+      # The off-chain harness against a real node, before the long campaign.
+      # It is cheap and it fails loudly: if the adapter, the deploy script or
+      # the shadow ledger has drifted, that is worth knowing in ninety seconds
+      # rather than after five hours of invariant search that was never going
+      # to touch any of them.
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies (lockfile)
+        run: npm ci
+
+      - name: Smoke the run loop against Anvil
+        run: |
+          set -o pipefail
+          anvil --chain-id 31337 --silent &
+          ANVIL_PID=$!
+          # Anvil is ready when it answers, not after a fixed sleep: a fixed
+          # wait is either too short on a loaded runner or wasted on a fast one.
+          for i in $(seq 1 30); do
+            if cast chain-id --rpc-url http://127.0.0.1:8545 >/dev/null 2>&1; then break; fi
+            sleep 1
+          done
+          ( cd contracts &&             PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80             WRITE_DEPLOYMENT_JSON=true             forge script script/DeployStack.s.sol --rpc-url http://127.0.0.1:8545 --broadcast --slow )
+          npm --workspace @nextblock/sim run smoke --             http://127.0.0.1:8545 contracts/deployments/31337-staging.json
+          kill $ANVIL_PID
+
       - name: Deep campaign
         working-directory: contracts
         env:

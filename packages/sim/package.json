@@ -1,0 +1,24 @@
+{
+  "name": "@nextblock/sim",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Multi-agent simulation harness for the NextBlock protocol: actuarial risk engine, independent shadow ledger, finding reporter and run guards.",
+  "author": "Anton Carlo Santoro",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts",
+    "./risk": "./src/risk/index.ts",
+    "./shadow": "./src/shadow/ledger.ts",
+    "./report": "./src/report/finding.ts",
+    "./guards": "./src/guards/index.ts"
+  },
+  "scripts": {
+    "test": "node --experimental-strip-types --test test/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "smoke": "node --experimental-strip-types src/bin/smoke.ts"
+  },
+  "dependencies": {
+    "viem": "^2.55.19"
+  }
+}

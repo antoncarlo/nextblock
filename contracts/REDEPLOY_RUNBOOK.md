@@ -36,8 +36,19 @@ as custody venue. `WRITE_DEPLOYMENT_JSON` (default true) refreshes
 ```bash
 export BASE_SEPOLIA_RPC_URL=https://sepolia.base.org
 export PRIVATE_KEY=<deployer key — owner terminal only>
-# optional role addresses (default: deployer): OWNER_ADDRESS, CURATOR_ADDRESS,
-# SENTINEL_ADDRESS, COMMITTEE_ADDRESS, ALLOCATOR_ADDRESS, ORACLE_ADDRESS
+# Role addresses. Every one of them defaults to the deployer, so leaving them
+# unset puts EVERY role on a single key. That deployment is not merely untidy:
+# it makes every separation-of-duty check in the protocol pass while proving
+# nothing, because there is no separation left to violate. The invariant suite
+# will report green against it. Set all eight, or know exactly why you are not.
+export OWNER_ADDRESS=<safe or governance>
+export CURATOR_ADDRESS=<underwriting curator>   # also authorises VaultFactory.createVault
+export ALLOCATOR_ADDRESS=<allocator>
+export SENTINEL_ADDRESS=<sentinel>
+export COMMITTEE_ADDRESS=<claims committee>
+export KYC_OPERATOR_ADDRESS=<kyc operator>
+export ORACLE_ADDRESS=<oracle node>
+export CEDANT_ADDRESS=<first cedant>
 # optional: REDEMPTION_EPOCH_SECONDS (default 7 days, bounds [1h, 90d])
 
 forge script script/DeployRedemptionQueue.s.sol \

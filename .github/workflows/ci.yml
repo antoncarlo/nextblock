@@ -85,6 +85,34 @@ jobs:
       - name: E2E (production build + live Base Sepolia reads)
         run: npm run ci:frontend:e2e
 
+  sim:
+    name: sim
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies (lockfile)
+        run: npm ci
+
+      # The simulation package holds the actuarial engine and the shadow
+      # ledger, and both are pure arithmetic with no chain access — so they run
+      # on every pull request in seconds, unlike the campaign they feed, which
+      # is nightly. A shadow model that has drifted from the specification
+      # would report the protocol as wrong; catching that here is cheaper than
+      # catching it in an evidence pack.
+      - name: Typecheck
+        run: npm run ci:sim:typecheck
+
+      - name: Test
+        run: npm run ci:sim:test
+
   security:
     name: security
     runs-on: ubuntu-latest
