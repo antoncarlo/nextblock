@@ -14,7 +14,15 @@ import { compare, sharePrice, type ShadowState } from './shadow/ledger.ts';
  * without a node. That is not only convenient: the orchestration logic — how
  * an unexpected success becomes a finding, how a shadow divergence is graded —
  * is the part most likely to be wrong, and it would be untestable if it could
- * only run against Base Sepolia with twelve funded keys.
+ * only run against a funded staging deployment.
+ *
+ * Worth being precise about what needs keys, because an earlier version of this
+ * comment was not. Foundry-level runs need none: the actors are deterministic
+ * addresses from `makeAddr`. Fork-level runs need none either: real deployed
+ * addresses are impersonated with `vm.startPrank`. Only staging on Base Sepolia
+ * needs real signers, and there it is twenty-four of them — one per role, three
+ * cedants rather than one so per-cedant concentration can bind, two keepers so
+ * a permissionless settlement can be shown not to redirect a payout.
  *
  * The viem adapter lives outside this file and satisfies this shape.
  */
