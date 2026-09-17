@@ -211,6 +211,20 @@ contract VaultHandler is Test {
         if (maxClaim == 0) return;
         amount = bound(amount, 1, maxClaim);
 
+        // The vault must have taken this portfolio's risk before it can be named
+        // as payer. The fuzzer reaches `allocateViaAllocator` only by chance, so
+        // put the vault on risk here when it is not already: otherwise this
+        // handler would revert or silently no-op on most runs, and the claim
+        // invariants would quietly stop asserting over anything at all.
+        if (!vault.underwrites(pid)) {
+            uint256 room = _maxAllocatorRoom(pid);
+            if (room == 0) return;
+            vm.prank(allocator);
+            uint256 bindProp = vaultAllocator.proposeAllocation(address(vault), pid, room);
+            vm.prank(allocator);
+            vaultAllocator.executeAllocation(bindProp);
+        }
+
         vm.prank(cedant);
         uint256 claimId = claimManager.submitClaim(
             address(vault), pid, amount, ClaimManager.ClaimType.PARAMETRIC, keccak256(abi.encode(claimId_salt++))
@@ -271,7 +285,7 @@ contract VaultInvariantTest is Test {
         usdc = new MockUSDC();
         oracle = new MockOracle();
         policyRegistry = new PolicyRegistry(address(protocolRoles));
-        claimReceipt = new ClaimReceipt();
+        claimReceipt = new ClaimReceipt(address(protocolRoles));
         compliance = new ComplianceRegistry(address(protocolRoles));
         portfolioRegistry = new PortfolioRegistry(address(protocolRoles));
         distributor = new PremiumDistributor(address(usdc), address(protocolRoles), address(portfolioRegistry));
@@ -393,6 +407,21 @@ contract VaultInvariantTest is Test {
         portfolioRegistry.startReview(pid);
         vm.prank(admin);
         portfolioRegistry.approvePortfolio(pid, 6_500);
+    }
+
+    /// @notice The claim path was actually exercised by this run.
+    /// @dev Not a property of the protocol — a property of the TEST, which is why
+    ///      it lives in `afterInvariant` rather than in an `invariant_` function:
+    ///      the latter is also evaluated before the first handler call, where no
+    ///      claim can have settled yet.
+    ///
+    ///      Every claim invariant below is vacuously true on a run where nothing
+    ///      ever settled, and `claimFlow` returns early on several guards, so a
+    ///      revert-free run proves nothing on its own. This fails loudly the day
+    ///      a change makes claims unreachable, instead of quietly turning the
+    ///      solvency invariants into green assertions over an empty set.
+    function afterInvariant() public view {
+        assertGt(handler.ghost_payouts(), 0, "no claim settled in this run: the claim invariants assert over nothing");
     }
 
     /// @notice USDC conservation: vault balance == deposits + premiums - withdrawals.

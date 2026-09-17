@@ -12,6 +12,8 @@ import {VaultFactory} from "../../src/VaultFactory.sol";
 import {ProtocolRoles} from "../../src/ProtocolRoles.sol";
 import {ComplianceRegistry} from "../../src/ComplianceRegistry.sol";
 import {PortfolioRegistry} from "../../src/PortfolioRegistry.sol";
+import {AIAssessor} from "../../src/AIAssessor.sol";
+import {ClaimManager} from "../../src/ClaimManager.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @title FullFlowTest
@@ -44,10 +46,16 @@ contract FullFlowTest is Test {
         protocolRoles = new ProtocolRoles(admin);
         usdc = new MockUSDC();
         oracle = new MockOracle();
-        claimReceipt = new ClaimReceipt();
+        claimReceipt = new ClaimReceipt(address(protocolRoles));
         registry = new PolicyRegistry(address(protocolRoles));
         compliance = new ComplianceRegistry(address(protocolRoles));
         portfolioRegistry = new PortfolioRegistry(address(protocolRoles));
+        ClaimManager claimManager = new ClaimManager(
+            address(protocolRoles),
+            address(portfolioRegistry),
+            address(new AIAssessor(address(protocolRoles))),
+            address(claimReceipt)
+        );
 
         // KYC onboarding for the test LP (admin acts as KYC operator)
         protocolRoles.grantRole(protocolRoles.KYC_OPERATOR_ROLE(), admin);
@@ -71,7 +79,8 @@ contract FullFlowTest is Test {
             address(protocolRoles),
             address(compliance),
             address(portfolioRegistry),
-            address(vaultDeployer)
+            address(vaultDeployer),
+            address(claimManager)
         );
         vaultDeployer.bindFactory(address(factory));
         protocolRoles.grantRole(protocolRoles.VAULT_FACTORY_ROLE(), address(factory));

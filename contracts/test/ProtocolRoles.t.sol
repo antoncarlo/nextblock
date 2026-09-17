@@ -15,6 +15,8 @@ import {VaultDeployer} from "../src/VaultDeployer.sol";
 import {VaultFactory} from "../src/VaultFactory.sol";
 import {ComplianceRegistry} from "../src/ComplianceRegistry.sol";
 import {PortfolioRegistry} from "../src/PortfolioRegistry.sol";
+import {AIAssessor} from "../src/AIAssessor.sol";
+import {ClaimManager} from "../src/ClaimManager.sol";
 
 /// @title ProtocolRolesTest
 /// @notice Phase 1 access-control suite: role lifecycle (grant/revoke) for every
@@ -45,9 +47,15 @@ contract ProtocolRolesTest is Test {
         usdc = new MockUSDC();
         oracle = new MockOracle();
         registry = new PolicyRegistry(address(protocolRoles));
-        claimReceipt = new ClaimReceipt();
+        claimReceipt = new ClaimReceipt(address(protocolRoles));
         compliance = new ComplianceRegistry(address(protocolRoles));
         portfolioRegistry = new PortfolioRegistry(address(protocolRoles));
+        ClaimManager claimManager = new ClaimManager(
+            address(protocolRoles),
+            address(portfolioRegistry),
+            address(new AIAssessor(address(protocolRoles))),
+            address(claimReceipt)
+        );
 
         VaultDeployer vaultDeployer = new VaultDeployer();
         factory = new VaultFactory(
@@ -58,7 +66,8 @@ contract ProtocolRolesTest is Test {
             address(protocolRoles),
             address(compliance),
             address(portfolioRegistry),
-            address(vaultDeployer)
+            address(vaultDeployer),
+            address(claimManager)
         );
         vaultDeployer.bindFactory(address(factory));
         claimReceipt.setRegistrar(address(factory));

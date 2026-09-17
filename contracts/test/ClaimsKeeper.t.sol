@@ -61,7 +61,7 @@ contract ClaimsKeeperTest is Test {
         usdc = new MockUSDC();
         oracle = new MockOracle();
         policyRegistry = new PolicyRegistry(address(protocolRoles));
-        claimReceipt = new ClaimReceipt();
+        claimReceipt = new ClaimReceipt(address(protocolRoles));
         compliance = new ComplianceRegistry(address(protocolRoles));
         portfolioRegistry = new PortfolioRegistry(address(protocolRoles));
         assessor = new AIAssessor(address(protocolRoles));
@@ -127,6 +127,14 @@ contract ClaimsKeeperTest is Test {
         vm.startPrank(lp);
         usdc.approve(address(vault), DEPOSIT_200K);
         vault.deposit(DEPOSIT_200K, lp);
+        vm.stopPrank();
+
+        // `submitClaim` requires the paying vault to have taken the portfolio's
+        // risk. A nominal line binds it without moving cash or creating UPR, so
+        // the sweep arithmetic below is unchanged.
+        vm.startPrank(admin);
+        vault.setVaultAllocator(admin);
+        vault.allocateToPortfolio(pid, 1e6);
         vm.stopPrank();
 
         keeper = new ClaimsKeeper();

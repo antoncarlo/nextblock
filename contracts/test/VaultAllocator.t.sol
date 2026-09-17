@@ -56,7 +56,7 @@ contract VaultAllocatorTest is Test {
         usdc = new MockUSDC();
         oracle = new MockOracle();
         policyRegistry = new PolicyRegistry(address(protocolRoles));
-        claimReceipt = new ClaimReceipt();
+        claimReceipt = new ClaimReceipt(address(protocolRoles));
         compliance = new ComplianceRegistry(address(protocolRoles));
         portfolioRegistry = new PortfolioRegistry(address(protocolRoles));
         navOracle = new NavOracle(address(protocolRoles), address(portfolioRegistry));

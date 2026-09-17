@@ -28,6 +28,10 @@ contract VaultFactory is Ownable, ProtocolRoleConstants {
     address public immutable oracle;
     /// @notice Claim receipt NFT wired into every vault.
     address public immutable claimReceiptAddr;
+    /// @notice ClaimManager bound into every vault at creation, so no vault is
+    ///         ever born unable to settle a claim. Governance can rebind a single
+    ///         vault afterwards through `InsuranceVault.setClaimManager`.
+    address public immutable claimManagerAddr;
 
     /// @notice Central protocol access manager (on-chain RBAC).
     ProtocolRoles public immutable protocolRoles;
@@ -86,12 +90,13 @@ contract VaultFactory is Ownable, ProtocolRoleConstants {
         address protocolRoles_,
         address complianceRegistry_,
         address portfolioRegistry_,
-        address vaultDeployer_
+        address vaultDeployer_,
+        address claimManager_
     ) Ownable(msg.sender) {
         if (
             asset_ == address(0) || policyRegistry_ == address(0) || oracle_ == address(0)
                 || claimReceipt_ == address(0) || protocolRoles_ == address(0) || complianceRegistry_ == address(0)
-                || portfolioRegistry_ == address(0) || vaultDeployer_ == address(0)
+                || portfolioRegistry_ == address(0) || vaultDeployer_ == address(0) || claimManager_ == address(0)
         ) {
             revert VaultFactory__InvalidParams();
         }
@@ -100,6 +105,7 @@ contract VaultFactory is Ownable, ProtocolRoleConstants {
         policyRegistry = policyRegistry_;
         oracle = oracle_;
         claimReceiptAddr = claimReceipt_;
+        claimManagerAddr = claimManager_;
         protocolRoles = ProtocolRoles(protocolRoles_);
         complianceRegistry = complianceRegistry_;
         portfolioRegistry = portfolioRegistry_;
@@ -192,6 +198,14 @@ contract VaultFactory is Ownable, ProtocolRoleConstants {
 
         // Auto-register vault as ClaimReceipt minter (factory is registrar)
         ClaimReceipt(claimReceiptAddr).setAuthorizedMinter(vault, true);
+
+        // Bind the claim path before the vault can take a single deposit. Without
+        // this the vault is born with `claimManager == address(0)`, an
+        // `onlyClaimManager` gate that admits nobody, and no view that says so —
+        // it accepts LP capital against cover it can never pay. The factory holds
+        // VAULT_FACTORY_ROLE, which `setClaimManager` accepts only while the slot
+        // is empty, so this can bootstrap but never displace governance's choice.
+        InsuranceVault(vault).setClaimManager(claimManagerAddr);
 
         emit VaultCreated(vault, name, symbol, vaultName, vaultManager_, bufferRatioBps_, managementFeeBps_);
     }
