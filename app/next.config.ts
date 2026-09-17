@@ -51,6 +51,12 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Public protocol documentation: a static build served from
+  // public/docs (index.html + self-hosted fonts, so the CSP above needs no
+  // external font or style host). /docs maps to its index page.
+  async rewrites() {
+    return [{ source: "/docs", destination: "/docs/index.html" }];
+  },
   async headers() {
     return [
       {
