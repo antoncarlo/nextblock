@@ -464,12 +464,28 @@ contract LendingMarket is ProtocolRoleConstants, ReentrancyGuard {
         uint256 collValue = oracle.priceCollateralUSDC(collShares);
 
         uint256 seizeValue = Math.mulDiv(repaid, MAX_BPS + liqIncentiveBps, MAX_BPS);
-        seized = Math.mulDiv(collShares, seizeValue, collValue);
-        if (seized > collShares) {
-            // Collateral fully consumed: seize all and recompute the repayable amount.
+        if (collValue == 0) {
+            // The collateral prices to zero, so there is nothing to buy and no
+            // ratio to seize by. Take it all and let the bad-debt branch below
+            // write the loss down to suppliers.
+            //
+            // Without this branch `mulDiv` panics on the zero denominator and the
+            // position becomes permanently unliquidatable: the market knows the
+            // loan is bad (_isHealthy returns false because maxDebt is zero) but
+            // can never act on it, so the defaulted loan keeps counting as a
+            // lender asset and whoever withdraws first is paid out of what is
+            // left. Reachable at NAV zero, and earlier by rounding whenever
+            // collShares * nav < totalSupply.
             seized = collShares;
-            uint256 backed = Math.mulDiv(collValue, MAX_BPS, MAX_BPS + liqIncentiveBps);
-            repaid = backed > debt ? debt : backed;
+            repaid = 0;
+        } else {
+            seized = Math.mulDiv(collShares, seizeValue, collValue);
+            if (seized > collShares) {
+                // Collateral fully consumed: seize all and recompute the repayable amount.
+                seized = collShares;
+                uint256 backed = Math.mulDiv(collValue, MAX_BPS, MAX_BPS + liqIncentiveBps);
+                repaid = backed > debt ? debt : backed;
+            }
         }
 
         uint256 repaidShares = repaid == debt

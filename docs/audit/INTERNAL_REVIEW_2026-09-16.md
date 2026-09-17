@@ -21,13 +21,14 @@ Suite after this review: **653 tests, 0 failures** (baseline 644 + 9 new).
 | F-07 | A claim is never bound to the vault that underwrote the portfolio | High | **Fixed in source** | `ClaimVaultBinding.t.sol` |
 | F-08 | `ClaimReceipt` sits outside the governance model; its owner holds an unrecoverable protocol-wide claim kill-switch | High | **Fixed in source**, live until redeploy | `GovernanceMigrationGap.t.sol` |
 | F-09 | Factory-created vaults are born unable to pay claims | High | **Fixed in source**; 2 live vaults still unwired (35,970 USDC) | `FactoryVaultClaimGap.t.sol` |
-| F-10 | `GovernanceMigration` phase 2 enforces none of its documented preconditions | Medium | Open | `GovernanceMigrationGap.t.sol` |
-| F-11 | Liquidation reverts by division-by-zero exactly when collateral prices to zero | Medium | Open, pre-production | `LiquidationBrickExploit.t.sol`, `LiquidationBrickFuzz.t.sol` |
-| F-12 | `BordereauOracle.proposeAssertion` does not check the caller is *that portfolio's* cedant | Low today, Medium once bordereau data drives accounting | Open | see below |
+| F-10 | `GovernanceMigration` phase 2 enforces none of its documented preconditions | Medium | **Fixed in source** | `GovernanceMigrationGap.t.sol` |
+| F-11 | Liquidation reverts by division-by-zero exactly when collateral prices to zero | Medium | **Fixed in source** | `LiquidationBrickExploit.t.sol`, `LiquidationBrickFuzz.t.sol` |
+| F-12 | `BordereauOracle.proposeAssertion` does not check the caller is *that portfolio's* cedant | Low today, Medium once bordereau data drives accounting | **Fixed in source** | `BordereauOracle.t.sol` |
 | F-13 | No NAV publication pipeline exists; the live feed is already unreadable | Medium | Open | `fork/LiveStagingAudit.t.sol` |
 
-Remediation for F-07, F-08 and F-09 landed on 2026-09-17; see **Remediation** at the
-end of this document for what changed and what each fix deliberately does not do.
+F-07 through F-12 were all remediated on 2026-09-17; F-13 is operational rather
+than a code defect. See **Remediation** at the end of this document for what
+changed and what each fix deliberately does not do.
 
 Also assessed and **not** a finding: the external report's thesis that `AIAssessor`
 holds no authority. See "AIAssessor" below — the thesis holds for positive
@@ -368,6 +369,50 @@ prevent.
 
 **The two live unwired vaults are not repaired by this.** They need a governance
 call to `setClaimManager`, or to be superseded by a redeploy.
+
+### F-10 — phase 2 enforces its own preconditions
+
+Two checks that were prose are now code. `_requireStageAComplete` refuses the
+renounce while the retiring key still holds any of SENTINEL, CLAIMS_COMMITTEE,
+ORACLE, AUTHORIZED_CEDANT, KYC_OPERATOR, ALLOCATOR or UNDERWRITING_CURATOR.
+`_requireTimelockRehearsed` takes a `REHEARSAL_OPERATION_ID` and refuses unless
+`isOperationDone` returns true for it, so the rehearsal has to be a real executed
+operation the operator can name, not a claim in a runbook.
+
+The retiring key is also now named explicitly via `RETIRING_KEY` instead of being
+taken from `msg.sender`. Inside a broadcast the caller is the broadcaster, not
+the script's `msg.sender`; when those differed the migration failed at its last
+step with an opaque `AccessControlBadConfirmation`. Naming it also lets both
+guards run before any broadcast opens, so a refusal leaves nothing half-started.
+
+The regression test drives the real script through all three cases — Stage A
+incomplete, no rehearsal, then both satisfied — in one test function. Split into
+three it raced itself: the script reads its configuration from the environment
+and `vm.setEnv` mutates process-wide state that forge's parallel test execution
+shares.
+
+### F-11 — liquidation at a zero collateral value
+
+`liquidate` now branches on `collValue == 0`, seizes the whole (worthless)
+position and lets the existing bad-debt path write the loss down to suppliers,
+instead of panicking on the zero denominator and leaving the loan permanently
+unclosable while still counted as a lender asset.
+
+`NavOracle.publishNav` deliberately still accepts a zero NAV. The audit
+originally recommended rejecting it at publication; that was wrong. A total loss
+is a real state the oracle must be able to express, and refusing to record it
+would force operators to publish a floor they do not believe. The consumer is the
+right place for the guard.
+
+The fuzz test's range now starts at zero instead of excluding it, so the property
+holds over the whole band rather than around a hole. 2001 runs, no exclusions.
+
+### F-12 — bordereau assertions are bound to the cedant
+
+`proposeAssertion` now requires a cedant to be *that portfolio's* cedant. The
+ORACLE_ROLE feed still speaks for every portfolio, which a second test pins: a
+fix that turned the oracle into a per-portfolio permission would break the
+attested-data pipeline for everything it does not own, which is all of it.
 
 ### Test-suite consequences
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Test, stdError} from "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 
 import {DeployStack} from "../script/DeployStack.s.sol";
 import {ProtocolRoles} from "../src/ProtocolRoles.sol";
@@ -12,7 +12,7 @@ import {MockUSDC} from "../src/MockUSDC.sol";
 import {NavShareOracle} from "../src/lending/NavShareOracle.sol";
 import {LendingMarket} from "../src/lending/LendingMarket.sol";
 
-/// @title LiquidationBrickExploit
+/// @title LiquidationBrick
 /// @author Anton Carlo Santoro
 /// @notice Liquidation reverts by division-by-zero exactly when it is needed most.
 ///
@@ -37,7 +37,7 @@ import {LendingMarket} from "../src/lending/LendingMarket.sol";
 ///         takes the collateral to zero, i.e. `collShares * nav < totalSupply`.
 ///         A borrower holding a small slice of a large-supply vault reaches that
 ///         long before NAV actually hits zero.
-contract LiquidationBrickExploitTest is Test {
+contract LiquidationBrickTest is Test {
     /// @dev Anvil default key #0 — publicly known testnet placeholder.
     uint256 constant ANVIL_PK = 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
 
@@ -101,8 +101,9 @@ contract LiquidationBrickExploitTest is Test {
         _whitelist(liquidator);
     }
 
-    /// @notice A defaulted position becomes permanently unliquidatable at NAV zero.
-    function test_liquidationBricksWhenCollateralPricesToZero() public {
+    /// @notice REGRESSION: a defaulted position at NAV zero is liquidated and the
+    ///         loss is written down, instead of panicking.
+    function test_liquidationSocialisesTheLossWhenCollateralPricesToZero() public {
         _openLeveragedPosition();
 
         // The NAV collapses to zero. Sentinel acknowledges the anomaly, which is
@@ -115,19 +116,27 @@ contract LiquidationBrickExploitTest is Test {
         assertEq(shareOracle.priceCollateralUSDC(market.collateralOf(borrower)), 0, "collateral prices to zero");
         assertGt(market.borrowAssetsOf(borrower), 0, "and the debt is still outstanding");
 
-        // But it cannot act. Liquidation panics on the division by zero.
+        uint256 collateralBefore = market.collateralOf(borrower);
+
+        // It can now act. The liquidator pays nothing — worthless collateral backs
+        // nothing — and takes it all, which lets the market realise the loss.
         deal(address(usdc), liquidator, LENDER_SUPPLY);
+        uint256 liquidatorUsdcBefore = usdc.balanceOf(liquidator);
         vm.startPrank(liquidator);
         usdc.approve(address(market), type(uint256).max);
-        vm.expectRevert(stdError.divisionError);
-        market.liquidate(borrower, type(uint256).max);
+        (uint256 repaid, uint256 seized) = market.liquidate(borrower, type(uint256).max);
         vm.stopPrank();
 
-        // The consequence: the bad debt is never realised. The market still
-        // counts the defaulted loan as a lender asset.
-        assertEq(market.totalBorrowAssets(), BORROW, "defaulted debt still booked as outstanding");
-        assertEq(market.totalSupplyAssets(), LENDER_SUPPLY, "lenders' balance sheet never written down");
-        assertEq(market.collateralOf(borrower), _borrowerShares(), "collateral never seized");
+        assertEq(repaid, 0, "nothing is repaid: the collateral backs nothing");
+        assertEq(seized, collateralBefore, "all of the worthless collateral is taken");
+        assertEq(usdc.balanceOf(liquidator), liquidatorUsdcBefore, "the liquidator pays nothing for it");
+
+        // The consequence that matters: the bad debt is realised rather than left
+        // counting as a lender asset for whoever withdraws last.
+        assertEq(market.collateralOf(borrower), 0, "position is closed out");
+        assertEq(market.borrowAssetsOf(borrower), 0, "borrower's debt is written off");
+        assertEq(market.totalBorrowAssets(), 0, "no phantom asset left on the books");
+        assertEq(market.totalSupplyAssets(), LENDER_SUPPLY - BORROW, "lenders take the loss, on the books, now");
     }
 
     /// @notice Control: the same default liquidates cleanly when the collateral

@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import {Test} from "forge-std/Test.sol";
 
 import {DeployStack} from "../script/DeployStack.s.sol";
+import {GovernanceMigration} from "../script/GovernanceMigration.s.sol";
 import {ProtocolRoles} from "../src/ProtocolRoles.sol";
 import {ProtocolTimelock} from "../src/ProtocolTimelock.sol";
 import {ComplianceRegistry} from "../src/ComplianceRegistry.sol";
@@ -133,34 +134,57 @@ contract GovernanceMigrationGapTest is Test {
         assertEq(receipts.registrar(), factoryAddr, "registrar is governance-set");
     }
 
-    /// @notice OPEN (F-10): phase 2 renounces two roles and leaves seven.
-    function test_migrationLeavesTheEntireOperationalRoleSetWithTheRetiredKey() public view {
-        assertTrue(roles.hasRole(roles.SENTINEL_ROLE(), deployer), "still Sentinel: can pause the protocol");
-        assertTrue(roles.hasRole(roles.CLAIMS_COMMITTEE_ROLE(), deployer), "still Claims Committee: approves payouts");
-        assertTrue(roles.hasRole(roles.ORACLE_ROLE(), deployer), "still Oracle: publishes NAV and assessments");
-        assertTrue(roles.hasRole(roles.AUTHORIZED_CEDANT_ROLE(), deployer), "still Cedant: can file claims");
-        assertTrue(roles.hasRole(roles.KYC_OPERATOR_ROLE(), deployer), "still KYC Operator: controls the whitelist");
-        assertTrue(roles.hasRole(roles.ALLOCATOR_ROLE(), deployer), "still Allocator: can put vaults on risk");
-        assertTrue(roles.hasRole(roles.UNDERWRITING_CURATOR_ROLE(), deployer), "still Curator: can bind risk");
-    }
+    /// @notice REGRESSION (F-10): phase 2 enforces its own documented preconditions.
+    /// @dev Written as ONE test on purpose. The script reads its configuration
+    ///      from the environment, and `vm.setEnv` mutates process-wide state that
+    ///      forge's parallel test execution shares — split into three tests they
+    ///      race each other and fail intermittently. Sequencing the cases here
+    ///      removes the race without weakening any assertion, and follows the
+    ///      order an operator actually hits them in.
+    ///
+    ///      Before this, phase 2 checked only that the timelock held the two
+    ///      admin roles, then printed "Governance now flows exclusively through
+    ///      ProtocolTimelock". Stage A — moving Sentinel, Committee, Oracle,
+    ///      Cedant, KYC, Allocator and Curator off the deploy key — lived in
+    ///      docs/GOVERNANCE_PHASE2.md as prose, and prose does not stop a deploy.
+    function test_phaseTwoEnforcesStageAAndRehearsal() public {
+        // setUp already replayed the unguarded phase 2, so give the deploy key
+        // its admin roles back and start from the state a real operator is in.
+        bytes32 ownerRole = roles.OWNER_ROLE();
+        bytes32 adminRole = roles.DEFAULT_ADMIN_ROLE();
+        vm.startPrank(address(timelock));
+        roles.grantRole(ownerRole, deployer);
+        roles.grantRole(adminRole, deployer);
+        vm.stopPrank();
 
-    /// @notice OPEN (F-10): the retired key still drains an LP vault unaided.
-    /// @dev Every role the claim path relies on for its quorum — cedant, oracle,
-    ///      committee — is the same address, and so is the allocator. Renouncing
-    ///      the admin roles changed none of that. The F-07 binding does bite: the
-    ///      key can no longer name an arbitrary funded vault, it must first put
-    ///      THIS vault on risk for the portfolio. With ALLOCATOR_ROLE retained,
-    ///      that is one extra transaction, not an obstacle.
-    function test_retiredDeployerStillDrainsTheVaultEndToEnd() public {
-        uint256 before = usdc.balanceOf(deployer);
+        GovernanceMigration migration = new GovernanceMigration();
+        _setPhaseTwoEnv(keccak256("never-happened"));
 
-        (uint256 claimId,) = _liveClaimReadyForApproval(keccak256("loss-b"));
+        // --- 1. Stage A not done: the deploy key still holds the operating set. ---
+        assertTrue(roles.hasRole(roles.SENTINEL_ROLE(), deployer), "starting state: Stage A not done");
+        vm.expectRevert(bytes("Stage A incomplete: deployer still SENTINEL_ROLE"));
+        migration.run();
+        assertTrue(roles.hasRole(ownerRole, deployer), "nothing renounced");
 
-        vm.prank(deployer); // CLAIMS_COMMITTEE_ROLE, retained
-        claims.approveClaim(claimId, CLAIM);
-        claims.executeClaim(claimId);
+        // --- 2. Stage A done, but the timelock was never rehearsed. ---
+        _completeStageA();
+        vm.expectRevert(
+            bytes("rehearsal not executed: REHEARSAL_OPERATION_ID is not a done operation on this timelock")
+        );
+        migration.run();
+        assertTrue(roles.hasRole(ownerRole, deployer), "still nothing renounced");
 
-        assertEq(usdc.balanceOf(deployer) - before, CLAIM, "retired key walked LP capital out after full migration");
+        // --- 3. Both preconditions genuinely met: it completes. ---
+        // Without this leg the guards could be unsatisfiable and the two refusals
+        // above would still pass. A migration nobody can ever run is not a fix.
+        bytes32 rehearsalId = _rehearseATimelockOperation();
+        _setPhaseTwoEnv(rehearsalId);
+
+        migration.run();
+
+        assertFalse(roles.hasRole(ownerRole, deployer), "OWNER_ROLE renounced");
+        assertFalse(roles.hasRole(adminRole, deployer), "DEFAULT_ADMIN_ROLE renounced");
+        assertTrue(roles.hasRole(ownerRole, address(timelock)), "the timelock still governs");
     }
 
     // --- Helpers ---
@@ -242,5 +266,50 @@ contract GovernanceMigrationGapTest is Test {
 
         claims.attachAssessment(claimId);
         vm.warp(block.timestamp + claims.disputeWindow() + 1);
+    }
+
+    /// @dev Stage A: move every operational role off the deploy key. Revoked
+    ///      through the timelock, which is the only DEFAULT_ADMIN left.
+    function _completeStageA() internal {
+        bytes32[7] memory operational = [
+            roles.SENTINEL_ROLE(),
+            roles.CLAIMS_COMMITTEE_ROLE(),
+            roles.ORACLE_ROLE(),
+            roles.AUTHORIZED_CEDANT_ROLE(),
+            roles.KYC_OPERATOR_ROLE(),
+            roles.ALLOCATOR_ROLE(),
+            roles.UNDERWRITING_CURATOR_ROLE()
+        ];
+        vm.startPrank(address(timelock));
+        for (uint256 i; i < operational.length; i++) {
+            roles.revokeRole(operational[i], deployer);
+        }
+        vm.stopPrank();
+    }
+
+    /// @dev Schedules and executes one real operation through the timelock, and
+    ///      returns its id. This is the rehearsal phase 2 now insists on, so the
+    ///      test has to perform it exactly as an operator would.
+    function _rehearseATimelockOperation() internal returns (bytes32 opId) {
+        bytes memory payload =
+            abi.encodeWithSignature("grantRole(bytes32,address)", roles.SENTINEL_ROLE(), makeAddr("rehearsalGuardian"));
+        bytes32 salt = keccak256("phase-2-rehearsal");
+
+        vm.prank(safe); // PROPOSER
+        timelock.schedule(address(roles), 0, payload, bytes32(0), salt, MIN_DELAY);
+        vm.warp(block.timestamp + MIN_DELAY + 1);
+        vm.prank(executor); // EXECUTOR
+        timelock.execute(address(roles), 0, payload, bytes32(0), salt);
+
+        opId = timelock.hashOperation(address(roles), 0, payload, bytes32(0), salt);
+        assertTrue(timelock.isOperationDone(opId), "the rehearsal really executed");
+    }
+
+    function _setPhaseTwoEnv(bytes32 rehearsalId) internal {
+        vm.setEnv("PROTOCOL_ROLES", vm.toString(address(roles)));
+        vm.setEnv("TIMELOCK_ADDRESS", vm.toString(address(timelock)));
+        vm.setEnv("RENOUNCE_DEPLOYER", "true");
+        vm.setEnv("RETIRING_KEY", vm.toString(deployer));
+        vm.setEnv("REHEARSAL_OPERATION_ID", vm.toString(rehearsalId));
     }
 }

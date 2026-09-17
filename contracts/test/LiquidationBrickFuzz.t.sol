@@ -25,16 +25,17 @@ import {LendingMarket} from "../src/lending/LendingMarket.sol";
 ///         free variable after a default — everything else (collateral, debt,
 ///         incentive, threshold) is fixed by the position.
 ///
-///         RESULT: at 3001 runs over (0, 80_000e6] the property holds. The
-///         unliquidatable point is exactly `nav == 0`, proven deterministically
-///         in LiquidationBrickExploit. It widens into a band only when the
-///         borrower's slice is small enough that `shares * nav < totalSupply`
-///         rounds the collateral to zero; with a dominant holder, as here, zero
-///         is the only point. That precision is what makes the fix cheap: reject
-///         a zero NAV at publication and guard the divisor in liquidate.
+///         HISTORY: the property used to fail at exactly `nav == 0`, where
+///         `mulDiv` panicked on a zero denominator and the position became
+///         permanently unliquidatable. The band widened below zero whenever
+///         rounding took the collateral to zero, i.e. `shares * nav <
+///         totalSupply`; with a dominant holder, as here, zero was the only
+///         point. `liquidate` now branches on a zero collateral value, seizes
+///         everything and socialises the residual, so the range includes zero
+///         and the property is universal.
 ///
-///         This test is therefore a live regression guard: it must keep passing,
-///         and it will fail the day the band widens.
+///         This is a live regression guard: it must keep passing, and it fails
+///         the day any corrective NAV leaves a bad loan unclosable.
 contract LiquidationBrickFuzzTest is Test {
     /// @dev Anvil default key #0 — publicly known testnet placeholder.
     uint256 constant ANVIL_PK = 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
@@ -106,9 +107,11 @@ contract LiquidationBrickFuzzTest is Test {
         // Only corrections that actually put the position underwater are in
         // scope: above this the loan is still healthy and refusing to liquidate
         // is the correct behaviour, not a defect.
-        // Zero is excluded deliberately: it is the known defect, proven
-        // deterministically elsewhere. This guards the band around it.
-        correctiveNav = bound(correctiveNav, 1, 80_000e6);
+        // Zero is now INCLUDED. It used to be excluded because it was the known
+        // defect; since `liquidate` guards the zero denominator the property is
+        // universal over the whole range, which is what makes this a real fuzz
+        // rather than a fuzz around a hole.
+        correctiveNav = bound(correctiveNav, 0, 80_000e6);
 
         _collapseNavTo(correctiveNav);
 
@@ -124,6 +127,10 @@ contract LiquidationBrickFuzzTest is Test {
         // can never realise, at a NAV the protocol itself chose to publish.
         try market.liquidate(borrower, type(uint256).max) returns (uint256, uint256 seized) {
             assertGt(seized, 0, "liquidation must seize something");
+            // Asserting on DEBT, not collateral: repaying the whole debt can
+            // legitimately leave collateral with the borrower, so a full
+            // close-out is not the property. Clearing the loan is.
+            assertEq(market.borrowAssetsOf(borrower), 0, "and must clear the bad loan");
         } catch {
             uint256 collValue = shareOracle.priceCollateralUSDC(market.collateralOf(borrower));
             emit log_named_uint("corrective NAV that bricks liquidation", correctiveNav);

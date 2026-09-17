@@ -106,6 +106,8 @@ contract BordereauOracle is ProtocolRoleConstants {
     error BordereauOracle__UnauthorizedRole(address caller, bytes32 role);
     /// @notice Caller is not an authorized bordereau proposer.
     error BordereauOracle__UnauthorizedProposer(address caller);
+    /// @notice A cedant may only assert against the portfolios it ceded.
+    error BordereauOracle__NotPortfolioCedant(uint256 portfolioId, address caller);
     /// @notice Zero address/value or otherwise malformed parameters.
     error BordereauOracle__InvalidParams();
     /// @notice No assertion under this id.
@@ -161,17 +163,25 @@ contract BordereauOracle is ProtocolRoleConstants {
         string calldata dataURI,
         uint256 declaredAmount
     ) external returns (uint256 assertionId) {
-        if (
-            !protocolRoles.hasRole(AUTHORIZED_CEDANT_ROLE, msg.sender)
-                && !protocolRoles.hasRole(ORACLE_ROLE, msg.sender)
-        ) {
-            revert BordereauOracle__UnauthorizedProposer(msg.sender);
-        }
         if (dataHash == bytes32(0)) revert BordereauOracle__InvalidParams();
         // Reverts if the portfolio does not exist.
-        // Existence check: getPortfolio reverts on unknown id (return unused by design).
-        // slither-disable-next-line unused-return
-        portfolioRegistry.getPortfolio(portfolioId);
+        PortfolioRegistry.Portfolio memory pf = portfolioRegistry.getPortfolio(portfolioId);
+
+        // The oracle feed speaks for every portfolio; a cedant speaks only for its
+        // own. Before this, holding AUTHORIZED_CEDANT_ROLE was enough to assert
+        // against ANY portfolio, and `_finalize` overwrites the latest record
+        // unconditionally — so one cedant could set the bordereau of record for a
+        // competitor's book. Finalisation carries no economic effect today (only
+        // NextBlockLens reads it), which bounds the impact to reporting, but the
+        // check belongs here before premium or loss accounting starts consuming
+        // this data.
+        if (!protocolRoles.hasRole(ORACLE_ROLE, msg.sender)) {
+            bool isCedant = protocolRoles.hasRole(AUTHORIZED_CEDANT_ROLE, msg.sender);
+            if (!isCedant) revert BordereauOracle__UnauthorizedProposer(msg.sender);
+            if (pf.cedant != msg.sender) {
+                revert BordereauOracle__NotPortfolioCedant(portfolioId, msg.sender);
+            }
+        }
 
         assertionId = nextAssertionId++;
         uint64 nowTs = uint64(block.timestamp);
