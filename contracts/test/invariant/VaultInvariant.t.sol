@@ -275,6 +275,10 @@ contract VaultInvariantTest is Test {
 
     uint256[] public portfolioIds;
 
+    /// @dev Fixed amounts for the reachability test: large enough to fund a claim,
+    ///      small enough to sit inside the allocator's concentration caps.
+    uint256 constant DEPOSIT_FOR_REACHABILITY = 200_000e6;
+    uint256 constant CLAIM_FOR_REACHABILITY = 50_000e6;
     uint256 constant COVERAGE_A = 150_000e6;
     uint256 constant COVERAGE_B = 60_000e6;
 
@@ -409,19 +413,29 @@ contract VaultInvariantTest is Test {
         portfolioRegistry.approvePortfolio(pid, 6_500);
     }
 
-    /// @notice The claim path was actually exercised by this run.
-    /// @dev Not a property of the protocol — a property of the TEST, which is why
-    ///      it lives in `afterInvariant` rather than in an `invariant_` function:
-    ///      the latter is also evaluated before the first handler call, where no
-    ///      claim can have settled yet.
+    /// @notice The claim path is reachable in the world these invariants run over.
+    /// @dev A property of the TEST, not of the protocol. Every claim invariant
+    ///      below is vacuously true on a world where no claim can settle, so
+    ///      without this a change that made claims unreachable would leave them
+    ///      green and asserting over an empty set.
     ///
-    ///      Every claim invariant below is vacuously true on a run where nothing
-    ///      ever settled, and `claimFlow` returns early on several guards, so a
-    ///      revert-free run proves nothing on its own. This fails loudly the day
-    ///      a change makes claims unreachable, instead of quietly turning the
-    ///      solvency invariants into green assertions over an empty set.
-    function afterInvariant() public view {
-        assertGt(handler.ghost_payouts(), 0, "no claim settled in this run: the claim invariants assert over nothing");
+    ///      This started life as `afterInvariant()` asserting `ghost_payouts > 0`,
+    ///      which was wrong: that hook runs after EACH invariant function's
+    ///      campaign, and whether the fuzzer happens to land a settled claim in a
+    ///      given campaign is chance. It held locally and failed on CI, where one
+    ///      campaign out of nine never reached a payout — a flaky assertion
+    ///      dressed up as a safety net.
+    ///
+    ///      Driving the handler directly asserts the same property and cannot
+    ///      flake: if a claim can no longer settle here, this fails every time,
+    ///      on every machine.
+    function test_theClaimPathIsReachableInThisWorld() public {
+        assertEq(handler.ghost_payouts(), 0, "starts from nothing");
+
+        handler.deposit(0, DEPOSIT_FOR_REACHABILITY);
+        handler.claimFlow(0, CLAIM_FOR_REACHABILITY);
+
+        assertGt(handler.ghost_payouts(), 0, "a claim must be able to settle in the invariant world");
     }
 
     /// @notice USDC conservation: vault balance == deposits + premiums - withdrawals.
