@@ -30,7 +30,7 @@ interface ILegacyOwnable {
 ///         Skips itself when no Base Sepolia RPC is configured, so the suite
 ///         stays runnable offline:
 ///           export BASE_SEPOLIA_RPC_URL=https://base-sepolia-rpc.publicnode.com
-contract LiveStagingAuditTest is Test {
+contract LiveStagingAuditForkTest is Test {
     uint256 constant BASE_SEPOLIA = 84_532;
 
     address constant STAGING_VAULT = 0x47b1F34b1aA2683Ebd0bC3A5D0F8507Af064BCa3;
