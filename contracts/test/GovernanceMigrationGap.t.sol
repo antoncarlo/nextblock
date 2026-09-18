@@ -135,12 +135,13 @@ contract GovernanceMigrationGapTest is Test {
     }
 
     /// @notice REGRESSION (F-10): phase 2 enforces its own documented preconditions.
-    /// @dev Written as ONE test on purpose. The script reads its configuration
-    ///      from the environment, and `vm.setEnv` mutates process-wide state that
-    ///      forge's parallel test execution shares — split into three tests they
-    ///      race each other and fail intermittently. Sequencing the cases here
-    ///      removes the race without weakening any assertion, and follows the
-    ///      order an operator actually hits them in.
+    /// @dev Sequenced in one test, in the order an operator actually hits them.
+    ///      It drives `runPhaseTwoWithConfig` rather than `run()`: the env-driven
+    ///      entry point would need `vm.setEnv`, which is process-global and races
+    ///      every suite forge runs in parallel — the same reason
+    ///      `DeployRedemptionQueueTest` avoids it. That race is invisible where
+    ///      scheduling happens to be stable and surfaces as a gas-snapshot
+    ///      mismatch on CI.
     ///
     ///      Before this, phase 2 checked only that the timelock held the two
     ///      admin roles, then printed "Governance now flows exclusively through
@@ -158,12 +159,11 @@ contract GovernanceMigrationGapTest is Test {
         vm.stopPrank();
 
         GovernanceMigration migration = new GovernanceMigration();
-        _setPhaseTwoEnv(keccak256("never-happened"));
 
         // --- 1. Stage A not done: the deploy key still holds the operating set. ---
         assertTrue(roles.hasRole(roles.SENTINEL_ROLE(), deployer), "starting state: Stage A not done");
         vm.expectRevert(bytes("Stage A incomplete: deployer still SENTINEL_ROLE"));
-        migration.run();
+        migration.runPhaseTwoWithConfig(address(roles), address(timelock), deployer, keccak256("never-happened"));
         assertTrue(roles.hasRole(ownerRole, deployer), "nothing renounced");
 
         // --- 2. Stage A done, but the timelock was never rehearsed. ---
@@ -171,16 +171,14 @@ contract GovernanceMigrationGapTest is Test {
         vm.expectRevert(
             bytes("rehearsal not executed: REHEARSAL_OPERATION_ID is not a done operation on this timelock")
         );
-        migration.run();
+        migration.runPhaseTwoWithConfig(address(roles), address(timelock), deployer, keccak256("never-happened"));
         assertTrue(roles.hasRole(ownerRole, deployer), "still nothing renounced");
 
         // --- 3. Both preconditions genuinely met: it completes. ---
         // Without this leg the guards could be unsatisfiable and the two refusals
         // above would still pass. A migration nobody can ever run is not a fix.
         bytes32 rehearsalId = _rehearseATimelockOperation();
-        _setPhaseTwoEnv(rehearsalId);
-
-        migration.run();
+        migration.runPhaseTwoWithConfig(address(roles), address(timelock), deployer, rehearsalId);
 
         assertFalse(roles.hasRole(ownerRole, deployer), "OWNER_ROLE renounced");
         assertFalse(roles.hasRole(adminRole, deployer), "DEFAULT_ADMIN_ROLE renounced");
@@ -303,13 +301,5 @@ contract GovernanceMigrationGapTest is Test {
 
         opId = timelock.hashOperation(address(roles), 0, payload, bytes32(0), salt);
         assertTrue(timelock.isOperationDone(opId), "the rehearsal really executed");
-    }
-
-    function _setPhaseTwoEnv(bytes32 rehearsalId) internal {
-        vm.setEnv("PROTOCOL_ROLES", vm.toString(address(roles)));
-        vm.setEnv("TIMELOCK_ADDRESS", vm.toString(address(timelock)));
-        vm.setEnv("RENOUNCE_DEPLOYER", "true");
-        vm.setEnv("RETIRING_KEY", vm.toString(deployer));
-        vm.setEnv("REHEARSAL_OPERATION_ID", vm.toString(rehearsalId));
     }
 }

@@ -40,8 +40,28 @@ contract GovernanceMigration is Script {
         if (!renounceDeployer) {
             _phaseOneDeployAndGrant(roles);
         } else {
-            _phaseTwoRenounce(roles);
+            _phaseTwoRenounce(
+                roles,
+                vm.envAddress("TIMELOCK_ADDRESS"),
+                vm.envAddress("RETIRING_KEY"),
+                vm.envBytes32("REHEARSAL_OPERATION_ID")
+            );
         }
+    }
+
+    /// @notice Phase 2 with every input passed explicitly.
+    /// @dev Exists for the same reason `DeployRedemptionQueue.runWithConfig` does:
+    ///      `vm.setEnv` is process-global, so a test that configures this script
+    ///      through the environment races every other suite forge runs in
+    ///      parallel. That race is invisible on a machine whose scheduling
+    ///      happens to be stable and shows up as a gas-snapshot mismatch on CI.
+    ///      Operators keep using `run()`; tests call this.
+    /// @param roles_ ProtocolRoles being migrated.
+    /// @param timelock ProtocolTimelock that will hold governance.
+    /// @param retiringKey The EOA that renounces.
+    /// @param rehearsalId A timelock operation already executed end-to-end.
+    function runPhaseTwoWithConfig(address roles_, address timelock, address retiringKey, bytes32 rehearsalId) public {
+        _phaseTwoRenounce(ProtocolRoles(roles_), timelock, retiringKey, rehearsalId);
     }
 
     function _phaseOneDeployAndGrant(ProtocolRoles roles) internal {
@@ -66,8 +86,9 @@ contract GovernanceMigration is Script {
         console.log("then re-run with RENOUNCE_DEPLOYER=true and TIMELOCK_ADDRESS set.");
     }
 
-    function _phaseTwoRenounce(ProtocolRoles roles) internal {
-        address timelock = vm.envAddress("TIMELOCK_ADDRESS");
+    function _phaseTwoRenounce(ProtocolRoles roles, address timelock, address retiringKey, bytes32 rehearsalId)
+        internal
+    {
         require(roles.hasRole(roles.OWNER_ROLE(), timelock), "timelock missing OWNER_ROLE");
         require(roles.hasRole(roles.DEFAULT_ADMIN_ROLE(), timelock), "timelock missing DEFAULT_ADMIN_ROLE");
 
@@ -84,10 +105,8 @@ contract GovernanceMigration is Script {
         // fail at its last step with an opaque AccessControlBadConfirmation.
         // Naming it also lets the guards below run BEFORE any broadcast opens, so
         // a refusal leaves no half-started transaction behind.
-        address retiringKey = vm.envAddress("RETIRING_KEY");
-
         _requireStageAComplete(roles, retiringKey);
-        _requireTimelockRehearsed(timelock);
+        _requireTimelockRehearsed(timelock, rehearsalId);
 
         vm.startBroadcast(retiringKey);
         roles.renounceRole(roles.OWNER_ROLE(), retiringKey);
@@ -129,8 +148,8 @@ contract GovernanceMigration is Script {
     ///      timelock that has never executed anything is an untested single point
     ///      of failure, and this is the last moment at which that is recoverable.
     /// @param timelock The ProtocolTimelock that will hold governance.
-    function _requireTimelockRehearsed(address timelock) internal view {
-        bytes32 rehearsalId = vm.envBytes32("REHEARSAL_OPERATION_ID");
+    /// @param rehearsalId Id of the operation that must already be done.
+    function _requireTimelockRehearsed(address timelock, bytes32 rehearsalId) internal view {
         require(
             ProtocolTimelock(payable(timelock)).isOperationDone(rehearsalId),
             "rehearsal not executed: REHEARSAL_OPERATION_ID is not a done operation on this timelock"
