@@ -76,21 +76,37 @@ const USDC_ABI = parseAbi(['function balanceOf(address) view returns (uint256)']
  * point the harness at a real RPC, which is exactly why the guard is not
  * optional and not here.
  */
-export function makeAnvilClient(
+/**
+ * The chain the client signs and reads against. Passed in rather than hardcoded
+ * so the same client serves both Anvil and Base Sepolia — the orchestration is
+ * identical, only the chain and the keys differ, and the keys are the one thing
+ * that must never be baked into the code.
+ */
+export interface ClientOptions {
+  keys: readonly `0x${string}`[];
+  chain: Parameters<typeof createPublicClient>[0]['chain'];
+}
+
+/**
+ * The chain-agnostic client. Anvil and staging both go through here; the only
+ * difference is the key set and the chain, both supplied by the caller.
+ */
+export function makeChainClient(
   rpcUrl: string,
   dep: Deployment,
   addr: Addresses,
   lpTarget: Address,
+  opts: ClientOptions,
 ): ChainClient {
-  const publicClient = createPublicClient({ chain: foundry, transport: http(rpcUrl) });
+  const publicClient = createPublicClient({ chain: opts.chain, transport: http(rpcUrl) });
 
   let salt = 0n;
   const wallets = new Map<Address, ReturnType<typeof createWalletClient>>();
-  for (const key of ANVIL_KEYS) {
+  for (const key of opts.keys) {
     const account = privateKeyToAccount(key);
     wallets.set(
       account.address,
-      createWalletClient({ account, chain: foundry, transport: http(rpcUrl) }),
+      createWalletClient({ account, chain: opts.chain, transport: http(rpcUrl) }),
     );
   }
 
@@ -219,4 +235,19 @@ export function makeAnvilClient(
       return { balance, totalShares: shares, sharePrice: price };
     },
   };
+}
+
+/**
+ * The Anvil client: the chain-agnostic one, fixed to Anvil's published keys and
+ * the foundry chain. Those keys are safe to bake in precisely because they are
+ * public and local; the staging client, by contrast, takes its keys from a file
+ * at runtime and never from source.
+ */
+export function makeAnvilClient(
+  rpcUrl: string,
+  dep: Deployment,
+  addr: Addresses,
+  lpTarget: Address,
+): ChainClient {
+  return makeChainClient(rpcUrl, dep, addr, lpTarget, { keys: ANVIL_KEYS, chain: foundry });
 }

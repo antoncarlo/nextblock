@@ -211,6 +211,20 @@ contract VaultHandler is Test {
         if (maxClaim == 0) return;
         amount = bound(amount, 1, maxClaim);
 
+        // The vault must have taken this portfolio's risk before it can be named
+        // as payer. The fuzzer reaches `allocateViaAllocator` only by chance, so
+        // put the vault on risk here when it is not already: otherwise this
+        // handler would revert or silently no-op on most runs, and the claim
+        // invariants would quietly stop asserting over anything at all.
+        if (!vault.underwrites(pid)) {
+            uint256 room = _maxAllocatorRoom(pid);
+            if (room == 0) return;
+            vm.prank(allocator);
+            uint256 bindProp = vaultAllocator.proposeAllocation(address(vault), pid, room);
+            vm.prank(allocator);
+            vaultAllocator.executeAllocation(bindProp);
+        }
+
         vm.prank(cedant);
         uint256 claimId = claimManager.submitClaim(
             address(vault), pid, amount, ClaimManager.ClaimType.PARAMETRIC, keccak256(abi.encode(claimId_salt++))
@@ -261,6 +275,10 @@ contract VaultInvariantTest is Test {
 
     uint256[] public portfolioIds;
 
+    /// @dev Fixed amounts for the reachability test: large enough to fund a claim,
+    ///      small enough to sit inside the allocator's concentration caps.
+    uint256 constant DEPOSIT_FOR_REACHABILITY = 200_000e6;
+    uint256 constant CLAIM_FOR_REACHABILITY = 50_000e6;
     uint256 constant COVERAGE_A = 150_000e6;
     uint256 constant COVERAGE_B = 60_000e6;
 
@@ -271,7 +289,7 @@ contract VaultInvariantTest is Test {
         usdc = new MockUSDC();
         oracle = new MockOracle();
         policyRegistry = new PolicyRegistry(address(protocolRoles));
-        claimReceipt = new ClaimReceipt();
+        claimReceipt = new ClaimReceipt(address(protocolRoles));
         compliance = new ComplianceRegistry(address(protocolRoles));
         portfolioRegistry = new PortfolioRegistry(address(protocolRoles));
         distributor = new PremiumDistributor(address(usdc), address(protocolRoles), address(portfolioRegistry));
@@ -393,6 +411,31 @@ contract VaultInvariantTest is Test {
         portfolioRegistry.startReview(pid);
         vm.prank(admin);
         portfolioRegistry.approvePortfolio(pid, 6_500);
+    }
+
+    /// @notice The claim path is reachable in the world these invariants run over.
+    /// @dev A property of the TEST, not of the protocol. Every claim invariant
+    ///      below is vacuously true on a world where no claim can settle, so
+    ///      without this a change that made claims unreachable would leave them
+    ///      green and asserting over an empty set.
+    ///
+    ///      This started life as `afterInvariant()` asserting `ghost_payouts > 0`,
+    ///      which was wrong: that hook runs after EACH invariant function's
+    ///      campaign, and whether the fuzzer happens to land a settled claim in a
+    ///      given campaign is chance. It held locally and failed on CI, where one
+    ///      campaign out of nine never reached a payout — a flaky assertion
+    ///      dressed up as a safety net.
+    ///
+    ///      Driving the handler directly asserts the same property and cannot
+    ///      flake: if a claim can no longer settle here, this fails every time,
+    ///      on every machine.
+    function test_theClaimPathIsReachableInThisWorld() public {
+        assertEq(handler.ghost_payouts(), 0, "starts from nothing");
+
+        handler.deposit(0, DEPOSIT_FOR_REACHABILITY);
+        handler.claimFlow(0, CLAIM_FOR_REACHABILITY);
+
+        assertGt(handler.ghost_payouts(), 0, "a claim must be able to settle in the invariant world");
     }
 
     /// @notice USDC conservation: vault balance == deposits + premiums - withdrawals.

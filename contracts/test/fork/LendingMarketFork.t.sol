@@ -22,7 +22,12 @@ import {MockUSDC} from "../../src/MockUSDC.sol";
 ///        BASE_SEPOLIA_RPC_URL=https://sepolia.base.org \
 ///          forge test --match-path "test/fork/LendingMarketFork*" -vvv
 contract LendingMarketForkTest is Test {
-    uint256 internal constant PINNED_BLOCK = 42_720_000;
+    // Block pinned for reproducibility. NOTE: a public Base Sepolia RPC prunes
+    // historical state, so a pin more than a few weeks old stops resolving on a
+    // cold cache and every test here fails in setUp with "state at block N is
+    // pruned". Refresh this to a recent block when that happens, or point
+    // BASE_SEPOLIA_RPC_URL at an archive node.
+    uint256 internal constant PINNED_BLOCK = 46_940_000;
     /// @dev Anvil default key #0 — TESTNET PLACEHOLDER, publicly known.
     uint256 internal constant ANVIL_PK = 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
     address internal constant ANVIL_DEPLOYER = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;

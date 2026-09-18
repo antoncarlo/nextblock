@@ -24,7 +24,12 @@ import {ProtocolTimelock} from "../../src/ProtocolTimelock.sol";
 ///      The fork is pinned to block 42_720_000 (after the phase 1 governance
 ///      broadcast at blocks 42_710_589..593) for reproducibility.
 contract GovernancePhase2ForkTest is Test, ProtocolRoleConstants {
-    uint256 internal constant PINNED_BLOCK = 42_720_000;
+    // Block pinned for reproducibility. NOTE: a public Base Sepolia RPC prunes
+    // historical state, so a pin more than a few weeks old stops resolving on a
+    // cold cache and every test here fails in setUp with "state at block N is
+    // pruned". Refresh this to a recent block when that happens, or point
+    // BASE_SEPOLIA_RPC_URL at an archive node.
+    uint256 internal constant PINNED_BLOCK = 46_940_000;
     bytes32 internal constant NO_PRED = bytes32(0);
     bytes32 internal constant SALT = bytes32(0);
 

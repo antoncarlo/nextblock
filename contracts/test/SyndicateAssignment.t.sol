@@ -39,7 +39,7 @@ contract SyndicateAssignmentTest is Test {
         usdc = new MockUSDC();
         oracle = new MockOracle();
         policyRegistry = new PolicyRegistry(address(roles));
-        claimReceipt = new ClaimReceipt();
+        claimReceipt = new ClaimReceipt(address(roles));
         compliance = new ComplianceRegistry(address(roles));
         portfolioRegistry = new PortfolioRegistry(address(roles));
 

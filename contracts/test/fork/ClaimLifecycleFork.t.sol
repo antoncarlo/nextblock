@@ -36,9 +36,12 @@ import {MockUSDC} from "../../src/MockUSDC.sol";
 ///             BASE_SEPOLIA_RPC_URL=https://sepolia.base.org \
 ///               forge test --match-path "test/fork/ClaimLifecycleFork*" -vvv
 contract ClaimLifecycleForkTest is Test, ProtocolRoleConstants {
-    // Block pinned for reproducibility. Matches LendingMarketFork to share the
-    // RPC cache between the two fork suites.
-    uint256 internal constant PINNED_BLOCK = 42_720_000;
+    // Block pinned for reproducibility. NOTE: a public Base Sepolia RPC prunes
+    // historical state, so a pin more than a few weeks old stops resolving on a
+    // cold cache and every test here fails in setUp with "state at block N is
+    // pruned". Refresh this to a recent block when that happens, or point
+    // BASE_SEPOLIA_RPC_URL at an archive node.
+    uint256 internal constant PINNED_BLOCK = 46_940_000;
     /// @dev Anvil default key #0 — TESTNET PLACEHOLDER, publicly known.
     uint256 internal constant ANVIL_PK = 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
     address internal constant ANVIL_DEPLOYER = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
@@ -154,11 +157,17 @@ contract ClaimLifecycleForkTest is Test, ProtocolRoleConstants {
         assertGt(sharesMinted, 0, "deposit minted no shares");
 
         // 5. Cedant pays the premium directly onto the vault (one-period flow).
-        deal(address(usdc), ANVIL_DEPLOYER, 50_000e6);
+        deal(address(usdc), ANVIL_DEPLOYER, 60_000e6);
         vm.startPrank(ANVIL_DEPLOYER);
-        usdc.approve(address(vault), 50_000e6);
+        usdc.approve(address(vault), 60_000e6);
         vault.depositPremium(policyId, 50_000e6);
+        // The step above is the legacy per-POLICY premium flow, which says nothing
+        // about the PORTFOLIO. Taking the portfolio's premium is what puts this
+        // vault on risk for it, and `submitClaim` requires that before it will let
+        // the vault be named as payer.
+        vault.recordPortfolioPremium(portfolioId, 10_000e6);
         vm.stopPrank();
+        assertTrue(vault.underwrites(portfolioId), "vault is on risk for the portfolio it will pay for");
 
         // 6. Cedant submits a claim against this portfolio.
         uint256 claimAmount = 30_000e6;

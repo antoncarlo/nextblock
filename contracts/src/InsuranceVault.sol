@@ -121,6 +121,17 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
     /// @notice USDC committed per approved/active portfolio (accounting-only commitment).
     mapping(uint256 => uint256) public portfolioAllocation;
 
+    /// @notice True once this vault has taken on a portfolio's risk, by committing
+    ///         capital to it or by receiving premium for it. STICKY: never cleared,
+    ///         because `portfolioAllocation` legitimately falls back to zero (a
+    ///         claim reserve absorbs it, or the allocator deallocates) while the
+    ///         vault remains on risk for losses that occurred during cover.
+    /// @dev This is the vault-side half of the claim binding. `ClaimManager` reads
+    ///      it in `submitClaim` so a cedant cannot name a vault that never
+    ///      underwrote the portfolio being claimed. Without it, the claim path
+    ///      delegated vault selection entirely to off-chain committee judgement.
+    mapping(uint256 => bool) public underwrites;
+
     /// @notice Total USDC committed to portfolio underwriting.
     uint256 public totalPortfolioAllocated;
 
@@ -176,6 +187,9 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
     event FeesCollected(address indexed recipient, uint256 amount);
     /// @notice Emitted when the deposit cap changes.
     event DepositCapUpdated(uint256 newCap);
+    /// @notice Emitted the first time this vault takes on a portfolio's risk.
+    ///         Sticky: it fires once and is never reversed.
+    event PortfolioUnderwritten(uint256 indexed portfolioId);
     /// @notice Emitted when capital is earmarked to a portfolio.
     event PortfolioAllocated(uint256 indexed portfolioId, uint256 amount, uint256 totalForPortfolio);
     /// @notice Emitted when a portfolio earmark is released.
@@ -554,6 +568,12 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
             _portfolioTracked[portfolioId] = true;
             _allocatedPortfolioIds.push(portfolioId);
         }
+        // Committing capital puts this vault on risk for the portfolio, and keeps
+        // it on risk for losses during cover even after the allocation unwinds.
+        if (!underwrites[portfolioId]) {
+            underwrites[portfolioId] = true;
+            emit PortfolioUnderwritten(portfolioId);
+        }
 
         emit PortfolioAllocated(portfolioId, amount, newAllocation);
     }
@@ -611,6 +631,12 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
             _premiumPortfolioIds.push(portfolioId);
         }
         totalPremiumReceived += amount;
+        // Taking premium for a portfolio is the other way a vault goes on risk
+        // for it: the LP quota is consideration for bearing those losses.
+        if (!underwrites[portfolioId]) {
+            underwrites[portfolioId] = true;
+            emit PortfolioUnderwritten(portfolioId);
+        }
 
         IERC20(asset()).safeTransferFrom(msg.sender, address(this), amount);
 
@@ -619,8 +645,22 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
 
     // --- Portfolio Claim Path (Phase 7; callable only by the bound ClaimManager) ---
 
-    /// @notice Bind the ClaimManager contract. Only OWNER_ROLE.
-    function setClaimManager(address claimManager_) external onlyProtocolRole(OWNER_ROLE) {
+    /// @notice Bind the ClaimManager contract.
+    /// @dev OWNER_ROLE may set or rebind at any time. VAULT_FACTORY_ROLE may bind
+    ///      ONLY while unset, which is how the factory wires a vault it just
+    ///      deployed. Before this, `_create` deployed the vault and stopped: the
+    ///      new vault's `claimManager` stayed at address(0), `onlyClaimManager`
+    ///      admitted nobody (`msg.sender` is never the zero address), and the
+    ///      vault still took LP deposits against cover it could not pay. Repair
+    ///      needed the global OWNER_ROLE, which the creating curator does not
+    ///      hold — so the gap was silent and outlived the transaction that
+    ///      created it. Bind-once keeps the factory unable to displace a manager
+    ///      that governance has already chosen.
+    function setClaimManager(address claimManager_) external {
+        bool isOwner = protocolRoles.hasRole(OWNER_ROLE, msg.sender);
+        bool isFactoryBootstrap = claimManager == address(0) && protocolRoles.hasRole(VAULT_FACTORY_ROLE, msg.sender);
+        if (!isOwner && !isFactoryBootstrap) revert InsuranceVault__UnauthorizedCaller(msg.sender);
+
         claimManager = claimManager_;
         emit ClaimManagerUpdated(claimManager_);
     }

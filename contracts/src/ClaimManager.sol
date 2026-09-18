@@ -153,6 +153,8 @@ contract ClaimManager is ProtocolRoleConstants, ReentrancyGuard {
     error ClaimManager__ClaimFrozenError(uint256 claimId);
     /// @notice Approved amount is zero or exceeds the requested amount.
     error ClaimManager__ApprovedAmountInvalid(uint256 approvedAmount, uint256 requestedAmount);
+    /// @notice The named vault never took on this portfolio's risk, so it cannot pay for it.
+    error ClaimManager__VaultDoesNotUnderwrite(address vault, uint256 portfolioId);
 
     // --- Modifiers ---
     modifier onlyProtocolRole(bytes32 role) {
@@ -216,6 +218,20 @@ contract ClaimManager is ProtocolRoleConstants, ReentrancyGuard {
         }
         if (amount > pf.coverageLimit) {
             revert ClaimManager__AmountExceedsCoverage(amount, pf.coverageLimit);
+        }
+        // BINDING: the paying vault must actually have taken on this portfolio's
+        // risk. Without it the vault is a free argument from the cedant, and the
+        // paying side checks only its own solvency — never the relationship — so
+        // a cedant with one legitimate portfolio could name any funded vault and
+        // drain LPs who never underwrote that risk. This restores the protocol
+        // invariant that each vault backs only its allocated portion.
+        //
+        // Checked last on purpose: the three checks above validate the CLAIM
+        // (right cedant, claimable portfolio, within cover), this one validates
+        // the PAYER. Keeping that order means a malformed claim still reports the
+        // defect in the claim rather than blaming the vault.
+        if (!InsuranceVault(vault).underwrites(portfolioId)) {
+            revert ClaimManager__VaultDoesNotUnderwrite(vault, portfolioId);
         }
 
         claimId = nextClaimId++;

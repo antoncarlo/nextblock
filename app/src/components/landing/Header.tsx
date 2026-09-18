@@ -7,6 +7,7 @@ const NAV_LINKS: { href: string; label: string }[] = [
   { href: "#about", label: "Market" },
   { href: "#how-it-works", label: "How It Works" },
   { href: "#protocol-stack", label: "Protocol" },
+  { href: "/docs", label: "Docs" },
 ];
 
 const linkStyle: React.CSSProperties = {

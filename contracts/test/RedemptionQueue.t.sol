@@ -45,7 +45,7 @@ contract RedemptionQueueTest is Test {
         usdc = new MockUSDC();
         oracle = new MockOracle();
         registry = new PolicyRegistry(address(roles));
-        claimReceipt = new ClaimReceipt();
+        claimReceipt = new ClaimReceipt(address(roles));
         compliance = new ComplianceRegistry(address(roles));
         portfolioRegistry = new PortfolioRegistry(address(roles));
 

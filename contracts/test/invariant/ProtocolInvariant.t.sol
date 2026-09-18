@@ -116,7 +116,7 @@ contract ProtocolInvariantTest is Test {
         usdc = new MockUSDC();
         oracle = new MockOracle();
         policies = new PolicyRegistry(address(roles));
-        receipts = new ClaimReceipt();
+        receipts = new ClaimReceipt(address(roles));
         compliance = new ComplianceRegistry(address(roles));
         portfolios = new PortfolioRegistry(address(roles));
         distributor = new PremiumDistributor(address(usdc), address(roles), address(portfolios));
@@ -185,7 +185,8 @@ contract ProtocolInvariantTest is Test {
             address(roles),
             address(compliance),
             address(portfolios),
-            address(deployer)
+            address(deployer),
+            address(claims)
         );
         deployer.bindFactory(address(factory));
 
