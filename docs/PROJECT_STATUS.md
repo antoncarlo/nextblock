@@ -81,11 +81,12 @@ to trust, and what to build next.
 | Governance execution console (Safe→timelock batches, cast-parity operation ids) | #81 |
 | NAV oracle publisher node (canonical serializer, HMAC, fail-closed publish CLI) | #83 |
 | Read-path E2E suite (Playwright vs production build + live chain reads) + CI job | #84 |
+| Redeploy preparation: separated-roles guard, deployer gives back borrowed roles, governance phase 1 records the timelock, generated ABIs with a CI drift check, rehearsal script | this PR |
 
 ## 4. Open scope (what to build next)
 
 **Owner-gated operational (hours):**
-1. Fresh-generation redeploy + `lockRealTime()` + governance phase 2 — [runbook](../contracts/REDEPLOY_RUNBOOK.md). The deployed staging generation predates the real-spine code.
+1. Fresh-generation redeploy + governance phase 2 (then `lockRealTime()`, deliberately later) — [runbook](../contracts/REDEPLOY_RUNBOOK.md), rehearsed end to end by `scripts/rehearse-redeploy.sh`. **Not done yet:** the deployed staging generation is still the one broadcast on 2026-06-10, so it carries none of the security-review fixes (F-07…F-12) and the frontend address book still points at it. Needs eight role addresses and the deployer key from the owner.
 
 **Bucket B — external vendors (blocked on accounts/keys, adapters ready):**
 2. Braino/WAVENURE integration → `NavOracle`/`AIAssessor`/`VaultAllocator` — **formal v2 spec ready to send to the Braino team**: [braino-oracle-spec.md](../contracts/docs/integrations/braino-oracle-spec.md) (5 services incl. agentic allocator; see also [real-providers.md](../contracts/docs/integrations/real-providers.md))
