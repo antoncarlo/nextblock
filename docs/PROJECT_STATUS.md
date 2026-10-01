@@ -82,6 +82,7 @@ to trust, and what to build next.
 | NAV oracle publisher node (canonical serializer, HMAC, fail-closed publish CLI) | #83 |
 | Read-path E2E suite (Playwright vs production build + live chain reads) + CI job | #84 |
 | Redeploy preparation: separated-roles guard, deployer gives back borrowed roles, governance phase 1 records the timelock, generated ABIs with a CI drift check, rehearsal script | this PR |
+| Lending layer on an already-deployed generation (`DeployLendingLayer`), fees to the governance Safe | this PR |
 
 ## 4. Open scope (what to build next)
 

@@ -16,7 +16,7 @@ otherwise.
 
 **This sequence has been rehearsed.** `scripts/rehearse-redeploy.sh` runs every
 step below against a local fork of Base Sepolia, with throwaway test keys, and
-asserts the on-chain end state after each one (36 checks). Run it first; it takes
+asserts the on-chain end state after each one (42 checks). Run it first; it takes
 a couple of minutes and it is the quickest way to see that your toolchain, your
 RPC and the scripts agree. Where this document and the rehearsal disagree, the
 rehearsal is right and the document is the bug.
@@ -98,6 +98,30 @@ it is not idempotent. It refreshes `deployments/84532-staging.json`.
 
 **Record the printed `queue:` address.** It is not in the deployment record (the
 queue is deployed after the record is written); you need it in section 7.
+
+## 2b. The lending layer (before governance phase 2)
+
+`DeployLendingLayer.s.sol` adds the permissioned lending layer to the generation you just
+deployed: a `LendingMarketFactory`, one `LendingMarket` whose collateral is the generation's
+vault, and the venue approval that lets the market custody nbUSDC. It reads the generation from
+the deployment record and sends the protocol fee to `FEE_RECIPIENT`, which should be the
+governance Safe. (`DeployLendingMarket.s.sol` deploys a whole new generation first; it is for
+local chains.)
+
+`createMarket` needs `UNDERWRITING_CURATOR_ROLE` and the venue approval needs
+`KYC_OPERATOR_ROLE`. In a separated deployment the deployer holds neither, so it borrows what
+it lacks through `OWNER_ROLE` and gives it back, like section 2 does. **That is why this runs
+before phase 2**: afterwards the deployer has no `OWNER_ROLE`, and the script stops with
+`DeployLendingLayer__CannotBorrowRoles` before sending anything.
+
+```bash
+export FEE_RECIPIENT=<governance Safe>
+forge script script/DeployLendingLayer.s.sol --rpc-url "$BASE_SEPOLIA_RPC_URL" --broadcast
+```
+
+It records `lendingFactory` and `lendingMarket` in the deployment record. The market has no
+price for its collateral until a NAV is published for the vault, so it stays dormant until the
+oracle node publishes one.
 
 ## 3. Governance phase 1 — timelock and Safe
 
@@ -250,6 +274,7 @@ Commit `contracts/deployments/84532-staging.json`, `contracts/broadcast/**` and
 | Where | What |
 |---|---|
 | Vercel env | `NEXT_PUBLIC_REDEMPTION_QUEUE_ADDRESS` = the queue address recorded in section 2, then redeploy |
+| Vercel env | `NEXT_PUBLIC_LENDING_MARKET_ADDRESS` = `lendingMarket` from the deployment record (section 2b) |
 | GitHub repo var | `REDEMPTION_QUEUE_ADDRESS` (redemption-keeper workflow) = the same address |
 | GitHub secret | `CRON_SECRET` = same value as the Vercel env (arms `scheduled-jobs.yml`) |
 | Keeper keys | the allocator and oracle accounts from section 1 run the keepers; their keys live in their own environments |

@@ -124,6 +124,20 @@ if [ "$CM" != "0x0000000000000000000000000000000000000000" ]; then ok "the vault
 eq "the redemption queue is an approved venue" \
    "$("$CAST" call "$COMPLIANCE" "approvedVenue(address)(bool)" "$QUEUE" --rpc-url "$RPC")" true
 
+step "4b. the lending layer, added to the generation that is already deployed"
+export FEE_RECIPIENT="$SAFE"
+if ! "$FORGE" script script/DeployLendingLayer.s.sol --rpc-url "$RPC" --broadcast > "$TMP/lending.log" 2>&1; then
+  tail -25 "$TMP/lending.log"; die "lending layer deploy failed"
+fi
+LMARKET="$(jget lendingMarket)"
+if [ -n "$LMARKET" ]; then ok "recorded lendingMarket $LMARKET in the deployment record"; else die "lendingMarket was not recorded"; fi
+lc() { printf '%s' "$1" | tr 'A-F' 'a-f'; }
+eq "the market's collateral is the generation's vault" "$(lc "$("$CAST" call "$LMARKET" "collateralToken()(address)" --rpc-url "$RPC")")" "$(lc "$VAULT")"
+eq "protocol fees go to the governance Safe"           "$(lc "$("$CAST" call "$LMARKET" "feeRecipient()(address)" --rpc-url "$RPC")")" "$(lc "$SAFE")"
+eq "the market is an approved venue" "$("$CAST" call "$COMPLIANCE" "approvedVenue(address)(bool)" "$LMARKET" --rpc-url "$RPC")" true
+eq "the deployer gave back UNDERWRITING_CURATOR_ROLE" "$(has "$(role UNDERWRITING_CURATOR_ROLE)" $DEPLOYER)" false
+eq "the deployer gave back KYC_OPERATOR_ROLE"         "$(has "$(role KYC_OPERATOR_ROLE)" $DEPLOYER)" false
+
 step "5. governance phase 1 (timelock + Safe)"
 export PROTOCOL_ROLES="$ROLES" SAFE_ADDRESS="$SAFE" EXECUTOR_ADDRESS="$OWNER" MIN_DELAY=86400 RENOUNCE_DEPLOYER=false
 if ! "$FORGE" script script/GovernanceMigration.s.sol --rpc-url "$RPC" --private-key "$DEPLOYER_KEY" --broadcast > "$TMP/gov1.log" 2>&1; then
