@@ -6,6 +6,8 @@ import {console2} from "forge-std/console2.sol";
 
 import {DeployStack} from "./DeployStack.s.sol";
 import {RedemptionQueue} from "../src/RedemptionQueue.sol";
+import {ProtocolRoles} from "../src/ProtocolRoles.sol";
+import {ComplianceRegistry} from "../src/ComplianceRegistry.sol";
 
 /// @title DeployRedemptionQueue
 /// @author Anton Carlo Santoro
@@ -43,20 +45,49 @@ contract DeployRedemptionQueue is Script {
 
     /// @dev Parameterized entrypoint: tests call this directly (no env races).
     function runWithConfig(uint256 pk, bool writeJson, uint64 epochDuration_) public {
-        // 1. Fresh stack generation (chain-guarded inside DeployStack).
+        // The role set comes from the stack's own env loader, so the CLI and the
+        // parameterized path cannot drift apart. The same instance goes on to
+        // deploy: a second one just to read env would cost a full copy of every
+        // creation code in the protocol.
         stack = new DeployStack();
-        stack.runWithConfig(pk, writeJson, address(0));
+        _deploy(pk, writeJson, epochDuration_, stack.rolesFromEnv(vm.addr(pk)));
+    }
+
+    /// @dev Fully parameterized entrypoint: roles are an argument, not env.
+    function runWithRoles(uint256 pk, bool writeJson, uint64 epochDuration_, DeployStack.RoleConfig memory roles)
+        public
+    {
+        stack = new DeployStack();
+        _deploy(pk, writeJson, epochDuration_, roles);
+    }
+
+    function _deploy(uint256 pk, bool writeJson, uint64 epochDuration_, DeployStack.RoleConfig memory roles) internal {
+        // 1. Fresh stack generation (chain-guarded inside DeployStack).
+        stack.runWithRoles(pk, writeJson, address(0), roles);
 
         epochDuration = epochDuration_;
+
+        address deployer = vm.addr(pk);
+        ProtocolRoles protocolRoles = stack.protocolRoles();
+        ComplianceRegistry compliance = stack.compliance();
+        bytes32 kycRole = protocolRoles.KYC_OPERATOR_ROLE();
 
         vm.startBroadcast(pk);
 
         // 2. One queue for the deployed vault.
-        queue = new RedemptionQueue(address(stack.protocolRoles()), address(stack.vault()), epochDuration);
+        queue = new RedemptionQueue(address(protocolRoles), address(stack.vault()), epochDuration);
 
-        // 3. Approve the queue as a custody venue (deployer holds KYC_OPERATOR_ROLE),
-        //    so it can hold escrowed nbRV without tripping the compliance gate.
-        stack.compliance().setApprovedVenue(address(queue), true);
+        // 3. Approve the queue as a custody venue so it can hold escrowed nbRV
+        //    without tripping the compliance gate. Only KYC_OPERATOR_ROLE may
+        //    do this, and with separated roles the deployer is not that
+        //    operator. The deployer keeps OWNER_ROLE (the role admin) through
+        //    the staging deploy, so it borrows the role for this one call and
+        //    gives it back: the finished deployment has exactly the holders the
+        //    configuration named, and the deployer is not a KYC operator in it.
+        bool deployerWasOperator = protocolRoles.hasRole(kycRole, deployer);
+        if (!deployerWasOperator) protocolRoles.grantRole(kycRole, deployer);
+        compliance.setApprovedVenue(address(queue), true);
+        if (!deployerWasOperator) protocolRoles.revokeRole(kycRole, deployer);
 
         vm.stopBroadcast();
 

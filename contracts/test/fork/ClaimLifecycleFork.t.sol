@@ -69,7 +69,25 @@ contract ClaimLifecycleForkTest is Test, ProtocolRoleConstants {
         forked = true;
 
         deploy = new DeployStack();
-        deploy.runWithConfig(ANVIL_PK, false, address(0));
+        // Every role on the deployer, chosen explicitly: this test walks the claim
+        // path and needs one key to act as each party. The env-driven path
+        // refuses that on 84532 unless ALLOW_SINGLE_KEY is set.
+        address self = vm.addr(ANVIL_PK);
+        deploy.runWithRoles(
+            ANVIL_PK,
+            false,
+            address(0),
+            DeployStack.RoleConfig({
+                owner: self,
+                curator: self,
+                sentinel: self,
+                committee: self,
+                allocatorBot: self,
+                oracleNode: self,
+                cedant: self,
+                kycOperator: self
+            })
+        );
 
         protocolRoles = deploy.protocolRoles();
         compliance = deploy.compliance();

@@ -58,6 +58,24 @@ contract DeployStack is Script, ProtocolRoleConstants {
 
     error DeployStack__UnexpectedChain(uint256 chainId);
     error DeployStack__VerificationFailed(string check);
+    /// @notice An operational role resolved to the deployer on a shared chain.
+    /// @param name The environment variable that was left unset or set to the deployer.
+    error DeployStack__RoleNotSeparated(string name);
+
+    /// @notice The operator addresses a deployment hands roles to.
+    /// @dev Passed as a value so tests and tooling can deploy a separated-roles
+    ///      world without touching process-global env (vm.setEnv races across
+    ///      parallel suites).
+    struct RoleConfig {
+        address owner;
+        address curator;
+        address sentinel;
+        address committee;
+        address allocatorBot;
+        address oracleNode;
+        address cedant;
+        address kycOperator;
+    }
 
     // --- Deployed stack (storage keeps the script stack-shallow) ---
     MockUSDC public usdc;
@@ -106,11 +124,16 @@ contract DeployStack is Script, ProtocolRoleConstants {
     ///      touches process-global env (vm.setEnv races across parallel suites
     ///      — a foreign USDC_ADDRESS made lens verification fail flakily).
     function runWithConfig(uint256 pk, bool writeJson, address usdcOverride) public {
+        runWithRoles(pk, writeJson, usdcOverride, rolesFromEnv(vm.addr(pk)));
+    }
+
+    /// @dev Fully parameterized entrypoint: roles are an argument, not env.
+    function runWithRoles(uint256 pk, bool writeJson, address usdcOverride, RoleConfig memory roles) public {
         _guardChain();
 
         deployer = vm.addr(pk);
         usdcOverrideAddr = usdcOverride;
-        _loadRoleConfig();
+        _applyRoles(roles);
 
         vm.startBroadcast(pk);
         _deployCore();
@@ -136,15 +159,51 @@ contract DeployStack is Script, ProtocolRoleConstants {
         }
     }
 
-    function _loadRoleConfig() internal {
-        ownerAddr = vm.envOr("OWNER_ADDRESS", deployer);
-        curatorAddr = vm.envOr("CURATOR_ADDRESS", deployer);
-        sentinelAddr = vm.envOr("SENTINEL_ADDRESS", deployer);
-        committeeAddr = vm.envOr("COMMITTEE_ADDRESS", deployer);
-        allocatorBotAddr = vm.envOr("ALLOCATOR_ADDRESS", deployer);
-        oracleNodeAddr = vm.envOr("ORACLE_ADDRESS", deployer);
-        cedantAddr = vm.envOr("CEDANT_ADDRESS", deployer);
-        kycOperatorAddr = vm.envOr("KYC_OPERATOR_ADDRESS", deployer);
+    /// @notice Reads the eight role addresses from env, each defaulting to
+    ///         `fallbackHolder`. Defaulting every role to one key is the
+    ///         staging convenience; it deploys a world with no separation of
+    ///         duties in it, so on a shared chain set all eight.
+    function rolesFromEnv(address fallbackHolder) public view returns (RoleConfig memory roles) {
+        roles.owner = vm.envOr("OWNER_ADDRESS", fallbackHolder);
+        roles.curator = vm.envOr("CURATOR_ADDRESS", fallbackHolder);
+        roles.sentinel = vm.envOr("SENTINEL_ADDRESS", fallbackHolder);
+        roles.committee = vm.envOr("COMMITTEE_ADDRESS", fallbackHolder);
+        roles.allocatorBot = vm.envOr("ALLOCATOR_ADDRESS", fallbackHolder);
+        roles.oracleNode = vm.envOr("ORACLE_ADDRESS", fallbackHolder);
+        roles.cedant = vm.envOr("CEDANT_ADDRESS", fallbackHolder);
+        roles.kycOperator = vm.envOr("KYC_OPERATOR_ADDRESS", fallbackHolder);
+
+        // On the shared testnet an unset variable must not quietly become "this
+        // role belongs to the deployer". That deployment passes every
+        // separation-of-duty check while proving nothing, because it has no
+        // separation left to violate. ALLOW_SINGLE_KEY=true is the explicit
+        // opt-out for the person who really means it.
+        if (block.chainid == BASE_SEPOLIA_CHAIN_ID && !vm.envOr("ALLOW_SINGLE_KEY", false)) {
+            _requireSeparated(roles, fallbackHolder);
+        }
+    }
+
+    /// @dev OWNER_ADDRESS is exempt: the deployer keeps OWNER_ROLE through the
+    ///      staging deploy by design and hands it to the timelock afterwards.
+    function _requireSeparated(RoleConfig memory roles, address deployer_) internal pure {
+        if (roles.curator == deployer_) revert DeployStack__RoleNotSeparated("CURATOR_ADDRESS");
+        if (roles.allocatorBot == deployer_) revert DeployStack__RoleNotSeparated("ALLOCATOR_ADDRESS");
+        if (roles.sentinel == deployer_) revert DeployStack__RoleNotSeparated("SENTINEL_ADDRESS");
+        if (roles.committee == deployer_) revert DeployStack__RoleNotSeparated("COMMITTEE_ADDRESS");
+        if (roles.kycOperator == deployer_) revert DeployStack__RoleNotSeparated("KYC_OPERATOR_ADDRESS");
+        if (roles.oracleNode == deployer_) revert DeployStack__RoleNotSeparated("ORACLE_ADDRESS");
+        if (roles.cedant == deployer_) revert DeployStack__RoleNotSeparated("CEDANT_ADDRESS");
+    }
+
+    function _applyRoles(RoleConfig memory roles) internal {
+        ownerAddr = roles.owner;
+        curatorAddr = roles.curator;
+        sentinelAddr = roles.sentinel;
+        committeeAddr = roles.committee;
+        allocatorBotAddr = roles.allocatorBot;
+        oracleNodeAddr = roles.oracleNode;
+        cedantAddr = roles.cedant;
+        kycOperatorAddr = roles.kycOperator;
     }
 
     function _deployCore() internal {
@@ -212,6 +271,13 @@ contract DeployStack is Script, ProtocolRoleConstants {
                 "NextBlock Reinsurance Vault - Balanced", "nbRV-BAL", "Balanced Core", curatorAddr, 2000, 0
             )
         );
+        // The deployer held the curator role only to create the vault above.
+        // When a distinct curator was configured, hand the role back: otherwise
+        // the deployer stays an underwriting curator for good and the deployment
+        // is not the separated one the configuration describes.
+        if (curatorAddr != deployer) {
+            protocolRoles.revokeRole(UNDERWRITING_CURATOR_ROLE, deployer);
+        }
     }
 
     function _wireAndGrant() internal {

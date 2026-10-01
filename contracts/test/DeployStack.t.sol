@@ -98,4 +98,30 @@ contract DeployStackTest is Test {
         usdc.mint(user, cap + 1);
         assertEq(usdc.balanceOf(user), cap + cap + 1);
     }
+
+    /// @dev The env-driven path is where a forgotten variable turns into "this
+    ///      role is the deployer's". On the shared testnet that must fail loudly
+    ///      instead of deploying a world with no separation of duties in it.
+    function test_rolesFromEnv_refusesAnUnsetRoleOnBaseSepolia() public {
+        // Needs the role variables unset, as they are on CI. A developer who has
+        // them exported for a real deploy has nothing to learn from this test.
+        if (
+            vm.envExists("CURATOR_ADDRESS") || vm.envExists("ALLOCATOR_ADDRESS") || vm.envExists("SENTINEL_ADDRESS")
+                || vm.envExists("ALLOW_SINGLE_KEY")
+        ) vm.skip(true);
+
+        vm.chainId(84532);
+        vm.expectRevert(abi.encodeWithSelector(DeployStack.DeployStack__RoleNotSeparated.selector, "CURATOR_ADDRESS"));
+        deploy.rolesFromEnv(ANVIL_DEPLOYER);
+    }
+
+    /// @dev The same call on the local chain keeps the convenience default, so
+    ///      every existing local flow is unchanged.
+    function test_rolesFromEnv_keepsTheSingleKeyDefaultLocally() public {
+        if (vm.envExists("CURATOR_ADDRESS") || vm.envExists("OWNER_ADDRESS")) vm.skip(true);
+
+        DeployStack.RoleConfig memory roles = deploy.rolesFromEnv(ANVIL_DEPLOYER);
+        assertEq(roles.curator, ANVIL_DEPLOYER, "local default");
+        assertEq(roles.kycOperator, ANVIL_DEPLOYER, "local default");
+    }
 }

@@ -1,74 +1,195 @@
-# Redeploy runbook — Base Sepolia (real-spine generation)
+# Redeploy runbook — Base Sepolia (separated-roles generation)
 
-**Why.** The staging contracts on Base Sepolia predate the real-spine work on
-`main`: the deployed `PolicyRegistry` has no `lockRealTime()` (verified on
-2026-07-03 — `clockLocked()` reverts on `0x2Bf1…f1a2`) and the deployed
-`VaultAllocator` still carries the removed demo split, and the redemption
-queue is bound to a vault holding zero shares, which is why withdrawals fail.
-A truthful (re)insurance test needs a fresh generation and governance moved
-off the deployer EOA. The one-way real-time lock comes later, on purpose —
-see section 2.
+**Why.** The staging contracts on Base Sepolia are the generation broadcast on
+2026-06-10. They predate the real-spine work and every fix in the internal
+security review: claims are not bound to the vault that underwrites them
+(F-07), `ClaimReceipt` sits outside governance (F-08), a vault can be created
+with no claim manager and then cannot pay (F-09), `PolicyRegistry` has no
+`lockRealTime()`, and the redemption queue is bound to a vault holding zero
+shares, which is why withdrawals fail. None of that can be repaired in place:
+the bindings are immutable. A truthful test needs a fresh generation.
 
-**Who runs this.** The OWNER, with the deployer key. The key is entered only
-in the owner's own terminal/UI — it must never transit assistant tooling,
-chats, or files in this repo. All commands below run from `contracts/`.
+**Who runs this.** The OWNER, with the deployer key. The key is entered only in
+your own terminal. It must never be pasted into a chat, an assistant tool, or a
+file in this repo. Everything below runs from `contracts/` unless it says
+otherwise.
+
+**This sequence has been rehearsed.** `scripts/rehearse-redeploy.sh` runs every
+step below against a local fork of Base Sepolia, with throwaway test keys, and
+asserts the on-chain end state after each one (36 checks). Run it first; it takes
+a couple of minutes and it is the quickest way to see that your toolchain, your
+RPC and the scripts agree. Where this document and the rehearsal disagree, the
+rehearsal is right and the document is the bug.
 
 ---
 
 ## 0. Preflight (no key needed)
 
+Use the Foundry release CI pins: **1.8.3** (`foundryup --install v1.8.3`).
+Gas figures and fuzz behaviour differ between releases, and the gas snapshot is
+valid only for the release that produced it.
+
 ```bash
-forge build                 # compiles clean on main
-forge test                  # 591 passed / 0 failed expected
-forge fmt --check           # no drift
+forge --version                              # 1.8.3
+forge build
+forge fmt --check
+forge test                                   # all green
+cd .. && bash scripts/rehearse-redeploy.sh   # "REHEARSAL PASSED"
+cd contracts
 ```
 
-Current staging generation (being replaced): see `deployments/84532-staging.json`.
+## 1. Decide the eight role addresses
 
-## 1. Deploy the new generation (ONE command)
+The deploy takes **addresses**, never keys, for every role. Only the deployer key
+is used. Decide these before you start; they cannot be changed except through
+governance afterwards.
 
-`DeployRedemptionQueue.s.sol` internally runs a fresh `DeployStack` (roles,
-compliance, timelock, registries, oracles, distributor, allocator, factory,
-vault, lens) and deploys the RedemptionQueue on top, then approves the queue
-as custody venue. `WRITE_DEPLOYMENT_JSON` (default true) refreshes
-`deployments/84532-staging.json`.
+| Variable | Role it receives | Notes |
+|---|---|---|
+| `OWNER_ADDRESS` | `OWNER_ROLE` | The Safe, or an owner account. The deployer also keeps `OWNER_ROLE` until phase 2 of governance. |
+| `CURATOR_ADDRESS` | `UNDERWRITING_CURATOR_ROLE` | Authorises `createVault`; also the first vault's syndicate. |
+| `ALLOCATOR_ADDRESS` | `ALLOCATOR_ROLE` | The allocator bot and the redemption keeper. |
+| `SENTINEL_ADDRESS` | `SENTINEL_ROLE` | Pause, freeze, challenge. Cannot move funds. |
+| `COMMITTEE_ADDRESS` | `CLAIMS_COMMITTEE_ROLE` | Claim quorum. |
+| `KYC_OPERATOR_ADDRESS` | `KYC_OPERATOR_ROLE` | Whitelist and venue approvals. |
+| `ORACLE_ADDRESS` | `ORACLE_ROLE` | NAV and event publisher. |
+| `CEDANT_ADDRESS` | `AUTHORIZED_CEDANT_ROLE` | First authorised cedant. |
+
+**All seven operational roles must differ from the deployer.** On Base Sepolia the
+script refuses to run when any of them is unset or equals the deployer
+(`DeployStack__RoleNotSeparated(<VARIABLE>)`), because every role defaults to the
+deployer and a deployment like that passes every separation-of-duty check while
+proving nothing — there is no separation left to violate. `OWNER_ADDRESS` is
+exempt. To deploy single-key on purpose, set `ALLOW_SINGLE_KEY=true`, and know
+that you are then testing nothing about role separation.
+
+The deployer needs Base Sepolia ETH: the deploy costs about 50M gas, roughly
+0.0006 ETH at current prices. Fund it with 0.01 ETH to leave room for the
+governance transactions.
+
+## 2. Deploy the new generation (one command)
+
+`DeployRedemptionQueue.s.sol` runs a fresh `DeployStack` (roles, compliance,
+registries, oracles, distributor, allocator, factory, vault, lens), deploys the
+`RedemptionQueue` on top, and approves the queue as a custody venue. The deployer
+borrows `KYC_OPERATOR_ROLE` for that one approval and gives it back, and gives
+back the curator role it needs to create the first vault, so the finished
+deployment holds exactly the roles you configured.
+
+The addresses chosen for the 2026-10-01 testnet generation are in
+`redeploy.roles.env` (addresses only, no keys): the governance Safe as owner and the
+simulation identities from `packages/sim/wallets/keys.map.json` for the seven operational
+roles. That file was exercised on a fork end to end. Load it, then add the deployer key
+yourself:
 
 ```bash
 export BASE_SEPOLIA_RPC_URL=https://sepolia.base.org
-export PRIVATE_KEY=<deployer key — owner terminal only>
-# Role addresses. Every one of them defaults to the deployer, so leaving them
-# unset puts EVERY role on a single key. That deployment is not merely untidy:
-# it makes every separation-of-duty check in the protocol pass while proving
-# nothing, because there is no separation left to violate. The invariant suite
-# will report green against it. Set all eight, or know exactly why you are not.
-export OWNER_ADDRESS=<safe or governance>
-export CURATOR_ADDRESS=<underwriting curator>   # also authorises VaultFactory.createVault
-export ALLOCATOR_ADDRESS=<allocator>
-export SENTINEL_ADDRESS=<sentinel>
-export COMMITTEE_ADDRESS=<claims committee>
-export KYC_OPERATOR_ADDRESS=<kyc operator>
-export ORACLE_ADDRESS=<oracle node>
-export CEDANT_ADDRESS=<first cedant>
+set -a; . ./redeploy.roles.env; set +a
+export PRIVATE_KEY=<deployer key — your terminal only>
 # optional: REDEMPTION_EPOCH_SECONDS (default 7 days, bounds [1h, 90d])
 
 forge script script/DeployRedemptionQueue.s.sol \
   --rpc-url "$BASE_SEPOLIA_RPC_URL" --broadcast
 ```
 
-Record the printed `queue:` address.
+The script simulates the whole run before it sends anything, so a revert leaves
+nothing deployed — fix the cause and rerun. Each run deploys a fresh generation;
+it is not idempotent. It refreshes `deployments/84532-staging.json`.
 
-## 2. Do NOT lock real time yet
+**Record the printed `queue:` address.** It is not in the deployment record (the
+queue is deployed after the record is written); you need it in section 7.
 
-`lockRealTime()` is **irreversible** and belongs at the end of the
-demonstration phase, not here. Locking it now costs the ability to show the
-protocol working end to end, and buys nothing that cannot be bought later
-with one transaction.
+## 3. Governance phase 1 — timelock and Safe
 
-What the mutable clock actually governs is narrow. Only `InsuranceVault` and
-`PolicyRegistry` read `registry.currentTime()`; everything else already runs
-on `block.timestamp` and is unaffected either way — claim dispute windows,
-NAV staleness, KYC expiry, redemption epochs, portfolio expiry. Inside those
-two it governs exactly three things:
+Deploys `ProtocolTimelock` with the Safe as proposer and canceller, and grants it
+`OWNER_ROLE` and `DEFAULT_ADMIN_ROLE`. The deployer keeps its roles for now.
+The protocol Safe is `0x0969B20f1d8a5628613f00fa6aDBE85e715fEf15` (Safe 1.5.0, one signer,
+threshold 1, created 2026-10-01; a transaction signed and executed from it was confirmed on-chain).
+It replaces the Safe `0x8Fd8…F870` of the June generation, which is 2-of-2 and cannot be recovered
+without the second signer. Nothing in the protocol is tied to it: the Safe only enters the picture as
+the timelock's proposer, in this section.
+
+```bash
+export PROTOCOL_ROLES=$(node -p "require('./deployments/84532-staging.json').protocolRoles")
+export SAFE_ADDRESS=0x0969B20f1d8a5628613f00fa6aDBE85e715fEf15
+export EXECUTOR_ADDRESS=<safe or ops executor>
+export MIN_DELAY=86400            # 1 day; raise for mainnet
+export RENOUNCE_DEPLOYER=false
+
+forge script script/GovernanceMigration.s.sol \
+  --rpc-url "$BASE_SEPOLIA_RPC_URL" --private-key "$PRIVATE_KEY" --broadcast
+```
+
+`--private-key` is required here: this script opens its broadcast without naming a
+key, and without the flag forge signs as its default sender, which holds no role
+(`AccessControlUnauthorizedAccount`). Phase 1 writes `protocolTimelock` and `safe`
+into the deployment record itself; `GovernanceCheck` and the address book both need
+them.
+
+```bash
+forge script script/GovernanceCheck.s.sol --rpc-url "$BASE_SEPOLIA_RPC_URL"   # report
+```
+
+## 4. Rehearse one timelocked operation
+
+Phase 2 is irreversible, and it refuses to run until a real operation has gone
+through the timelock end to end. Pick a harmless one — granting a role the holder
+already has will do — and run it through the Safe:
+
+```bash
+TL=$(node -p "require('./deployments/84532-staging.json').protocolTimelock")
+ROLES=$PROTOCOL_ROLES
+ROLE=$(cast call "$ROLES" "ORACLE_ROLE()(bytes32)" --rpc-url "$BASE_SEPOLIA_RPC_URL")
+DATA=$(cast calldata "grantRole(bytes32,address)" "$ROLE" "$ORACLE_ADDRESS")
+ZERO=0x0000000000000000000000000000000000000000000000000000000000000000
+SALT=0x0000000000000000000000000000000000000000000000000000000000000001
+
+# the id you will need in section 5
+cast call "$TL" "hashOperation(address,uint256,bytes,bytes32,bytes32)(bytes32)" \
+  "$ROLES" 0 "$DATA" $ZERO $SALT --rpc-url "$BASE_SEPOLIA_RPC_URL"
+
+# calldata for the Safe to send to $TL (target = $TL, value = 0):
+cast calldata "schedule(address,uint256,bytes,bytes32,bytes32,uint256)" \
+  "$ROLES" 0 "$DATA" $ZERO $SALT 86400
+```
+
+Send that calldata from the Safe. After `MIN_DELAY`, the executor sends:
+
+```bash
+cast calldata "execute(address,uint256,bytes,bytes32,bytes32)" "$ROLES" 0 "$DATA" $ZERO $SALT
+cast call "$TL" "isOperationDone(bytes32)(bool)" <operation id> --rpc-url "$BASE_SEPOLIA_RPC_URL"   # true
+```
+
+## 5. Governance phase 2 — the deployer renounces
+
+IRREVERSIBLE for the deployer key. Run it only after section 4 shows `true`.
+
+```bash
+export RENOUNCE_DEPLOYER=true
+export TIMELOCK_ADDRESS=$TL
+export RETIRING_KEY=<deployer address>
+export REHEARSAL_OPERATION_ID=<operation id from section 4>
+
+forge script script/GovernanceMigration.s.sol \
+  --rpc-url "$BASE_SEPOLIA_RPC_URL" --private-key "$PRIVATE_KEY" --broadcast
+```
+
+The script checks, before it opens any broadcast, that the timelock holds both
+roles, that the deployer holds none of the seven operational roles ("Stage A" — a
+deployment made by section 2 satisfies this by construction), and that
+`REHEARSAL_OPERATION_ID` is a done operation on this timelock. Any of them failing
+stops it with a message and changes nothing.
+
+## 6. Do NOT lock real time yet
+
+`lockRealTime()` is **irreversible** and belongs at the end of the demonstration
+phase, not here. Locking it now costs the ability to show the protocol working end
+to end, and buys nothing that cannot be bought later with one transaction.
+
+What the mutable clock governs is narrow. Only `InsuranceVault` and
+`PolicyRegistry` read `registry.currentTime()`; everything else already runs on
+`block.timestamp` — claim dispute windows, NAV staleness, KYC expiry, redemption
+epochs, portfolio expiry. Inside those two it governs exactly three things:
 
 | Governed by the mutable clock | Consequence of locking |
 |---|---|
@@ -76,123 +197,87 @@ two it governs exactly three things:
 | Management fee accrual | fees accrue in real time |
 | Policy expiry | policies expire on the wall clock |
 
-Those three are what turn a received premium into visible yield. With the
-clock locked, a day of staging moves the NAV in the fourth decimal, and two
-asset managers stay indistinguishable for weeks — the platform is alive and
-looks frozen.
-
-With it unlocked, one transaction takes a portfolio through its whole life:
-premium fully earned, fees accrued, policy expired, capacity released, LPs
-redeeming against a return you can read. The numbers are produced by the
-real protocol; only the clock moved.
-
-**The limit is what those numbers may be called.** An owner who can move the
-clock can move the earnings, so nothing produced in this phase is a track
-record and none of it may be shown to an investor as one. It is an
-engineering instrument for finding faults, and that is all it is.
-
-Lock it when the numbers have convinced you and you want them to become
-evidence:
+**The limit is what those numbers may be called.** An owner who can move the clock
+can move the earnings, so nothing produced while it is movable is a track record and
+none of it may be shown to an investor as one. It is an engineering instrument for
+finding faults, and that is all it is. Lock it when you want the numbers to become
+evidence. `lockRealTime()` is `OWNER_ROLE`-gated. After phase 2 that role is held by
+`OWNER_ADDRESS` and by the timelock and no longer by the deployer, so send it from the
+owner account (`--interactive` prompts for the key instead of putting it in your shell
+history), or schedule it through the timelock if you want the delay:
 
 ```bash
-POLICY_REGISTRY=$(python -c "import json;print(json.load(open('deployments/84532-staging.json'))['policyRegistry'])")
-
-cast send "$POLICY_REGISTRY" "lockRealTime()" \
-  --rpc-url "$BASE_SEPOLIA_RPC_URL" --private-key "$PRIVATE_KEY"
-
-# verify — must print true; advanceTime() reverts forever after this
-cast call "$POLICY_REGISTRY" "clockLocked()(bool)" --rpc-url "$BASE_SEPOLIA_RPC_URL"
+POLICY_REGISTRY=$(node -p "require('./deployments/84532-staging.json').policyRegistry")
+cast send "$POLICY_REGISTRY" "lockRealTime()" --rpc-url "$BASE_SEPOLIA_RPC_URL" --interactive
+cast call "$POLICY_REGISTRY" "clockLocked()(bool)" --rpc-url "$BASE_SEPOLIA_RPC_URL"   # true afterwards
 ```
 
-After that, premium earning, UPR, fee accrual and policy expiry run on the
-real block clock and nobody — the owner included — can fast-forward.
+## 6b. (Optional) Provision capacity a syndicate can claim
 
-## 3. Governance migration (Safe + timelock)
+Every vault the deploy script creates already has its syndicate. To have a vault
+appear under **Vaults awaiting curation** — the take-over surface — provision one
+with no manager. It accepts capital immediately but no policy can be written to it
+until a syndicate is appointed.
 
-Moves role admin off the deployer EOA. Safe already exists:
-`0x8Fd8b45Ba2612E7535bbeB21615554701CfaF870` (see deployment json).
-
-```bash
-export PROTOCOL_ROLES=<from deployment json>
-export TIMELOCK_ADDRESS=<from deployment json>
-export SAFE_ADDRESS=0x8Fd8b45Ba2612E7535bbeB21615554701CfaF870
-export EXECUTOR_ADDRESS=<safe or ops executor>
-export MIN_DELAY=86400            # 1 day; raise for mainnet
-export RENOUNCE_DEPLOYER=false    # keep the EOA as fallback on testnet first
-
-forge script script/GovernanceMigration.s.sol \
-  --rpc-url "$BASE_SEPOLIA_RPC_URL" --broadcast
-
-forge script script/GovernanceCheck.s.sol --rpc-url "$BASE_SEPOLIA_RPC_URL"
-```
-
-Run again later with `RENOUNCE_DEPLOYER=true` once the Safe flow is rehearsed.
-
-## 3b. (Optional) Provision capacity a syndicate can claim
-
-Every vault the deploy script creates already has its syndicate. To have a
-vault appear under **Vaults awaiting curation** — the take-over surface — the
-owner provisions one with no manager. It accepts capital immediately but no
-policy can be written to it until a syndicate is appointed.
+`createUnassignedVault` is `OWNER_ROLE`-gated, like `assignSyndicate`:
 
 ```bash
-VAULT_FACTORY=$(python -c "import json;print(json.load(open('deployments/84532-staging.json'))['vaultFactory'])")
-
+VAULT_FACTORY=$(node -p "require('./deployments/84532-staging.json').vaultFactory")
 cast send "$VAULT_FACTORY" \
   "createUnassignedVault(string,string,string,uint256,uint256)" \
   "NextBlock Open Capacity" "nxbOPEN" "Open Capacity" 2000 0 \
-  --rpc-url "$BASE_SEPOLIA_RPC_URL" --private-key "$PRIVATE_KEY"
+  --rpc-url "$BASE_SEPOLIA_RPC_URL" --interactive      # from OWNER_ADDRESS
 ```
 
-Appointment is a separate, owner-gated, **one-way** call — an incumbent
-syndicate is never displaced:
+Appointment is a separate, owner-gated, **one-way** call — an incumbent syndicate is
+never displaced: `assignSyndicate(address)`. In the app a syndicate presses **Request
+curation**, which hands the encoded operation to the governance console for the owner
+to schedule through the Safe.
 
-```bash
-cast send <vault> "assignSyndicate(address)" <syndicate> \
-  --rpc-url "$BASE_SEPOLIA_RPC_URL" --private-key "$PRIVATE_KEY"
+## 7. Ship the frontend
 
-cast call <vault> "isAwaitingCuration()(bool)" --rpc-url "$BASE_SEPOLIA_RPC_URL"  # false after
-```
-
-In the app, a Syndicate does not run this: it presses **Request curation**,
-which hands the encoded operation to the governance console for the owner to
-schedule through the Safe.
-
-## 4. Regenerate the frontend addressbook + ship it
+The ABIs in `app/src/config/contracts.ts` are generated from the contracts and CI
+fails if they drift (`npm run check:abis`; fix with `npm run codegen:abis`). The
+address book is generated from the deployment record:
 
 ```bash
 cd .. && npm run codegen:addressbook && npm run check:addressbook
 ```
 
-Commit `contracts/deployments/84532-staging.json`,
-`contracts/broadcast/**` and `app/src/config/generated/addressBook.ts` on a
-branch → PR → merge (auto-deploys the frontend).
-
-## 5. Post-deploy wiring (owner UIs)
+Commit `contracts/deployments/84532-staging.json`, `contracts/broadcast/**` and
+`app/src/config/generated/addressBook.ts` on a branch → PR → merge (auto-deploys).
 
 | Where | What |
 |---|---|
-| Vercel env | `NEXT_PUBLIC_REDEMPTION_QUEUE_ADDRESS` = new queue address, then redeploy |
-| GitHub repo var | `REDEMPTION_QUEUE_ADDRESS` (redemption-keeper workflow) = new queue |
+| Vercel env | `NEXT_PUBLIC_REDEMPTION_QUEUE_ADDRESS` = the queue address recorded in section 2, then redeploy |
+| GitHub repo var | `REDEMPTION_QUEUE_ADDRESS` (redemption-keeper workflow) = the same address |
 | GitHub secret | `CRON_SECRET` = same value as the Vercel env (arms `scheduled-jobs.yml`) |
-| Goldsky | re-point the subgraph at the new queue address + start block |
+| Keeper keys | the allocator and oracle accounts from section 1 run the keepers; their keys live in their own environments |
+| Goldsky | re-point the subgraph at the new addresses and start block |
 
-## 6. Smoke (no key needed)
+The previous generation stays on-chain and keeps working for whoever holds
+positions in it, but nothing migrates: new deposits, vaults and claims start from
+zero. On a testnet with MockUSDC that is the point.
+
+## 8. Smoke (no key needed)
 
 ```bash
 forge script script/SanityCheck.s.sol --rpc-url "$BASE_SEPOLIA_RPC_URL"
 
-# Expected FALSE at this stage: the clock stays movable through the
-# demonstration phase and is locked deliberately afterwards (section 2).
-cast call "$POLICY_REGISTRY" "clockLocked()(bool)" --rpc-url "$BASE_SEPOLIA_RPC_URL"
+cast call "$POLICY_REGISTRY" "clockLocked()(bool)" --rpc-url "$BASE_SEPOLIA_RPC_URL"   # false until you lock it
 ```
 
-UI: connect as admin → /app/admin shows the new lens status; an LP deposit +
-redemption request against the new queue completes the loop.
+UI: connect as the owner → `/app/admin` shows the new lens status; an LP deposit and
+a redemption request against the new queue complete the loop.
 
 ---
 
-**Failure modes.** Deploy script reverts → nothing to clean, rerun (fresh
-generation each time, chain-guarded to 84532). Lock reverts with
-`PolicyRegistry__ClockLocked` → already locked (idempotence guard, fine).
-GovernanceCheck red → do NOT renounce the deployer; fix grants first.
+**Failure modes.**
+- Deploy script reverts → nothing was sent (it simulates first). Read the error and rerun.
+- `DeployStack__RoleNotSeparated(NAME)` → that role variable is unset or equals the deployer.
+- `AccessControlUnauthorizedAccount` on governance phase 1 → `--private-key` was left out.
+- `GovernanceCheck` cannot find `.protocolTimelock` → phase 1 has not run on this record.
+- Phase 2 stops with `Stage A incomplete: deployer still <ROLE>` → grant that role to its
+  intended holder and revoke it from the deployer, through governance; do not renounce.
+- Phase 2 stops with `rehearsal not executed` → section 4 has not completed; wait out the delay.
+- `lockRealTime` reverts with `PolicyRegistry__ClockLocked` → already locked (idempotence guard, fine).
