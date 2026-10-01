@@ -28,11 +28,15 @@ floor 1h) holds OWNER_ROLE and DEFAULT_ADMIN_ROLE on ProtocolRoles. The Safe
 canceller; the timelock is self-administered. Every risk-increasing action
 flows schedule -> delay -> execute.
 
-Phase 2 (BLOCKED until explicit owner authorization, after a rehearsed
-timelocked operation): the deployer EOA renounces OWNER_ROLE and
-DEFAULT_ADMIN_ROLE, leaving the timelock as sole administrator. Until then
-the deployer retains roles by design; this is a known, accepted staging
-posture, not an oversight.
+Phase 2 (done on Base Sepolia, 2026-10-01, after a timelocked operation was
+rehearsed through the Safe): the deployer EOA renounced OWNER_ROLE and
+DEFAULT_ADMIN_ROLE and holds no role. The timelock is the sole holder of
+DEFAULT_ADMIN_ROLE, and OWNER_ROLE sits with the timelock and the Safe.
+
+Known limit: the Safe has one signer (threshold 1, and that signer is a
+smart-contract wallet) and the timelock delay is the one-hour floor. That is
+testnet governance. Before real value it has to become a multi-signer Safe with
+a longer delay.
 
 ## 3. Compliance gate (authoritative)
 

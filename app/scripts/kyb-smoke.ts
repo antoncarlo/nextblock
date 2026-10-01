@@ -34,7 +34,7 @@ function check(name: string, condition: boolean) {
 
 const validPayload = {
   applicantType: 'cedant',
-  walletAddress: '0x8Fd8b45Ba2612E7535bbeB21615554701CfaF870',
+  walletAddress: '0x0969B20f1d8a5628613f00fa6aDBE85e715fEf15',
   companyName: 'Example Re S.A.',
   legalEntityType: 'S.A.',
   jurisdiction: 'Luxembourg',
@@ -92,7 +92,7 @@ const validReview = {
   toStatus: 'approved',
   note: 'Review completed.',
   auth: {
-    address: '0x8Fd8b45Ba2612E7535bbeB21615554701CfaF870',
+    address: '0x0969B20f1d8a5628613f00fa6aDBE85e715fEf15',
     timestamp: 1781200000,
     nonce: 'abcdef1234567890',
     signature: '0x' + 'a'.repeat(130),
