@@ -76,12 +76,16 @@ borrows `KYC_OPERATOR_ROLE` for that one approval and gives it back, and gives
 back the curator role it needs to create the first vault, so the finished
 deployment holds exactly the roles you configured.
 
+The addresses chosen for the 2026-10-01 testnet generation are in
+`redeploy.roles.env` (addresses only, no keys): the governance Safe as owner and the
+simulation identities from `packages/sim/wallets/keys.map.json` for the seven operational
+roles. That file was exercised on a fork end to end. Load it, then add the deployer key
+yourself:
+
 ```bash
 export BASE_SEPOLIA_RPC_URL=https://sepolia.base.org
+set -a; . ./redeploy.roles.env; set +a
 export PRIVATE_KEY=<deployer key — your terminal only>
-export OWNER_ADDRESS=<…>        CURATOR_ADDRESS=<…>      ALLOCATOR_ADDRESS=<…>
-export SENTINEL_ADDRESS=<…>     COMMITTEE_ADDRESS=<…>    KYC_OPERATOR_ADDRESS=<…>
-export ORACLE_ADDRESS=<…>       CEDANT_ADDRESS=<…>
 # optional: REDEMPTION_EPOCH_SECONDS (default 7 days, bounds [1h, 90d])
 
 forge script script/DeployRedemptionQueue.s.sol \
