@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { Shield, TrendingUp, Building2, Globe, Award, ChevronRight, Lock } from 'lucide-react';
+import { Award, ChevronRight, Lock } from 'lucide-react';
 import { useVaultAddresses } from '@/hooks/useVaultData';
 import {
   useLensProtocolStatus,
@@ -8,132 +8,14 @@ import {
   LensDataStatus,
 } from '@/hooks/useNextBlockLens';
 import { DataSourceBadge } from '@/components/shared/DataSourceBadge';
+import { useOfferingTerms } from '@/hooks/useOfferingTerms';
 import { formatUSDC } from '@/lib/formatting';
 
-// BACKEND MOCK: illustrative curator directory (identity content only, not
-// on-chain state). Protocol metrics (TVL, APY, vault counts) were removed:
-// canonical figures come exclusively from NextBlockLens in the sections above.
-const CURATORS = [
-  {
-    id: 'nextblock-core',
-    name: 'NextBlock Core Team',
-    type: 'Protocol',
-    jurisdiction: 'Saint Kitts & Nevis',
-    description:
-      'The founding team of the NextBlock protocol. Manages the flagship Balanced Core vault with full-spectrum diversification across all three verification paths: permissionless, oracle-verified, and admin-settled.',
-    verificationTypes: ['Permissionless', 'Oracle', 'Admin'],
-    featured: true,
-    since: '2024',
-    badge: 'Founding Syndicate',
-  },
-  {
-    id: 'klapton-re',
-    name: 'Klapton Re Partners',
-    type: 'Reinsurer',
-    jurisdiction: 'Saint Kitts & Nevis',
-    description:
-      'Licensed reinsurer and strategic partner of NextBlock. Manages both the Conservative Yield vault (low-volatility off-chain reinsurance) and the flagship Klapton RE Surety vault.',
-    verificationTypes: ['Admin', 'Oracle'],
-    featured: true,
-    since: '2024',
-    badge: 'Strategic Partner',
-  },
-  {
-    id: 'alphare-capital',
-    name: 'AlphaRe Capital',
-    type: 'Reinsurer',
-    jurisdiction: 'Bermuda',
-    description:
-      'Specialist in on-chain parametric and crypto-native risk. Operates the Digital Asset Shield vault with automated claim settlement via smart contract triggers only — no manual adjudication.',
-    verificationTypes: ['Permissionless'],
-    featured: true,
-    since: '2024',
-    badge: 'Verified Syndicate',
-  },
-  {
-    id: 'alpine-re',
-    name: 'Alpine Re',
-    type: 'Reinsurer',
-    jurisdiction: 'Switzerland',
-    description:
-      'Catastrophe-focused reinsurer with deep expertise in nat-cat modelling. The Catastrophe & Specialty vault targets specialty lines diversification.',
-    verificationTypes: ['Oracle', 'Admin'],
-    featured: false,
-    since: '2024',
-    badge: 'Verified Syndicate',
-  },
-  {
-    id: 'stormguard-capital',
-    name: 'StormGuard Capital',
-    type: 'Insurer',
-    jurisdiction: 'Cayman Islands',
-    description:
-      'Parametric insurance specialist. The Parametric Shield vault settles claims automatically via oracle-verified triggers — no manual adjudication required.',
-    verificationTypes: ['Oracle'],
-    featured: false,
-    since: '2024',
-    badge: 'Verified Syndicate',
-  },
-  {
-    id: 'bondsecure-capital',
-    name: 'BondSecure Capital',
-    type: 'Asset Manager',
-    jurisdiction: 'Luxembourg',
-    description:
-      'Traditional lines specialist managing established commercial and liability reinsurance portfolios. Conservative, low-volatility strategy designed for institutional allocators.',
-    verificationTypes: ['Admin'],
-    featured: false,
-    since: '2024',
-    badge: 'Verified Syndicate',
-  },
-  {
-    id: 'cyberguard-partners',
-    name: 'CyberGuard Partners',
-    type: 'Insurer',
-    jurisdiction: 'Singapore',
-    description:
-      'Digital asset and technology risk specialist. Combines cyber insurance with property diversification in the Technology & Specialty vault.',
-    verificationTypes: ['Oracle', 'Permissionless'],
-    featured: false,
-    since: '2024',
-    badge: 'Verified Syndicate',
-  },
-  {
-    id: 'meridian-risk',
-    name: 'Meridian Risk Mgmt',
-    type: 'Asset Manager',
-    jurisdiction: 'Cayman Islands',
-    description:
-      'Maximum diversification across all insurance categories. The Multi-Line Diversified vault is designed for allocators seeking broad exposure to the insurance risk premium.',
-    verificationTypes: ['Permissionless', 'Oracle', 'Admin'],
-    featured: false,
-    since: '2024',
-    badge: 'Verified Syndicate',
-  },
-];
-
-function TypeBadge({ type }: { type: string }) {
-  const map: Record<string, { bg: string; color: string; icon: React.ReactNode }> = {
-    Protocol:       { bg: '#EFF6FF', color: '#1D4ED8', icon: <Shield size={11} /> },
-    Reinsurer:      { bg: '#FFF7ED', color: '#C2410C', icon: <Building2 size={11} /> },
-    Insurer:        { bg: '#F0FDF4', color: '#166534', icon: <Shield size={11} /> },
-    'Asset Manager':{ bg: '#FAF5FF', color: '#7E22CE', icon: <TrendingUp size={11} /> },
-  };
-  const s = map[type] ?? map['Protocol'];
-  return (
-    <span style={{ display:'inline-flex', alignItems:'center', gap:'4px', backgroundColor:s.bg, color:s.color, fontSize:'11px', fontWeight:600, padding:'3px 8px', borderRadius:'4px', letterSpacing:'0.06em', textTransform:'uppercase' }}>
-      {s.icon}{type}
-    </span>
-  );
-}
-
 export default function CuratorsPage() {
-  const featured = CURATORS.filter(c => c.featured);
-  const rest     = CURATORS.filter(c => !c.featured);
-
   // Canonical protocol figures: factory enumeration + NextBlockLens dashboards.
   const { data: protocolStatus, lensDeployed } = useLensProtocolStatus();
   const { data: vaultAddresses } = useVaultAddresses();
+  const { terms } = useOfferingTerms();
   const { data: dashReads } = useLensVaultDashboards(vaultAddresses);
   const onchainVaults = (dashReads ?? [])
     .map(r => (r.status === 'success' ? r.result : undefined))
@@ -154,14 +36,11 @@ export default function CuratorsPage() {
             <span style={{ color:'rgba(255,255,255,0.9)', fontSize:'13px' }}>Syndicates</span>
           </div>
           <h1 style={{ fontFamily:'"Playfair Display", Georgia, serif', fontSize:'42px', fontWeight:700, color:'#FFFFFF', margin:'0 0 12px', letterSpacing:'-0.5px' }}>
-            Syndicates / Syndicates
+            Syndicates
           </h1>
           <p style={{ color:'rgba(255,255,255,0.65)', fontSize:'16px', margin:'0 0 8px', maxWidth:'560px' }}>
             On-chain authorized Syndicates: the entities that evaluate ceded
             reinsurance portfolios, approve risk terms and manage vault strategies.
-          </p>
-          <p style={{ color:'rgba(255,255,255,0.45)', fontSize:'12px', margin:'0 0 40px', maxWidth:'560px', textTransform:'uppercase', letterSpacing:'0.06em' }}>
-            Directory below: backend mock — illustrative profiles, not on-chain state
           </p>
           <div style={{ display:'flex', alignItems:'center', gap:'48px' }}>
             {[
@@ -208,7 +87,7 @@ export default function CuratorsPage() {
                     <ChevronRight size={16} color="#9CA3AF" />
                   </div>
                   <div style={{ fontSize:'11px', color:'#8A8A8A', marginBottom:'14px' }}>
-                    Manager: <code>{d.manager.slice(0, 6)}...{d.manager.slice(-4)}</code>
+                    Manager: {terms.get(d.vault.toLowerCase())?.managerName ? `${terms.get(d.vault.toLowerCase())?.managerName} · ` : ''}<code>{d.manager.slice(0, 6)}...{d.manager.slice(-4)}</code>
                   </div>
                   <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(130px, 1fr))', gap:'12px', backgroundColor:'#FAFAF8', borderRadius:'8px', padding:'14px' }}>
                     {[
@@ -232,24 +111,6 @@ export default function CuratorsPage() {
           </p>
         )}
 
-        {/* Featured — illustrative directory (identity content, not on-chain state) */}
-        <div style={{ display:'flex', alignItems:'center', gap:'12px', marginBottom:'24px' }}>
-          <h2 style={{ fontFamily:'"Playfair Display", Georgia, serif', fontSize:'22px', fontWeight:600, color:'#1B3A6B', margin:0 }}>Featured Syndicates</h2>
-          <DataSourceBadge source="backend-mock" />
-        </div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(520px, 1fr))', gap:'20px', marginBottom:'48px' }}>
-          {featured.map(c => <CuratorCard key={c.id} syndicateManager={c} featured />)}
-        </div>
-
-        {/* All — illustrative directory (identity content, not on-chain state) */}
-        <div style={{ display:'flex', alignItems:'center', gap:'12px', marginBottom:'24px' }}>
-          <h2 style={{ fontFamily:'"Playfair Display", Georgia, serif', fontSize:'22px', fontWeight:600, color:'#1B3A6B', margin:0 }}>All Syndicates</h2>
-          <DataSourceBadge source="backend-mock" />
-        </div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(360px, 1fr))', gap:'16px', marginBottom:'64px' }}>
-          {rest.map(c => <CuratorCard key={c.id} syndicateManager={c} featured={false} />)}
-        </div>
-
         {/* CTA */}
         <div style={{ background:'linear-gradient(135deg, #1B3A6B 0%, #0F2447 100%)', borderRadius:'16px', padding:'48px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'32px' }}>
           <div>
@@ -266,45 +127,6 @@ export default function CuratorsPage() {
               Syndicate Dashboard →
             </Link>
           </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CuratorCard({ syndicateManager, featured }: { syndicateManager: typeof CURATORS[0]; featured: boolean }) {
-  return (
-    <div
-      style={{ backgroundColor:'#FFFFFF', border:'1px solid #E8E4DC', borderRadius:'12px', padding: featured ? '28px' : '22px', transition:'box-shadow 0.2s, border-color 0.2s', cursor:'default' }}
-      onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.boxShadow='0 8px 32px rgba(27,58,107,0.12)'; d.style.borderColor='#1B3A6B'; }}
-      onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.boxShadow='none'; d.style.borderColor='#E8E4DC'; }}
-    >
-      {/* Header */}
-      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:'16px' }}>
-        <div>
-          <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'6px' }}>
-            <TypeBadge type={syndicateManager.type} />
-          </div>
-          <h3 style={{ fontFamily:'"Playfair Display", Georgia, serif', fontSize: featured ? '22px' : '18px', fontWeight:700, color:'#1B3A6B', margin:'4px 0 2px' }}>{syndicateManager.name}</h3>
-          <div style={{ display:'flex', alignItems:'center', gap:'4px', color:'#8A8A8A', fontSize:'12px' }}>
-            <Globe size={11} />{syndicateManager.jurisdiction} · Since {syndicateManager.since}
-          </div>
-        </div>
-        <span style={{ backgroundColor:'#F5F0E8', color:'#6B5B3E', fontSize:'11px', fontWeight:600, padding:'4px 10px', borderRadius:'20px', letterSpacing:'0.04em', whiteSpace:'nowrap' }}>
-          {syndicateManager.badge}
-        </span>
-      </div>
-
-      {/* Description */}
-      <p style={{ fontSize:'13px', color:'#5A5A5A', lineHeight:'1.6', marginBottom:'20px' }}>{syndicateManager.description}</p>
-
-      {/* Verification focus (declared capabilities, identity content) */}
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', borderTop:'1px solid #F0EDE8', paddingTop:'14px' }}>
-        <span style={{ fontSize:'11px', color:'#8A8A8A', textTransform:'uppercase', letterSpacing:'0.06em' }}>Verification focus:</span>
-        <div style={{ display:'flex', gap:'4px' }}>
-          {syndicateManager.verificationTypes.map(v => (
-            <span key={v} style={{ fontSize:'10px', fontWeight:600, padding:'2px 7px', borderRadius:'4px', backgroundColor:'#F0F4FF', color:'#3B5BDB', letterSpacing:'0.04em' }}>{v}</span>
-          ))}
         </div>
       </div>
     </div>

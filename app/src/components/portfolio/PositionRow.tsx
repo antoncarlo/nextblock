@@ -40,7 +40,7 @@ export function PositionRow({ vaultAddress }: { vaultAddress: `0x${string}` }) {
     >
       <div className="min-w-0">
         <p className="truncate text-sm font-semibold text-gray-900">{name}</p>
-        <p className="mt-0.5 truncate text-xs text-gray-500">{display.manager}</p>
+        {display.manager && <p className="mt-0.5 truncate text-xs text-gray-500">{display.manager}</p>}
       </div>
       <div className="ml-4 shrink-0 text-right">
         <p className="text-sm font-semibold text-gray-900">{formatUSDC(valueUsdc)}</p>

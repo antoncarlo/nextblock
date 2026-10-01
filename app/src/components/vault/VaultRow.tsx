@@ -12,16 +12,18 @@ import {
   shortenAddress,
 } from "@/lib/formatting";
 // Display metadata: curator-supplied offering terms when published (backend,
-// role-gated write), otherwise the illustrative defaults — labeled apart.
+// role-gated write), otherwise an explicit "not published" state.
 import { resolveVaultDisplay } from "@/config/vaultDisplay";
 import type { OfferingTerms } from "@/lib/offering/terms";
 
 interface VaultRowProps {
   vaultAddress: `0x${string}`;
   offeringTerms?: OfferingTerms;
+  /** Whether the table has a target-APY column (only when some curator published one). */
+  showApy?: boolean;
 }
 
-export function VaultRow({ vaultAddress, offeringTerms }: VaultRowProps) {
+export function VaultRow({ vaultAddress, offeringTerms, showApy = true }: VaultRowProps) {
   const { data: vaultInfo, isLoading, error } = useVaultInfoSafe(vaultAddress);
   const { data: policyIds } = useVaultPolicyIds(vaultAddress);
   const { data: globalPolicies } = useGlobalPoliciesData(policyIds);
@@ -32,7 +34,7 @@ export function VaultRow({ vaultAddress, offeringTerms }: VaultRowProps) {
   const { ensName } = useEnsName(managerAddr);
 
   if (isLoading) {
-    return <VaultRowSkeleton />;
+    return <VaultRowSkeleton showApy={showApy} />;
   }
 
   if (error || !vaultInfo) {
@@ -74,11 +76,13 @@ export function VaultRow({ vaultAddress, offeringTerms }: VaultRowProps) {
         <td style={{ padding: "18px 24px", textAlign: "center" }}>
           <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "14px", fontWeight: 500, color: "#9A9A9A" }}>—</span>
         </td>
-        <td style={{ padding: "18px 24px", textAlign: "right" }}>
-          <span style={{ display: "inline-block", padding: "4px 10px", borderRadius: "50px", fontFamily: "'Inter', sans-serif", fontSize: "11px", fontWeight: 600, background: "rgba(127,29,29,0.08)", color: "#7F1D1D", border: "1px solid rgba(127,29,29,0.25)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-            Unavailable
-          </span>
-        </td>
+        {showApy && (
+          <td style={{ padding: "18px 24px", textAlign: "right" }}>
+            <span style={{ display: "inline-block", padding: "4px 10px", borderRadius: "50px", fontFamily: "'Inter', sans-serif", fontSize: "11px", fontWeight: 600, background: "rgba(127,29,29,0.08)", color: "#7F1D1D", border: "1px solid rgba(127,29,29,0.25)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Unavailable
+            </span>
+          </td>
+        )}
       </tr>
     );
   }
@@ -124,16 +128,18 @@ export function VaultRow({ vaultAddress, offeringTerms }: VaultRowProps) {
           >
             {name}
           </div>
-          <div
-            style={{
-              fontFamily: "'Inter', sans-serif",
-              fontSize: "12px",
-              color: "#9A9A9A",
-              lineHeight: 1.4,
-            }}
-          >
-            {display.strategy}
-          </div>
+          {display.strategy && (
+            <div
+              style={{
+                fontFamily: "'Inter', sans-serif",
+                fontSize: "12px",
+                color: "#9A9A9A",
+                lineHeight: 1.4,
+              }}
+            >
+              {display.strategy}
+            </div>
+          )}
         </Link>
       </td>
 
@@ -164,7 +170,7 @@ export function VaultRow({ vaultAddress, offeringTerms }: VaultRowProps) {
             }}
             title={display.source === "curated" ? `On-chain manager: ${managerAddr}` : undefined}
           >
-            {ensName || (display.source === "curated" ? display.manager : shortenAddress(managerAddr!))}
+            {ensName || display.manager || shortenAddress(managerAddr!)}
           </span>
         </Link>
       </td>
@@ -197,44 +203,45 @@ export function VaultRow({ vaultAddress, offeringTerms }: VaultRowProps) {
         </Link>
       </td>
 
-      {/* Illustrative APY */}
-      <td style={{ padding: "18px 24px", textAlign: "right" }}>
-        <Link href={`/app/vault/${vaultAddress}`} style={{ textDecoration: "none", display: "block" }}>
-          <span
-            className="badge-institutional"
-            style={{
-              display: "inline-block",
-              padding: "4px 10px",
-              borderRadius: "50px",
-              fontFamily: "'Inter', sans-serif",
-              fontSize: "12px",
-              fontWeight: 500,
-            }}
-          >
-            {display.targetApy}
-          </span>
-          {display.source === "curated" && (
+      {showApy && (
+        <td style={{ padding: "18px 24px", textAlign: "right" }}>
+          <Link href={`/app/vault/${vaultAddress}`} style={{ textDecoration: "none", display: "block" }}>
             <span
-              title="Curator-published offering terms"
-              style={{ display: "block", marginTop: "3px", fontFamily: "'Inter', sans-serif", fontSize: "9px", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#0E7490" }}
+              className="badge-institutional"
+              style={{
+                display: "inline-block",
+                padding: "4px 10px",
+                borderRadius: "50px",
+                fontFamily: "'Inter', sans-serif",
+                fontSize: "12px",
+                fontWeight: 500,
+              }}
             >
-              Curated
+              {display.targetApy}
             </span>
-          )}
-        </Link>
-      </td>
+            {display.source === "curated" && (
+              <span
+                title="Curator-published offering terms"
+                style={{ display: "block", marginTop: "3px", fontFamily: "'Inter', sans-serif", fontSize: "9px", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#0E7490" }}
+              >
+                Curated
+              </span>
+            )}
+          </Link>
+        </td>
+      )}
     </tr>
   );
 }
 
-function VaultRowSkeleton() {
+function VaultRowSkeleton({ showApy = true }: { showApy?: boolean }) {
   return (
     <tr style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
       <td style={{ padding: "18px 24px" }}>
         <div style={{ height: "15px", width: "120px", borderRadius: "4px", background: "#E5E7EB", marginBottom: "6px" }} />
         <div style={{ height: "11px", width: "180px", borderRadius: "4px", background: "#F3F4F6" }} />
       </td>
-      {[64, 96, 40, 24, 56].map((w, j) => (
+      {(showApy ? [64, 96, 40, 24, 56] : [64, 96, 40, 24]).map((w, j) => (
         <td key={j} style={{ padding: "18px 24px" }}>
           <div style={{ height: "14px", width: `${w}px`, borderRadius: "4px", background: "#E5E7EB" }} />
         </td>

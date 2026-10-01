@@ -38,6 +38,23 @@ export function useTimeOffset() {
 }
 
 /**
+ * Whether `lockRealTime()` has been called: once true the registry reads the block
+ * clock and `advanceTime` reverts for good.
+ */
+export function useClockLocked() {
+  const addresses = useAddresses();
+  return useReadContract({
+    address: addresses.policyRegistry,
+    abi: POLICY_REGISTRY_ABI,
+    functionName: 'clockLocked',
+    query: {
+      refetchInterval: POLL_INTERVAL,
+      enabled: addresses.policyRegistry !== '0x0000000000000000000000000000000000000000',
+    },
+  });
+}
+
+/**
  * Fetch total number of registered policies.
  */
 export function usePolicyCount() {

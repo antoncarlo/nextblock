@@ -35,8 +35,9 @@ test('vault detail shows labeled metadata and the deposit sidebar gate', async (
   await firstVault.click();
 
   await expect(page).toHaveURL(/\/app\/vault\/0x/);
-  // Illustrative-APY relabel (PR #75) — never plain "Target APY".
-  await expect(page.getByText('Illustrative Target APY').first()).toBeVisible({ timeout: 45_000 });
+  // The syndicate block is always there: it carries the on-chain manager, and the
+  // curator's published terms when there are any. No yield figure is invented.
+  await expect(page.getByText('Vault Syndicate').first()).toBeVisible({ timeout: 45_000 });
   // Disconnected visitors get the connect gate, not a broken form.
   await expect(page.getByText(/connect your wallet/i).first()).toBeVisible();
 });
