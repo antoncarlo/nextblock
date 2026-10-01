@@ -147,7 +147,7 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: stable
+          version: v1.8.3
 
       - name: Format check
         run: forge fmt --check
@@ -180,7 +180,7 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: stable
+          version: v1.8.3
 
       - name: Setup Node 22
         uses: actions/setup-node@v4
