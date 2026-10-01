@@ -159,7 +159,7 @@ contract DeployStack is Script, ProtocolRoleConstants {
 
         protocolRoles = new ProtocolRoles(deployer);
         policyRegistry = new PolicyRegistry(address(protocolRoles));
-        claimReceipt = new ClaimReceipt();
+        claimReceipt = new ClaimReceipt(address(protocolRoles));
         mockOracle = new MockOracle();
         compliance = new ComplianceRegistry(address(protocolRoles));
         portfolioRegistry = new PortfolioRegistry(address(protocolRoles));
@@ -187,12 +187,18 @@ contract DeployStack is Script, ProtocolRoleConstants {
             address(protocolRoles),
             address(compliance),
             address(portfolioRegistry),
-            address(vaultDeployer)
+            address(vaultDeployer),
+            address(claimManager)
         );
         // Bind-once: only this factory can deploy vaults through the deployer.
         vaultDeployer.bindFactory(address(factory));
         // Factory must be able to register vaults as receipt minters.
         claimReceipt.setRegistrar(address(factory));
+        // ...and to bind the claim manager into every vault it creates. This grant
+        // must land BEFORE the first createVault, not in the later wiring phase,
+        // or the vault is born with no claim path — exactly the state this
+        // ordering exists to prevent.
+        protocolRoles.grantRole(VAULT_FACTORY_ROLE, address(factory));
 
         // createVault requires curator role on caller AND manager.
         protocolRoles.grantRole(UNDERWRITING_CURATOR_ROLE, deployer);

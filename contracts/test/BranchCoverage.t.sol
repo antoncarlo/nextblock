@@ -50,6 +50,8 @@ contract BranchCoverageTest is Test {
 
     uint256 constant DEPOSIT_200K = 200_000e6;
     uint256 constant COVERAGE_150K = 150_000e6;
+    /// @dev Nominal line that binds the vault to the portfolio in setUp.
+    uint256 internal constant ON_RISK_LINE = 1e6;
     uint256 constant CLAIM_50K = 50_000e6;
     bytes32 constant EVIDENCE = keccak256("evidence");
     bytes32 constant AI_SOURCE = keccak256("ai-source");
@@ -60,7 +62,7 @@ contract BranchCoverageTest is Test {
         usdc = new MockUSDC();
         oracle = new MockOracle();
         policyRegistry = new PolicyRegistry(address(protocolRoles));
-        claimReceipt = new ClaimReceipt();
+        claimReceipt = new ClaimReceipt(address(protocolRoles));
         compliance = new ComplianceRegistry(address(protocolRoles));
         portfolioRegistry = new PortfolioRegistry(address(protocolRoles));
         assessor = new AIAssessor(address(protocolRoles));
@@ -113,6 +115,13 @@ contract BranchCoverageTest is Test {
         vm.startPrank(lp);
         usdc.approve(address(vault), DEPOSIT_200K);
         vault.deposit(DEPOSIT_200K, lp);
+        vm.stopPrank();
+
+        // `submitClaim` requires the paying vault to have taken the portfolio's
+        // risk. A nominal line binds it without moving cash or creating UPR.
+        vm.startPrank(admin);
+        vault.setVaultAllocator(admin);
+        vault.allocateToPortfolio(pid, ON_RISK_LINE);
         vm.stopPrank();
     }
 
@@ -281,7 +290,10 @@ contract BranchCoverageTest is Test {
         vm.prank(admin);
         vault.setVaultAllocator(admin);
         vm.prank(admin);
-        vault.allocateToPortfolio(pid, COVERAGE_150K);
+        // Tops the portfolio up to exactly its coverage limit. setUp already put
+        // the vault on risk with a nominal line, and allocation is capped at the
+        // limit, so this adds the remainder rather than the whole figure.
+        vault.allocateToPortfolio(pid, COVERAGE_150K - ON_RISK_LINE);
 
         uint256 available = vault.maxWithdraw(lp);
         assertLt(available, DEPOSIT_200K, "buffer must cap withdrawals");

@@ -13,6 +13,8 @@ import {VaultFactory} from "../src/VaultFactory.sol";
 import {ProtocolRoles} from "../src/ProtocolRoles.sol";
 import {ComplianceRegistry} from "../src/ComplianceRegistry.sol";
 import {PortfolioRegistry} from "../src/PortfolioRegistry.sol";
+import {AIAssessor} from "../src/AIAssessor.sol";
+import {ClaimManager} from "../src/ClaimManager.sol";
 
 contract VaultFactoryTest is Test {
     MockUSDC public usdc;
@@ -36,9 +38,15 @@ contract VaultFactoryTest is Test {
         usdc = new MockUSDC();
         oracle = new MockOracle();
         registry = new PolicyRegistry(address(protocolRoles));
-        claimReceipt = new ClaimReceipt();
+        claimReceipt = new ClaimReceipt(address(protocolRoles));
         compliance = new ComplianceRegistry(address(protocolRoles));
         portfolioRegistry = new PortfolioRegistry(address(protocolRoles));
+        ClaimManager claimManager = new ClaimManager(
+            address(protocolRoles),
+            address(portfolioRegistry),
+            address(new AIAssessor(address(protocolRoles))),
+            address(claimReceipt)
+        );
 
         VaultDeployer vaultDeployer = new VaultDeployer();
         factory = new VaultFactory(
@@ -49,7 +57,8 @@ contract VaultFactoryTest is Test {
             address(protocolRoles),
             address(compliance),
             address(portfolioRegistry),
-            address(vaultDeployer)
+            address(vaultDeployer),
+            address(claimManager)
         );
         vaultDeployer.bindFactory(address(factory));
 
@@ -216,6 +225,7 @@ contract VaultFactoryTest is Test {
             address(protocolRoles),
             address(compliance),
             address(portfolioRegistry),
+            address(1),
             address(1)
         );
 
@@ -228,6 +238,7 @@ contract VaultFactoryTest is Test {
             address(protocolRoles),
             address(compliance),
             address(portfolioRegistry),
+            address(1),
             address(1)
         );
 
@@ -240,6 +251,7 @@ contract VaultFactoryTest is Test {
             address(0),
             address(compliance),
             address(portfolioRegistry),
+            address(1),
             address(1)
         );
 
@@ -252,6 +264,7 @@ contract VaultFactoryTest is Test {
             address(protocolRoles),
             address(0),
             address(portfolioRegistry),
+            address(1),
             address(1)
         );
 
@@ -264,6 +277,7 @@ contract VaultFactoryTest is Test {
             address(protocolRoles),
             address(compliance),
             address(0),
+            address(1),
             address(1)
         );
 

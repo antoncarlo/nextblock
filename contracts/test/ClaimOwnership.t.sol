@@ -51,6 +51,9 @@ contract ClaimOwnershipTest is Test {
     uint256 internal pidB;
 
     uint256 internal constant COVERAGE = 1_000_000e6;
+    /// @dev Nominal premium: puts the vault on risk for a book so the claim-vault
+    ///      binding is satisfied and the role gate is what these tests measure.
+    uint256 internal constant ON_RISK_PREMIUM = 1_000e6;
 
     function setUp() public {
         vm.startPrank(governance);
@@ -58,7 +61,7 @@ contract ClaimOwnershipTest is Test {
         usdc = new MockUSDC();
         oracle = new MockOracle();
         policies = new PolicyRegistry(address(roles));
-        receipts = new ClaimReceipt();
+        receipts = new ClaimReceipt(address(roles));
         compliance = new ComplianceRegistry(address(roles));
         portfolios = new PortfolioRegistry(address(roles));
 
@@ -208,5 +211,16 @@ contract ClaimOwnershipTest is Test {
         portfolios.approvePortfolio(pid, 6_500);
         vm.prank(curator);
         portfolios.activatePortfolio(pid);
+
+        // The vault takes the book's premium, which is what binds it as the payer
+        // for claims on that book. These tests are about WHO may claim on a
+        // portfolio, so both books must be on risk for the role gate — and not
+        // the claim-vault binding — to be the thing actually under test.
+        vm.startPrank(governance);
+        roles.grantRole(roles.PREMIUM_DEPOSITOR_ROLE(), governance);
+        usdc.mint(governance, ON_RISK_PREMIUM);
+        usdc.approve(address(vault), ON_RISK_PREMIUM);
+        vault.recordPortfolioPremium(pid, ON_RISK_PREMIUM);
+        vm.stopPrank();
     }
 }

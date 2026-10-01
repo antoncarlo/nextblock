@@ -52,7 +52,7 @@ contract InsuranceVaultTest is Test {
         usdc = new MockUSDC();
         oracle = new MockOracle();
         registry = new PolicyRegistry(address(protocolRoles));
-        claimReceipt = new ClaimReceipt();
+        claimReceipt = new ClaimReceipt(address(protocolRoles));
         compliance = new ComplianceRegistry(address(protocolRoles));
         portfolioRegistry = new PortfolioRegistry(address(protocolRoles));
 

@@ -19,11 +19,13 @@ const XIcon = ({ size = 20 }: { size?: number }) => (
 
 const Footer = () => {
   const protocolLinks = [
-    { label: "Protocol Overview", href: "#" },
+    { label: "Protocol Overview", href: "#protocol-stack" },
+    { label: "Documentation", href: "/docs" },
+    { label: "Insights", href: "/blog" },
   ];
 
   const resourceLinks = [
-    { label: "FAQ", href: "#" },
+    { label: "FAQ", href: "/docs#/technical/faq" },
   ];
 
   const legalLinks = [

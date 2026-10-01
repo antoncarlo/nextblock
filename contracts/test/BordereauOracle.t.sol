@@ -66,6 +66,44 @@ contract BordereauOracleTest is Test {
 
     // =========== PROPOSAL ===========
 
+    /// @notice REGRESSION (F-12): a cedant may only assert against its own book.
+    /// @dev `proposeAssertion` used to check the ROLE and nothing else, so any
+    ///      whitelisted cedant could post bordereau data against a competitor's
+    ///      portfolio — and `_finalize` overwrites the latest record
+    ///      unconditionally, making that data the record of record. Two cedants
+    ///      are needed to ask the question at all: with one, the role check and
+    ///      the ownership check are indistinguishable.
+    function test_cedantCannotAssertAgainstAnotherCedantsPortfolio() public {
+        address rival = makeAddr("rivalCedant");
+        // Hoisted: an external call in argument position would consume the prank.
+        bytes32 cedantRole = protocolRoles.AUTHORIZED_CEDANT_ROLE();
+        vm.prank(admin);
+        protocolRoles.grantRole(cedantRole, rival);
+        assertTrue(protocolRoles.hasRole(cedantRole, rival), "rival is authorised");
+
+        vm.prank(rival);
+        vm.expectRevert(
+            abi.encodeWithSelector(BordereauOracle.BordereauOracle__NotPortfolioCedant.selector, pid, rival)
+        );
+        bordereau.proposeAssertion(
+            pid, BordereauOracle.AssertionType.PREMIUM_BORDEREAU, keccak256("forged"), "ipfs://forged", 1
+        );
+
+        assertEq(bordereau.getAssertionCount(), 0, "nothing was recorded");
+    }
+
+    /// @notice The oracle feed still speaks for every portfolio.
+    /// @dev The other half of the property: the fix must not turn the ORACLE_ROLE
+    ///      feed into a per-portfolio permission, or the attested-data pipeline
+    ///      stops working for everything it does not own — which is all of it.
+    function test_oracleMayStillAssertAgainstAnyPortfolio() public {
+        vm.prank(oracleNode);
+        uint256 id = bordereau.proposeAssertion(
+            pid, BordereauOracle.AssertionType.PREMIUM_BORDEREAU, keccak256("feed"), "ipfs://feed", DECLARED_100K
+        );
+        assertEq(bordereau.getAssertion(id).proposer, oracleNode, "the oracle feed is not the portfolio's cedant");
+    }
+
     function test_propose_byCedantAndOracle() public {
         uint256 id0 = _propose();
         assertEq(id0, 0);

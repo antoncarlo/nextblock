@@ -43,6 +43,9 @@ contract ClaimManagerTest is Test {
     uint256 public pid;
 
     uint256 constant DEPOSIT_200K = 200_000e6;
+    /// @dev Nominal underwriting line: enough to bind the vault to the portfolio
+    ///      without materially moving any balance the tests assert on.
+    uint256 constant ON_RISK_LINE = 1e6;
     uint256 constant COVERAGE_150K = 150_000e6;
     uint256 constant CLAIM_50K = 50_000e6;
     bytes32 constant EVIDENCE = keccak256("loss-bordereau-2026-06");
@@ -55,7 +58,7 @@ contract ClaimManagerTest is Test {
         usdc = new MockUSDC();
         oracle = new MockOracle();
         policyRegistry = new PolicyRegistry(address(protocolRoles));
-        claimReceipt = new ClaimReceipt();
+        claimReceipt = new ClaimReceipt(address(protocolRoles));
         compliance = new ComplianceRegistry(address(protocolRoles));
         portfolioRegistry = new PortfolioRegistry(address(protocolRoles));
         assessor = new AIAssessor(address(protocolRoles));
@@ -131,6 +134,20 @@ contract ClaimManagerTest is Test {
         usdc.approve(address(vault), DEPOSIT_200K);
         vault.deposit(DEPOSIT_200K, lp);
         vm.stopPrank();
+
+        _putVaultOnRisk();
+    }
+
+    /// @dev `submitClaim` requires the paying vault to have actually taken the
+    ///      portfolio's risk (claim-vault binding). A nominal line is enough, and
+    ///      unlike premium it moves no cash and creates no UPR, so the solvency
+    ///      arithmetic these tests assert on is left exactly as it was.
+    function _putVaultOnRisk() internal {
+        vm.startPrank(admin);
+        vault.setVaultAllocator(admin);
+        vault.allocateToPortfolio(pid, ON_RISK_LINE);
+        vm.stopPrank();
+        assertTrue(vault.underwrites(pid), "vault is on risk for the portfolio");
     }
 
     // --- Helpers ---

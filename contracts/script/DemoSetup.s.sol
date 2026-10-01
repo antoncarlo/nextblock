@@ -12,6 +12,8 @@ import {VaultFactory} from "../src/VaultFactory.sol";
 import {ProtocolRoles} from "../src/ProtocolRoles.sol";
 import {ComplianceRegistry} from "../src/ComplianceRegistry.sol";
 import {PortfolioRegistry} from "../src/PortfolioRegistry.sol";
+import {AIAssessor} from "../src/AIAssessor.sol";
+import {ClaimManager} from "../src/ClaimManager.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @title DemoSetup
@@ -106,6 +108,8 @@ contract DemoSetup is Script {
     ProtocolRoles public protocolRoles;
     ComplianceRegistry public compliance;
     PortfolioRegistry public portfolioRegistry;
+    AIAssessor public assessor;
+    ClaimManager public claimManager;
 
     address public vaultAAddr;
     address public vaultBAddr;
@@ -187,7 +191,7 @@ contract DemoSetup is Script {
         oracle = new MockOracle();
         console.log("MockOracle:", address(oracle));
 
-        claimReceipt = new ClaimReceipt();
+        claimReceipt = new ClaimReceipt(address(protocolRoles));
         console.log("ClaimReceipt:", address(claimReceipt));
 
         registry = new PolicyRegistry(address(protocolRoles));
@@ -198,6 +202,15 @@ contract DemoSetup is Script {
 
         portfolioRegistry = new PortfolioRegistry(address(protocolRoles));
         console.log("PortfolioRegistry:", address(portfolioRegistry));
+
+        // The demo stack needs a real claim path: the factory binds a ClaimManager
+        // into every vault it creates, so demo vaults can settle a claim like the
+        // staging ones rather than silently collecting capital they cannot pay out.
+        assessor = new AIAssessor(address(protocolRoles));
+        claimManager = new ClaimManager(
+            address(protocolRoles), address(portfolioRegistry), address(assessor), address(claimReceipt)
+        );
+        console.log("ClaimManager:", address(claimManager));
     }
 
     // ============================================
@@ -229,7 +242,8 @@ contract DemoSetup is Script {
             address(protocolRoles),
             address(compliance),
             address(portfolioRegistry),
-            address(vaultDeployer)
+            address(vaultDeployer),
+            address(claimManager)
         );
         vaultDeployer.bindFactory(address(factory));
         console.log("VaultFactory:", address(factory));

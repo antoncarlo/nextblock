@@ -3,11 +3,12 @@ pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
 import {ClaimReceipt} from "../src/ClaimReceipt.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ProtocolRoles} from "../src/ProtocolRoles.sol";
 import {IERC721Errors} from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
 
 contract ClaimReceiptTest is Test {
     ClaimReceipt public cr;
+    ProtocolRoles public protocolRoles;
     address public admin = makeAddr("admin");
     address public vault = makeAddr("vault");
     address public vault2 = makeAddr("vault2");
@@ -15,8 +16,10 @@ contract ClaimReceiptTest is Test {
     address public notAuthorized = makeAddr("notAuthorized");
 
     function setUp() public {
-        vm.prank(admin);
-        cr = new ClaimReceipt();
+        // `admin` is the protocol OWNER_ROLE holder: ClaimReceipt's admin
+        // authority lives in ProtocolRoles, not in a private Ownable owner.
+        protocolRoles = new ProtocolRoles(admin);
+        cr = new ClaimReceipt(address(protocolRoles));
 
         // Authorize vault as minter
         vm.prank(admin);

@@ -28,8 +28,12 @@ import {RedemptionQueue} from "../../src/RedemptionQueue.sol";
 ///        BASE_SEPOLIA_RPC_URL=https://sepolia.base.org \
 ///          forge test --match-path "test/fork/RedemptionQueueFork*" -vvv
 contract RedemptionQueueForkTest is Test {
-    /// @dev Pinned for reproducibility (same block family as LendingMarketFork).
-    uint256 internal constant PINNED_BLOCK = 42_720_000;
+    // Block pinned for reproducibility. NOTE: a public Base Sepolia RPC prunes
+    // historical state, so a pin more than a few weeks old stops resolving on a
+    // cold cache and every test here fails in setUp with "state at block N is
+    // pruned". Refresh this to a recent block when that happens, or point
+    // BASE_SEPOLIA_RPC_URL at an archive node.
+    uint256 internal constant PINNED_BLOCK = 46_940_000;
     uint256 internal constant BASE_SEPOLIA_CHAIN_ID = 84532;
 
     uint64 internal constant EPOCH = 7 days;
@@ -66,7 +70,7 @@ contract RedemptionQueueForkTest is Test {
         usdc = new MockUSDC();
         oracle = new MockOracle();
         policyRegistry = new PolicyRegistry(address(roles));
-        claimReceipt = new ClaimReceipt();
+        claimReceipt = new ClaimReceipt(address(roles));
         compliance = new ComplianceRegistry(address(roles));
         portfolioRegistry = new PortfolioRegistry(address(roles));
 
