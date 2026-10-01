@@ -99,11 +99,15 @@ queue is deployed after the record is written); you need it in section 7.
 
 Deploys `ProtocolTimelock` with the Safe as proposer and canceller, and grants it
 `OWNER_ROLE` and `DEFAULT_ADMIN_ROLE`. The deployer keeps its roles for now.
-The protocol Safe is `0x8Fd8b45Ba2612E7535bbeB21615554701CfaF870`.
+The protocol Safe is `0x0969B20f1d8a5628613f00fa6aDBE85e715fEf15` (Safe 1.5.0, one signer,
+threshold 1, created 2026-10-01; a transaction signed and executed from it was confirmed on-chain).
+It replaces the Safe `0x8Fd8…F870` of the June generation, which is 2-of-2 and cannot be recovered
+without the second signer. Nothing in the protocol is tied to it: the Safe only enters the picture as
+the timelock's proposer, in this section.
 
 ```bash
 export PROTOCOL_ROLES=$(node -p "require('./deployments/84532-staging.json').protocolRoles")
-export SAFE_ADDRESS=0x8Fd8b45Ba2612E7535bbeB21615554701CfaF870
+export SAFE_ADDRESS=0x0969B20f1d8a5628613f00fa6aDBE85e715fEf15
 export EXECUTOR_ADDRESS=<safe or ops executor>
 export MIN_DELAY=86400            # 1 day; raise for mainnet
 export RENOUNCE_DEPLOYER=false
