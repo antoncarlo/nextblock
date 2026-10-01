@@ -80,10 +80,25 @@ contract GovernanceMigration is Script {
         roles.grantRole(roles.DEFAULT_ADMIN_ROLE(), address(timelock));
         vm.stopBroadcast();
 
+        _recordGovernance(address(timelock), safe);
+
         console.log("ProtocolTimelock deployed:", address(timelock));
         console.log("OWNER_ROLE + DEFAULT_ADMIN_ROLE granted to timelock.");
         console.log("Deployer roles RETAINED (phase 1). Rehearse a timelocked op,");
         console.log("then re-run with RENOUNCE_DEPLOYER=true and TIMELOCK_ADDRESS set.");
+    }
+
+    /// @dev Writes the two addresses phase 1 creates or consumes into the
+    ///      chain's deployment record. `GovernanceCheck` and the frontend address
+    ///      book read `.protocolTimelock` and `.safe` from it, and a fresh
+    ///      generation's record has neither until something puts them there. Left
+    ///      as a manual step it surfaces as an opaque JSON-path error after the
+    ///      fact. A missing record (no deploy on this chain) is not an error here.
+    function _recordGovernance(address timelock, address safe) internal {
+        string memory path = string.concat("deployments/", vm.toString(block.chainid), "-staging.json");
+        if (!vm.exists(path)) return;
+        vm.writeJson(vm.toString(timelock), path, ".protocolTimelock");
+        vm.writeJson(vm.toString(safe), path, ".safe");
     }
 
     function _phaseTwoRenounce(ProtocolRoles roles, address timelock, address retiringKey, bytes32 rehearsalId)
