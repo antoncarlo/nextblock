@@ -34,7 +34,7 @@ function check(name: string, condition: boolean) {
   }
 }
 
-const operatorAddress = '0x8Fd8b45Ba2612E7535bbeB21615554701CfaF870';
+const operatorAddress = '0x0969B20f1d8a5628613f00fa6aDBE85e715fEf15';
 
 const nonceTables: string[] = [];
 const nonceFilters: Array<{ op: string; column: string; value: unknown }> = [];

@@ -89,18 +89,22 @@ The two lists must be identical, in the same order.
 
 ## PRODUCTION BLOCK (governance)
 
-PRODUCTION USE IS BLOCKED until Governance Phase 2 (the deployer renounces) is
-executed and verified. On the current Base Sepolia generation (deployed
-2026-10-01) the operational roles already sit on separate keys, so Stage A holds
-by construction, but the deployer EOA `0x090043bF030C12d8761441790EB2CF81F0eDcf2c`
-still holds OWNER_ROLE and DEFAULT_ADMIN_ROLE: a single hot key can still
-administer every role, bypassing the timelock. Until phase 2 completes:
+Governance phase 2 is **done** on the current Base Sepolia generation
+(2026-10-01). A timelocked operation was rehearsed through the Safe, and then the
+deployer EOA `0x090043bF030C12d8761441790EB2CF81F0eDcf2c` renounced OWNER_ROLE and
+DEFAULT_ADMIN_ROLE; it holds no role at all. Role administration now sits with the
+ProtocolTimelock and the governance Safe `0x0969B20f1d8a5628613f00fa6aDBE85e715fEf15`.
+
+That does not unblock production. The Safe has a single signer (threshold 1, and
+the signer is a smart-contract wallet), so governance is one key behind a
+one-hour delay: acceptable on a testnet, not for real value. Until the governance
+is a multi-signer Safe with a longer delay, and the items in `docs/PROJECT_STATUS.md`
+section 4 (external audit, legal wrapper) are closed:
 
 - no mainnet deployment may be prepared or executed;
 - no real-value asset may be referenced by any vault;
-- the staging app shows a permanent warning whenever the deployer key
-  connects (`DeployerWalletWarning`), and that warning must not be removed;
-- routine operations must not be performed with the deployer key.
+- the staging app keeps its permanent warning whenever the deployer key
+  connects (`DeployerWalletWarning`), and that warning must not be removed.
 
 Runbook and authorization gates: `docs/GOVERNANCE_PHASE2.md`.
 

@@ -9,6 +9,12 @@ with no claim manager and then cannot pay (F-09), `PolicyRegistry` has no
 shares, which is why withdrawals fail. None of that can be repaired in place:
 the bindings are immutable. A truthful test needs a fresh generation.
 
+**Status.** Executed on 2026-10-01: sections 1 to 5 are done on Base Sepolia (deployer
+`0x090043bF030C12d8761441790EB2CF81F0eDcf2c`, governance Safe
+`0x0969B20f1d8a5628613f00fa6aDBE85e715fEf15`, the lending layer of section 2b included).
+Section 6 (`lockRealTime`) is deliberately still open. The sequence is kept because the
+next generation will follow it.
+
 **Who runs this.** The OWNER, with the deployer key. The key is entered only in
 your own terminal. It must never be pasted into a chat, an assistant tool, or a
 file in this repo. Everything below runs from `contracts/` unless it says
