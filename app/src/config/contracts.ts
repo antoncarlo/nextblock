@@ -59,6 +59,11 @@ export const VAULT_FACTORY_ABI = [
         "name": "vaultDeployer_",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "claimManager_",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "nonpayable"
@@ -196,6 +201,19 @@ export const VAULT_FACTORY_ABI = [
   {
     "type": "function",
     "name": "asset",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "claimManagerAddr",
     "inputs": [],
     "outputs": [
       {
@@ -2136,6 +2154,25 @@ export const INSURANCE_VAULT_ABI = [
   },
   {
     "type": "function",
+    "name": "underwrites",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "underwritingCapacity",
     "inputs": [],
     "outputs": [
@@ -2568,6 +2605,19 @@ export const INSURANCE_VAULT_ABI = [
         "name": "amount",
         "type": "uint256",
         "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "PortfolioUnderwritten",
+    "inputs": [
+      {
+        "name": "portfolioId",
+        "type": "uint256",
+        "indexed": true,
         "internalType": "uint256"
       }
     ],
@@ -3292,6 +3342,19 @@ export const POLICY_REGISTRY_ABI = [
   },
   {
     "type": "function",
+    "name": "clockLocked",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "currentTime",
     "inputs": [],
     "outputs": [
@@ -3424,6 +3487,13 @@ export const POLICY_REGISTRY_ABI = [
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "lockRealTime",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -3675,6 +3745,19 @@ export const POLICY_REGISTRY_ABI = [
   },
   {
     "type": "event",
+    "name": "RealTimeLocked",
+    "inputs": [
+      {
+        "name": "at",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "TimeAdvanced",
     "inputs": [
       {
@@ -3713,6 +3796,11 @@ export const POLICY_REGISTRY_ABI = [
         "internalType": "address"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "PolicyRegistry__ClockLocked",
+    "inputs": []
   },
   {
     "type": "error",
@@ -3774,6 +3862,19 @@ export const MOCK_USDC_ABI = [
     "type": "constructor",
     "inputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "FAUCET_CAP",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -3854,6 +3955,19 @@ export const MOCK_USDC_ABI = [
       }
     ],
     "stateMutability": "pure"
+  },
+  {
+    "type": "function",
+    "name": "deployer",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -4098,6 +4212,22 @@ export const MOCK_USDC_ABI = [
         "name": "spender",
         "type": "address",
         "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "MockUSDC__FaucetCapExceeded",
+    "inputs": [
+      {
+        "name": "requested",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "cap",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ]
   }
@@ -4345,8 +4475,144 @@ export const MOCK_ORACLE_ABI = [
 export const CLAIM_RECEIPT_ABI = [
   {
     "type": "constructor",
-    "inputs": [],
+    "inputs": [
+      {
+        "name": "protocolRoles_",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "ALLOCATOR_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "AUTHORIZED_CEDANT_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "CLAIMS_COMMITTEE_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "KYC_OPERATOR_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "ORACLE_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "OWNER_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "PREMIUM_DEPOSITOR_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "SENTINEL_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "UNDERWRITING_CURATOR_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "VAULT_FACTORY_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -4573,19 +4839,6 @@ export const CLAIM_RECEIPT_ABI = [
   },
   {
     "type": "function",
-    "name": "owner",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "ownerOf",
     "inputs": [
       {
@@ -4599,6 +4852,19 @@ export const CLAIM_RECEIPT_ABI = [
         "name": "",
         "type": "address",
         "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "protocolRoles",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract ProtocolRoles"
       }
     ],
     "stateMutability": "view"
@@ -4659,13 +4925,6 @@ export const CLAIM_RECEIPT_ABI = [
       }
     ],
     "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "renounceOwnership",
-    "inputs": [],
-    "outputs": [],
-    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -4842,19 +5101,6 @@ export const CLAIM_RECEIPT_ABI = [
     "stateMutability": "nonpayable"
   },
   {
-    "type": "function",
-    "name": "transferOwnership",
-    "inputs": [
-      {
-        "name": "newOwner",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
     "type": "event",
     "name": "Approval",
     "inputs": [
@@ -4919,25 +5165,6 @@ export const CLAIM_RECEIPT_ABI = [
         "type": "bool",
         "indexed": false,
         "internalType": "bool"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "OwnershipTransferred",
-    "inputs": [
-      {
-        "name": "previousOwner",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "newOwner",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
       }
     ],
     "anonymous": false
@@ -5040,6 +5267,11 @@ export const CLAIM_RECEIPT_ABI = [
         "internalType": "uint256"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "ClaimReceipt__InvalidParams",
+    "inputs": []
   },
   {
     "type": "error",
@@ -5200,28 +5432,6 @@ export const CLAIM_RECEIPT_ABI = [
         "name": "tokenId",
         "type": "uint256",
         "internalType": "uint256"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "OwnableInvalidOwner",
-    "inputs": [
-      {
-        "name": "owner",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "OwnableUnauthorizedAccount",
-    "inputs": [
-      {
-        "name": "account",
-        "type": "address",
-        "internalType": "address"
       }
     ]
   }
@@ -5763,6 +5973,25 @@ export const COMPLIANCE_REGISTRY_ABI = [
   },
   {
     "type": "function",
+    "name": "approvedVenue",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "blocked",
     "inputs": [
       {
@@ -5955,6 +6184,24 @@ export const COMPLIANCE_REGISTRY_ABI = [
   },
   {
     "type": "function",
+    "name": "setApprovedVenue",
+    "inputs": [
+      {
+        "name": "venue",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "approved",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "setBlocked",
     "inputs": [
       {
@@ -6061,6 +6308,25 @@ export const COMPLIANCE_REGISTRY_ABI = [
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "ApprovedVenueUpdated",
+    "inputs": [
+      {
+        "name": "venue",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "approved",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      }
+    ],
+    "anonymous": false
   },
   {
     "type": "event",
@@ -8814,1096 +9080,1159 @@ export const NAV_ORACLE_ABI = [
 ] as const;
 
 export const VAULT_ALLOCATOR_ABI = [
-    {
-      "type": "constructor",
-      "inputs": [
-        {
-          "name": "protocolRoles_",
-          "type": "address",
-          "internalType": "address"
-        },
-        {
-          "name": "portfolioRegistry_",
-          "type": "address",
-          "internalType": "address"
-        },
-        {
-          "name": "navOracle_",
-          "type": "address",
-          "internalType": "address"
-        }
-      ],
-      "stateMutability": "nonpayable"
-    },
-    {
-      "type": "function",
-      "name": "ALLOCATOR_ROLE",
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "",
-          "type": "bytes32",
-          "internalType": "bytes32"
-        }
-      ],
-      "stateMutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "AUTHORIZED_CEDANT_ROLE",
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "",
-          "type": "bytes32",
-          "internalType": "bytes32"
-        }
-      ],
-      "stateMutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "BASIS_POINTS",
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "",
-          "type": "uint256",
-          "internalType": "uint256"
-        }
-      ],
-      "stateMutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "CLAIMS_COMMITTEE_ROLE",
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "",
-          "type": "bytes32",
-          "internalType": "bytes32"
-        }
-      ],
-      "stateMutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "DEFAULT_MAX_CEDANT_CONCENTRATION_BPS",
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "",
-          "type": "uint256",
-          "internalType": "uint256"
-        }
-      ],
-      "stateMutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "DEFAULT_MAX_PORTFOLIO_CONCENTRATION_BPS",
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "",
-          "type": "uint256",
-          "internalType": "uint256"
-        }
-      ],
-      "stateMutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "DEFAULT_PROPOSAL_TTL",
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "",
-          "type": "uint64",
-          "internalType": "uint64"
-        }
-      ],
-      "stateMutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "KYC_OPERATOR_ROLE",
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "",
-          "type": "bytes32",
-          "internalType": "bytes32"
-        }
-      ],
-      "stateMutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "ORACLE_ROLE",
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "",
-          "type": "bytes32",
-          "internalType": "bytes32"
-        }
-      ],
-      "stateMutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "OWNER_ROLE",
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "",
-          "type": "bytes32",
-          "internalType": "bytes32"
-        }
-      ],
-      "stateMutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "PREMIUM_DEPOSITOR_ROLE",
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "",
-          "type": "bytes32",
-          "internalType": "bytes32"
-        }
-      ],
-      "stateMutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "PROPOSAL_TTL_CEILING",
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "",
-          "type": "uint64",
-          "internalType": "uint64"
-        }
-      ],
-      "stateMutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "PROPOSAL_TTL_FLOOR",
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "",
-          "type": "uint64",
-          "internalType": "uint64"
-        }
-      ],
-      "stateMutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "SENTINEL_ROLE",
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "",
-          "type": "bytes32",
-          "internalType": "bytes32"
-        }
-      ],
-      "stateMutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "UNDERWRITING_CURATOR_ROLE",
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "",
-          "type": "bytes32",
-          "internalType": "bytes32"
-        }
-      ],
-      "stateMutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "VAULT_FACTORY_ROLE",
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "",
-          "type": "bytes32",
-          "internalType": "bytes32"
-        }
-      ],
-      "stateMutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "cancelProposal",
-      "inputs": [
-        {
-          "name": "proposalId",
-          "type": "uint256",
-          "internalType": "uint256"
-        }
-      ],
-      "outputs": [],
-      "stateMutability": "nonpayable"
-    },
-    {
-      "type": "function",
-      "name": "cedantExposure",
-      "inputs": [
-        {
-          "name": "vault",
-          "type": "address",
-          "internalType": "address"
-        },
-        {
-          "name": "cedant",
-          "type": "address",
-          "internalType": "address"
-        }
-      ],
-      "outputs": [
-        {
-          "name": "exposure",
-          "type": "uint256",
-          "internalType": "uint256"
-        }
-      ],
-      "stateMutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "executeAllocation",
-      "inputs": [
-        {
-          "name": "proposalId",
-          "type": "uint256",
-          "internalType": "uint256"
-        }
-      ],
-      "outputs": [],
-      "stateMutability": "nonpayable"
-    },
-    {
-      "type": "function",
-      "name": "getProposal",
-      "inputs": [
-        {
-          "name": "proposalId",
-          "type": "uint256",
-          "internalType": "uint256"
-        }
-      ],
-      "outputs": [
-        {
-          "name": "",
-          "type": "tuple",
-          "internalType": "struct VaultAllocator.AllocationProposal",
-          "components": [
-            {
-              "name": "proposalId",
-              "type": "uint256",
-              "internalType": "uint256"
-            },
-            {
-              "name": "vault",
-              "type": "address",
-              "internalType": "address"
-            },
-            {
-              "name": "portfolioId",
-              "type": "uint256",
-              "internalType": "uint256"
-            },
-            {
-              "name": "amount",
-              "type": "uint256",
-              "internalType": "uint256"
-            },
-            {
-              "name": "isDeallocation",
-              "type": "bool",
-              "internalType": "bool"
-            },
-            {
-              "name": "proposer",
-              "type": "address",
-              "internalType": "address"
-            },
-            {
-              "name": "proposedAt",
-              "type": "uint64",
-              "internalType": "uint64"
-            },
-            {
-              "name": "expiresAt",
-              "type": "uint64",
-              "internalType": "uint64"
-            },
-            {
-              "name": "status",
-              "type": "uint8",
-              "internalType": "enum VaultAllocator.ProposalStatus"
-            }
-          ]
-        }
-      ],
-      "stateMutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "getProposalCount",
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "",
-          "type": "uint256",
-          "internalType": "uint256"
-        }
-      ],
-      "stateMutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "investableBase",
-      "inputs": [
-        {
-          "name": "vault",
-          "type": "address",
-          "internalType": "address"
-        }
-      ],
-      "outputs": [
-        {
-          "name": "",
-          "type": "uint256",
-          "internalType": "uint256"
-        }
-      ],
-      "stateMutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "isInPassiveBreach",
-      "inputs": [
-        {
-          "name": "vault",
-          "type": "address",
-          "internalType": "address"
-        },
-        {
-          "name": "portfolioId",
-          "type": "uint256",
-          "internalType": "uint256"
-        }
-      ],
-      "outputs": [
-        {
-          "name": "",
-          "type": "bool",
-          "internalType": "bool"
-        }
-      ],
-      "stateMutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "markExpired",
-      "inputs": [
-        {
-          "name": "proposalId",
-          "type": "uint256",
-          "internalType": "uint256"
-        }
-      ],
-      "outputs": [],
-      "stateMutability": "nonpayable"
-    },
-    {
-      "type": "function",
-      "name": "maxCedantConcentrationBps",
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "",
-          "type": "uint256",
-          "internalType": "uint256"
-        }
-      ],
-      "stateMutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "maxCedantExposure",
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "",
-          "type": "uint256",
-          "internalType": "uint256"
-        }
-      ],
-      "stateMutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "maxPortfolioConcentrationBps",
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "",
-          "type": "uint256",
-          "internalType": "uint256"
-        }
-      ],
-      "stateMutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "maxPortfolioExposure",
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "",
-          "type": "uint256",
-          "internalType": "uint256"
-        }
-      ],
-      "stateMutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "navOracle",
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "",
-          "type": "address",
-          "internalType": "contract NavOracle"
-        }
-      ],
-      "stateMutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "nextProposalId",
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "",
-          "type": "uint256",
-          "internalType": "uint256"
-        }
-      ],
-      "stateMutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "passiveBreachStatus",
-      "inputs": [
-        {
-          "name": "vault",
-          "type": "address",
-          "internalType": "address"
-        },
-        {
-          "name": "portfolioId",
-          "type": "uint256",
-          "internalType": "uint256"
-        }
-      ],
-      "outputs": [
-        {
-          "name": "portfolioBreached",
-          "type": "bool",
-          "internalType": "bool"
-        },
-        {
-          "name": "cedantBreached",
-          "type": "bool",
-          "internalType": "bool"
-        },
-        {
-          "name": "portfolioExcess",
-          "type": "uint256",
-          "internalType": "uint256"
-        },
-        {
-          "name": "cedantExcess",
-          "type": "uint256",
-          "internalType": "uint256"
-        }
-      ],
-      "stateMutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "portfolioRegistry",
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "",
-          "type": "address",
-          "internalType": "contract PortfolioRegistry"
-        }
-      ],
-      "stateMutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "proposalTtl",
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "",
-          "type": "uint64",
-          "internalType": "uint64"
-        }
-      ],
-      "stateMutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "proposeAllocation",
-      "inputs": [
-        {
-          "name": "vault",
-          "type": "address",
-          "internalType": "address"
-        },
-        {
-          "name": "portfolioId",
-          "type": "uint256",
-          "internalType": "uint256"
-        },
-        {
-          "name": "amount",
-          "type": "uint256",
-          "internalType": "uint256"
-        }
-      ],
-      "outputs": [
-        {
-          "name": "proposalId",
-          "type": "uint256",
-          "internalType": "uint256"
-        }
-      ],
-      "stateMutability": "nonpayable"
-    },
-    {
-      "type": "function",
-      "name": "proposeDeallocation",
-      "inputs": [
-        {
-          "name": "vault",
-          "type": "address",
-          "internalType": "address"
-        },
-        {
-          "name": "portfolioId",
-          "type": "uint256",
-          "internalType": "uint256"
-        },
-        {
-          "name": "amount",
-          "type": "uint256",
-          "internalType": "uint256"
-        }
-      ],
-      "outputs": [
-        {
-          "name": "proposalId",
-          "type": "uint256",
-          "internalType": "uint256"
-        }
-      ],
-      "stateMutability": "nonpayable"
-    },
-    {
-      "type": "function",
-      "name": "proposeSplitAllocation",
-      "inputs": [
-        {
-          "name": "vault",
-          "type": "address",
-          "internalType": "address"
-        },
-        {
-          "name": "portfolioIds",
-          "type": "uint256[]",
-          "internalType": "uint256[]"
-        },
-        {
-          "name": "weightsBps",
-          "type": "uint256[]",
-          "internalType": "uint256[]"
-        },
-        {
-          "name": "totalAmount",
-          "type": "uint256",
-          "internalType": "uint256"
-        }
-      ],
-      "outputs": [
-        {
-          "name": "proposalIds",
-          "type": "uint256[]",
-          "internalType": "uint256[]"
-        }
-      ],
-      "stateMutability": "nonpayable"
-    },
-    {
-      "type": "function",
-      "name": "protocolRoles",
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "",
-          "type": "address",
-          "internalType": "contract ProtocolRoles"
-        }
-      ],
-      "stateMutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "setAbsoluteExposureCaps",
-      "inputs": [
-        {
-          "name": "portfolioCap",
-          "type": "uint256",
-          "internalType": "uint256"
-        },
-        {
-          "name": "cedantCap",
-          "type": "uint256",
-          "internalType": "uint256"
-        }
-      ],
-      "outputs": [],
-      "stateMutability": "nonpayable"
-    },
-    {
-      "type": "function",
-      "name": "setConcentrationLimits",
-      "inputs": [
-        {
-          "name": "maxPortfolioBps",
-          "type": "uint256",
-          "internalType": "uint256"
-        },
-        {
-          "name": "maxCedantBps",
-          "type": "uint256",
-          "internalType": "uint256"
-        }
-      ],
-      "outputs": [],
-      "stateMutability": "nonpayable"
-    },
-    {
-      "type": "function",
-      "name": "setNavOracle",
-      "inputs": [
-        {
-          "name": "navOracle_",
-          "type": "address",
-          "internalType": "address"
-        }
-      ],
-      "outputs": [],
-      "stateMutability": "nonpayable"
-    },
-    {
-      "type": "function",
-      "name": "setProposalTtl",
-      "inputs": [
-        {
-          "name": "ttl",
-          "type": "uint64",
-          "internalType": "uint64"
-        }
-      ],
-      "outputs": [],
-      "stateMutability": "nonpayable"
-    },
-    {
-      "type": "event",
-      "name": "AbsoluteExposureCapsUpdated",
-      "inputs": [
-        {
-          "name": "maxPortfolioExposure",
-          "type": "uint256",
-          "indexed": false,
-          "internalType": "uint256"
-        },
-        {
-          "name": "maxCedantExposure",
-          "type": "uint256",
-          "indexed": false,
-          "internalType": "uint256"
-        }
-      ],
-      "anonymous": false
-    },
-    {
-      "type": "event",
-      "name": "AllocationCancelled",
-      "inputs": [
-        {
-          "name": "proposalId",
-          "type": "uint256",
-          "indexed": true,
-          "internalType": "uint256"
-        },
-        {
-          "name": "by",
-          "type": "address",
-          "indexed": true,
-          "internalType": "address"
-        }
-      ],
-      "anonymous": false
-    },
-    {
-      "type": "event",
-      "name": "AllocationExecuted",
-      "inputs": [
-        {
-          "name": "proposalId",
-          "type": "uint256",
-          "indexed": true,
-          "internalType": "uint256"
-        },
-        {
-          "name": "executor",
-          "type": "address",
-          "indexed": true,
-          "internalType": "address"
-        }
-      ],
-      "anonymous": false
-    },
-    {
-      "type": "event",
-      "name": "AllocationExpired",
-      "inputs": [
-        {
-          "name": "proposalId",
-          "type": "uint256",
-          "indexed": true,
-          "internalType": "uint256"
-        }
-      ],
-      "anonymous": false
-    },
-    {
-      "type": "event",
-      "name": "AllocationProposed",
-      "inputs": [
-        {
-          "name": "proposalId",
-          "type": "uint256",
-          "indexed": true,
-          "internalType": "uint256"
-        },
-        {
-          "name": "vault",
-          "type": "address",
-          "indexed": true,
-          "internalType": "address"
-        },
-        {
-          "name": "portfolioId",
-          "type": "uint256",
-          "indexed": true,
-          "internalType": "uint256"
-        },
-        {
-          "name": "amount",
-          "type": "uint256",
-          "indexed": false,
-          "internalType": "uint256"
-        },
-        {
-          "name": "isDeallocation",
-          "type": "bool",
-          "indexed": false,
-          "internalType": "bool"
-        },
-        {
-          "name": "proposer",
-          "type": "address",
-          "indexed": false,
-          "internalType": "address"
-        },
-        {
-          "name": "expiresAt",
-          "type": "uint64",
-          "indexed": false,
-          "internalType": "uint64"
-        }
-      ],
-      "anonymous": false
-    },
-    {
-      "type": "event",
-      "name": "ConcentrationLimitsUpdated",
-      "inputs": [
-        {
-          "name": "maxPortfolioBps",
-          "type": "uint256",
-          "indexed": false,
-          "internalType": "uint256"
-        },
-        {
-          "name": "maxCedantBps",
-          "type": "uint256",
-          "indexed": false,
-          "internalType": "uint256"
-        }
-      ],
-      "anonymous": false
-    },
-    {
-      "type": "event",
-      "name": "NavOracleSet",
-      "inputs": [
-        {
-          "name": "navOracle",
-          "type": "address",
-          "indexed": true,
-          "internalType": "address"
-        }
-      ],
-      "anonymous": false
-    },
-    {
-      "type": "event",
-      "name": "ProposalTtlUpdated",
-      "inputs": [
-        {
-          "name": "ttl",
-          "type": "uint64",
-          "indexed": false,
-          "internalType": "uint64"
-        }
-      ],
-      "anonymous": false
-    },
-    {
-      "type": "error",
-      "name": "VaultAllocator__CedantConcentrationExceeded",
-      "inputs": [
-        {
-          "name": "cedant",
-          "type": "address",
-          "internalType": "address"
-        },
-        {
-          "name": "wouldBe",
-          "type": "uint256",
-          "internalType": "uint256"
-        },
-        {
-          "name": "limit",
-          "type": "uint256",
-          "internalType": "uint256"
-        }
-      ]
-    },
-    {
-      "type": "error",
-      "name": "VaultAllocator__CedantExposureCapExceeded",
-      "inputs": [
-        {
-          "name": "cedant",
-          "type": "address",
-          "internalType": "address"
-        },
-        {
-          "name": "wouldBe",
-          "type": "uint256",
-          "internalType": "uint256"
-        },
-        {
-          "name": "cap",
-          "type": "uint256",
-          "internalType": "uint256"
-        }
-      ]
-    },
-    {
-      "type": "error",
-      "name": "VaultAllocator__InvalidParams",
-      "inputs": []
-    },
-    {
-      "type": "error",
-      "name": "VaultAllocator__OracleBlocked",
-      "inputs": [
-        {
-          "name": "vault",
-          "type": "address",
-          "internalType": "address"
-        }
-      ]
-    },
-    {
-      "type": "error",
-      "name": "VaultAllocator__PortfolioConcentrationExceeded",
-      "inputs": [
-        {
-          "name": "portfolioId",
-          "type": "uint256",
-          "internalType": "uint256"
-        },
-        {
-          "name": "wouldBe",
-          "type": "uint256",
-          "internalType": "uint256"
-        },
-        {
-          "name": "limit",
-          "type": "uint256",
-          "internalType": "uint256"
-        }
-      ]
-    },
-    {
-      "type": "error",
-      "name": "VaultAllocator__PortfolioExposureCapExceeded",
-      "inputs": [
-        {
-          "name": "portfolioId",
-          "type": "uint256",
-          "internalType": "uint256"
-        },
-        {
-          "name": "wouldBe",
-          "type": "uint256",
-          "internalType": "uint256"
-        },
-        {
-          "name": "cap",
-          "type": "uint256",
-          "internalType": "uint256"
-        }
-      ]
-    },
-    {
-      "type": "error",
-      "name": "VaultAllocator__PortfolioNotAllocatable",
-      "inputs": [
-        {
-          "name": "portfolioId",
-          "type": "uint256",
-          "internalType": "uint256"
-        }
-      ]
-    },
-    {
-      "type": "error",
-      "name": "VaultAllocator__ProposalExpired",
-      "inputs": [
-        {
-          "name": "proposalId",
-          "type": "uint256",
-          "internalType": "uint256"
-        },
-        {
-          "name": "expiresAt",
-          "type": "uint64",
-          "internalType": "uint64"
-        }
-      ]
-    },
-    {
-      "type": "error",
-      "name": "VaultAllocator__ProposalNotExpired",
-      "inputs": [
-        {
-          "name": "proposalId",
-          "type": "uint256",
-          "internalType": "uint256"
-        },
-        {
-          "name": "expiresAt",
-          "type": "uint64",
-          "internalType": "uint64"
-        }
-      ]
-    },
-    {
-      "type": "error",
-      "name": "VaultAllocator__ProposalNotFound",
-      "inputs": [
-        {
-          "name": "proposalId",
-          "type": "uint256",
-          "internalType": "uint256"
-        }
-      ]
-    },
-    {
-      "type": "error",
-      "name": "VaultAllocator__ProposalNotPending",
-      "inputs": [
-        {
-          "name": "proposalId",
-          "type": "uint256",
-          "internalType": "uint256"
-        },
-        {
-          "name": "status",
-          "type": "uint8",
-          "internalType": "enum VaultAllocator.ProposalStatus"
-        }
-      ]
-    },
-    {
-      "type": "error",
-      "name": "VaultAllocator__UnauthorizedCanceller",
-      "inputs": [
-        {
-          "name": "caller",
-          "type": "address",
-          "internalType": "address"
-        }
-      ]
-    },
-    {
-      "type": "error",
-      "name": "VaultAllocator__UnauthorizedRole",
-      "inputs": [
-        {
-          "name": "caller",
-          "type": "address",
-          "internalType": "address"
-        },
-        {
-          "name": "role",
-          "type": "bytes32",
-          "internalType": "bytes32"
-        }
-      ]
-    },
-    {
-      "type": "error",
-      "name": "VaultAllocator__WeightsMismatch",
-      "inputs": []
-    }
+  {
+    "type": "constructor",
+    "inputs": [
+      {
+        "name": "protocolRoles_",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "portfolioRegistry_",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "navOracle_",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "ALLOCATOR_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "AUTHORIZED_CEDANT_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "BASIS_POINTS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "CLAIMS_COMMITTEE_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "DEFAULT_MAX_CEDANT_CONCENTRATION_BPS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "DEFAULT_MAX_PORTFOLIO_CONCENTRATION_BPS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "DEFAULT_PROPOSAL_TTL",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "KYC_OPERATOR_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "ORACLE_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "OWNER_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "PREMIUM_DEPOSITOR_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "PROPOSAL_TTL_CEILING",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "PROPOSAL_TTL_FLOOR",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "SENTINEL_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "UNDERWRITING_CURATOR_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "VAULT_FACTORY_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "cancelProposal",
+    "inputs": [
+      {
+        "name": "proposalId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "cedantExposure",
+    "inputs": [
+      {
+        "name": "vault",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "cedant",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "exposure",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "executeAllocation",
+    "inputs": [
+      {
+        "name": "proposalId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "getProposal",
+    "inputs": [
+      {
+        "name": "proposalId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "internalType": "struct VaultAllocator.AllocationProposal",
+        "components": [
+          {
+            "name": "proposalId",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "vault",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "portfolioId",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "amount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "isDeallocation",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "proposer",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "proposedAt",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "expiresAt",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "status",
+            "type": "uint8",
+            "internalType": "enum VaultAllocator.ProposalStatus"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getProposalCount",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "investableBase",
+    "inputs": [
+      {
+        "name": "vault",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "isInPassiveBreach",
+    "inputs": [
+      {
+        "name": "vault",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "portfolioId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "markExpired",
+    "inputs": [
+      {
+        "name": "proposalId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "maxCedantConcentrationBps",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "maxCedantExposure",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "maxPortfolioConcentrationBps",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "maxPortfolioExposure",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "navOracle",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract NavOracle"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "nextProposalId",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "passiveBreachStatus",
+    "inputs": [
+      {
+        "name": "vault",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "portfolioId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "portfolioBreached",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "cedantBreached",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "portfolioExcess",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "cedantExcess",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "portfolioRegistry",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract PortfolioRegistry"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "proposalTtl",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "proposeAllocation",
+    "inputs": [
+      {
+        "name": "vault",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "portfolioId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "proposalId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "proposeDeallocation",
+    "inputs": [
+      {
+        "name": "vault",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "portfolioId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "proposalId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "proposeSplitAllocation",
+    "inputs": [
+      {
+        "name": "vault",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "portfolioIds",
+        "type": "uint256[]",
+        "internalType": "uint256[]"
+      },
+      {
+        "name": "weightsBps",
+        "type": "uint256[]",
+        "internalType": "uint256[]"
+      },
+      {
+        "name": "totalAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "proposalIds",
+        "type": "uint256[]",
+        "internalType": "uint256[]"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "protocolCedantExposure",
+    "inputs": [
+      {
+        "name": "fallbackVault",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "cedant",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "total",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "protocolRoles",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract ProtocolRoles"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "setAbsoluteExposureCaps",
+    "inputs": [
+      {
+        "name": "portfolioCap",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "cedantCap",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setConcentrationLimits",
+    "inputs": [
+      {
+        "name": "maxPortfolioBps",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "maxCedantBps",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setNavOracle",
+    "inputs": [
+      {
+        "name": "navOracle_",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setProposalTtl",
+    "inputs": [
+      {
+        "name": "ttl",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setVaultFactory",
+    "inputs": [
+      {
+        "name": "vaultFactory_",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "vaultFactory",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract VaultFactory"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "AbsoluteExposureCapsUpdated",
+    "inputs": [
+      {
+        "name": "maxPortfolioExposure",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "maxCedantExposure",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "AllocationCancelled",
+    "inputs": [
+      {
+        "name": "proposalId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "by",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "AllocationExecuted",
+    "inputs": [
+      {
+        "name": "proposalId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "executor",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "AllocationExpired",
+    "inputs": [
+      {
+        "name": "proposalId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "AllocationProposed",
+    "inputs": [
+      {
+        "name": "proposalId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "vault",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "portfolioId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "isDeallocation",
+        "type": "bool",
+        "indexed": false,
+        "internalType": "bool"
+      },
+      {
+        "name": "proposer",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
+        "name": "expiresAt",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ConcentrationLimitsUpdated",
+    "inputs": [
+      {
+        "name": "maxPortfolioBps",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "maxCedantBps",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "NavOracleSet",
+    "inputs": [
+      {
+        "name": "navOracle",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ProposalTtlUpdated",
+    "inputs": [
+      {
+        "name": "ttl",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "VaultFactorySet",
+    "inputs": [
+      {
+        "name": "vaultFactory",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "error",
+    "name": "VaultAllocator__CedantConcentrationExceeded",
+    "inputs": [
+      {
+        "name": "cedant",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "wouldBe",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "limit",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "VaultAllocator__CedantExposureCapExceeded",
+    "inputs": [
+      {
+        "name": "cedant",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "wouldBe",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "cap",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "VaultAllocator__InvalidParams",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "VaultAllocator__OracleBlocked",
+    "inputs": [
+      {
+        "name": "vault",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "VaultAllocator__PortfolioConcentrationExceeded",
+    "inputs": [
+      {
+        "name": "portfolioId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "wouldBe",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "limit",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "VaultAllocator__PortfolioExposureCapExceeded",
+    "inputs": [
+      {
+        "name": "portfolioId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "wouldBe",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "cap",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "VaultAllocator__PortfolioNotAllocatable",
+    "inputs": [
+      {
+        "name": "portfolioId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "VaultAllocator__ProposalExpired",
+    "inputs": [
+      {
+        "name": "proposalId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "expiresAt",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "VaultAllocator__ProposalNotExpired",
+    "inputs": [
+      {
+        "name": "proposalId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "expiresAt",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "VaultAllocator__ProposalNotFound",
+    "inputs": [
+      {
+        "name": "proposalId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "VaultAllocator__ProposalNotPending",
+    "inputs": [
+      {
+        "name": "proposalId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "status",
+        "type": "uint8",
+        "internalType": "enum VaultAllocator.ProposalStatus"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "VaultAllocator__UnauthorizedCanceller",
+    "inputs": [
+      {
+        "name": "caller",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "VaultAllocator__UnauthorizedRole",
+    "inputs": [
+      {
+        "name": "caller",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "role",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "VaultAllocator__WeightsMismatch",
+    "inputs": []
+  }
 ] as const;
 
 export const CLAIM_MANAGER_ABI = [
@@ -10896,6 +11225,22 @@ export const CLAIM_MANAGER_ABI = [
         "name": "role",
         "type": "bytes32",
         "internalType": "bytes32"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "ClaimManager__VaultDoesNotUnderwrite",
+    "inputs": [
+      {
+        "name": "vault",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "portfolioId",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ]
   },
@@ -12130,6 +12475,22 @@ export const BORDEREAU_ORACLE_ABI = [
   },
   {
     "type": "error",
+    "name": "BordereauOracle__NotPortfolioCedant",
+    "inputs": [
+      {
+        "name": "portfolioId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "caller",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
     "name": "BordereauOracle__UnauthorizedProposer",
     "inputs": [
       {
@@ -12718,10 +13079,6 @@ export const ADAPTER_REGISTRY_ABI = [
     ]
   }
 ] as const;
-// =============================================================================
-// NextBlockLens (Phase 10) — canonical READ-ONLY source for dashboards.
-// Never-reverting get* views; DataStatus/DataSource enums match on-chain.
-// =============================================================================
 
 export const NEXTBLOCK_LENS_ABI = [
   {

@@ -155,6 +155,17 @@ jobs:
       - name: Build with sizes
         run: forge build --sizes
 
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # The frontend ABIs are generated from this build. Without a check they
+      # drift silently: the app went months without `underwrites`, the getter
+      # the claim path depends on. Fix a failure with `npm run codegen:abis`.
+      - name: Frontend ABI drift check
+        run: node ../scripts/generate-abis.mjs --check
+
       - name: Test
         run: forge test -vvv
 

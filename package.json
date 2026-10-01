@@ -12,6 +12,8 @@
     "build": "npm --prefix app run build",
     "codegen:addressbook": "node scripts/generate-addressbook.mjs",
     "check:addressbook": "node scripts/check-addressbook.mjs",
+    "codegen:abis": "node scripts/generate-abis.mjs",
+    "check:abis": "node scripts/generate-abis.mjs --check",
     "check:natspec": "node scripts/check-natspec.mjs",
     "ci:frontend:install": "npm ci",
     "ci:frontend:lint": "npm --prefix app run lint",
