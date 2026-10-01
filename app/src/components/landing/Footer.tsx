@@ -21,6 +21,7 @@ const Footer = () => {
   const protocolLinks = [
     { label: "Protocol Overview", href: "#protocol-stack" },
     { label: "Documentation", href: "/docs" },
+    { label: "Insights", href: "/blog" },
   ];
 
   const resourceLinks = [
