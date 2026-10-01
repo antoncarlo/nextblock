@@ -89,12 +89,12 @@ The two lists must be identical, in the same order.
 
 ## PRODUCTION BLOCK (governance)
 
-PRODUCTION USE IS BLOCKED until Governance Phase 2 Stage A (operational key
-separation) is executed and verified. The deployer EOA
-`0xfF6f0d49dD2187351264C4d3bbd5537bE8Ad81d2` still holds OWNER_ROLE,
-DEFAULT_ADMIN_ROLE and every operational role: a single hot key has full
-instant control bypassing the timelock. Until Stage A completes (and Stage B
-finalizes the handover):
+PRODUCTION USE IS BLOCKED until Governance Phase 2 (the deployer renounces) is
+executed and verified. On the current Base Sepolia generation (deployed
+2026-10-01) the operational roles already sit on separate keys, so Stage A holds
+by construction, but the deployer EOA `0x090043bF030C12d8761441790EB2CF81F0eDcf2c`
+still holds OWNER_ROLE and DEFAULT_ADMIN_ROLE: a single hot key can still
+administer every role, bypassing the timelock. Until phase 2 completes:
 
 - no mainnet deployment may be prepared or executed;
 - no real-value asset may be referenced by any vault;
@@ -106,9 +106,10 @@ Runbook and authorization gates: `docs/GOVERNANCE_PHASE2.md`.
 
 ## Governance operations (Base Sepolia)
 
-- Phase 1 (done): ProtocolTimelock `0x6e2927627d83A90EDC9cDA3c626B49875f9449CF`
-  holds OWNER_ROLE + DEFAULT_ADMIN_ROLE on ProtocolRoles; Safe
-  `0x8Fd8b45Ba2612E7535bbeB21615554701CfaF870` proposes/executes/cancels.
+- Phase 1 (done, 2026-10-01): ProtocolTimelock `0xc2d419c6EEaC865fE81DAFa7C848fD7d5a5674a7`
+  (min delay 3600s) holds OWNER_ROLE + DEFAULT_ADMIN_ROLE on ProtocolRoles; Safe
+  `0x0969B20f1d8a5628613f00fa6aDBE85e715fEf15` proposes/executes/cancels. The Safe of the
+  previous generation (`0x8Fd8b45Ba2612E7535bbeB21615554701CfaF870`, 2-of-2) is retired.
 - Rehearsal (next, requires explicit authorization): one harmless operation
   via Safe -> schedule on timelock -> wait 1h -> execute -> verify with cast.
 - Phase 2 RENOUNCE_DEPLOYER: BLOCKED. Do not run under any circumstance
@@ -221,7 +222,7 @@ compromised proposer intent, changed circumstances).
    state: `cast call <timelock> "isOperationPending(bytes32)(bool)" <id>`.
 2. Cancel (only the Safe holds CANCELLER_ROLE): from the Safe UI, execute
    `cancel(bytes32 id)` on the ProtocolTimelock
-   (`0x6e2927627d83A90EDC9cDA3c626B49875f9449CF`). Cancellation requires
+   (`0xc2d419c6EEaC865fE81DAFa7C848fD7d5a5674a7`). Cancellation requires
    the standard Safe signer threshold - emergency does not reduce the
    quorum.
 3. Verify: `isOperationPending(id)` returns false; re-run

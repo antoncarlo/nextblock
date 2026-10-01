@@ -86,7 +86,7 @@ to trust, and what to build next.
 ## 4. Open scope (what to build next)
 
 **Owner-gated operational (hours):**
-1. Fresh-generation redeploy + governance phase 2 (then `lockRealTime()`, deliberately later) — [runbook](../contracts/REDEPLOY_RUNBOOK.md), rehearsed end to end by `scripts/rehearse-redeploy.sh`. **Not done yet:** the deployed staging generation is still the one broadcast on 2026-06-10, so it carries none of the security-review fixes (F-07…F-12) and the frontend address book still points at it. Needs eight role addresses and the deployer key from the owner.
+1. **Fresh generation deployed 2026-10-01** on Base Sepolia (roles on separate holders, governance phase 1 done, security-review fixes F-07…F-12 live; verified on-chain read-only). Remaining, in order: run one timelocked operation through the Safe, then governance phase 2 (the deployer renounces), then `lockRealTime()` deliberately later — [runbook](../contracts/REDEPLOY_RUNBOOK.md). Owner-gated wiring still open: Vercel env `NEXT_PUBLIC_REDEMPTION_QUEUE_ADDRESS`, GitHub var `REDEMPTION_QUEUE_ADDRESS`, secret `CRON_SECRET`, Goldsky redeploy of `indexer/subgraph.yaml` (already re-pointed).
 
 **Bucket B — external vendors (blocked on accounts/keys, adapters ready):**
 2. Braino/WAVENURE integration → `NavOracle`/`AIAssessor`/`VaultAllocator` — **formal v2 spec ready to send to the Braino team**: [braino-oracle-spec.md](../contracts/docs/integrations/braino-oracle-spec.md) (5 services incl. agentic allocator; see also [real-providers.md](../contracts/docs/integrations/real-providers.md))
