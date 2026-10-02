@@ -90,7 +90,7 @@ The two lists must be identical, in the same order.
 ## PRODUCTION BLOCK (governance)
 
 Governance phase 2 is **done** on the current Base Sepolia generation
-(2026-10-01). A timelocked operation was rehearsed through the Safe, and then the
+(2026-10-02). A timelocked operation was rehearsed through the Safe, and then the
 deployer EOA `0x090043bF030C12d8761441790EB2CF81F0eDcf2c` renounced OWNER_ROLE and
 DEFAULT_ADMIN_ROLE; it holds no role at all. Role administration now sits with the
 ProtocolTimelock and the governance Safe `0x0969B20f1d8a5628613f00fa6aDBE85e715fEf15`.
@@ -110,16 +110,18 @@ Runbook and authorization gates: `docs/GOVERNANCE_PHASE2.md`.
 
 ## Governance operations (Base Sepolia)
 
-- Phase 1 (done, 2026-10-01): ProtocolTimelock `0xc2d419c6EEaC865fE81DAFa7C848fD7d5a5674a7`
+- Phase 1 (done, 2026-10-02): ProtocolTimelock `0xD94ea36FD19a0D3Cb3A8EA1214C6F97A947e5950`
   (min delay 3600s) holds OWNER_ROLE + DEFAULT_ADMIN_ROLE on ProtocolRoles; Safe
   `0x0969B20f1d8a5628613f00fa6aDBE85e715fEf15` proposes/executes/cancels. The Safe of the
   previous generation (`0x8Fd8b45Ba2612E7535bbeB21615554701CfaF870`, 2-of-2) is retired.
-- Rehearsal (next, requires explicit authorization): one harmless operation
-  via Safe -> schedule on timelock -> wait 1h -> execute -> verify with cast.
-- Phase 2 RENOUNCE_DEPLOYER: BLOCKED. Do not run under any circumstance
-  without a new explicit owner authorization AND a successful rehearsal. It
-  is irreversible for the deployer EOA
-  (`contracts/script/GovernanceMigration.s.sol`, `RENOUNCE_DEPLOYER=true`).
+- Rehearsal (done, 2026-10-02): one harmless operation scheduled by the Safe on the
+  timelock, executed after the one-hour delay, `isOperationDone` true.
+- Phase 2 RENOUNCE_DEPLOYER (done, 2026-10-02, block 47588905): the deployer EOA
+  `0x090043bF030C12d8761441790EB2CF81F0eDcf2c` renounced OWNER_ROLE and
+  DEFAULT_ADMIN_ROLE on ProtocolRoles and holds no role anywhere. The timelock
+  holds DEFAULT_ADMIN_ROLE; OWNER_ROLE sits with the timelock and the Safe. It
+  cannot be undone for that key; any later change goes through the Safe and the
+  timelock (`contracts/script/GovernanceMigration.s.sol`, `RENOUNCE_DEPLOYER=true`).
 
 ## Incident quick reference
 
@@ -226,7 +228,7 @@ compromised proposer intent, changed circumstances).
    state: `cast call <timelock> "isOperationPending(bytes32)(bool)" <id>`.
 2. Cancel (only the Safe holds CANCELLER_ROLE): from the Safe UI, execute
    `cancel(bytes32 id)` on the ProtocolTimelock
-   (`0xc2d419c6EEaC865fE81DAFa7C848fD7d5a5674a7`). Cancellation requires
+   (`0xD94ea36FD19a0D3Cb3A8EA1214C6F97A947e5950`). Cancellation requires
    the standard Safe signer threshold - emergency does not reduce the
    quorum.
 3. Verify: `isOperationPending(id)` returns false; re-run
