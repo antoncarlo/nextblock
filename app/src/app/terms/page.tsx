@@ -29,7 +29,7 @@ export default function TermsPage() {
           heading: '2. Staging scope — no mainnet, no real value',
           body: [
             '• All contracts run exclusively on the Base Sepolia test network. There is no mainnet deployment and no token sale.',
-            '• The settlement asset is a test USDC mock with no monetary value. Nothing in the staging environment constitutes real funds, deposits, premiums or payouts, and no real value can be put at risk through the staging contracts.',
+            '• The settlement asset is the testnet USDC issued by Circle, which has no monetary value. Nothing in the staging environment constitutes real funds, deposits, premiums or payouts, and no real value can be put at risk through the staging contracts.',
             '• The protocol has not undergone an external security audit. Do not send real assets of any kind to the staging addresses; anything sent to them is unrecoverable by design of the test network.',
             '• The staging environment, including its database of KYB applications, may be modified, paused, redeployed or wiped at any time without notice.',
           ],

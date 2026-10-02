@@ -18,8 +18,8 @@ export const MIN_ETH_WEI = 5_000_000_000_000_000n;
 /** Minimum test USDC (6 decimals) to consider a wallet funded for deposit/premium demos: 1 USDC. */
 export const MIN_USDC_6 = 1_000_000n;
 
-/** Test USDC minted per faucet click in the existing DepositSidebar faucet. */
-export const FAUCET_USDC_AMOUNT_6 = 10_000_000_000n; // 10,000 USDC
+/** Circle's faucet for testnet USDC, the token the vaults settle in. Guidance only. */
+export const USDC_FAUCET_URL = 'https://faucet.circle.com';
 
 /** External Base Sepolia ETH faucets (gas cannot be minted on-chain). Guidance only. */
 export const ETH_FAUCET_LINKS: readonly { label: string; url: string }[] = [
@@ -211,8 +211,9 @@ export function nextAction(input: PilotInput): NextAction {
   if (input.roles.isCedant && !meetsUsdcRequirement(input.usdc6)) {
     return {
       severity: 'action',
-      message: 'You hold a role. Mint test USDC from the faucet to fund deposits and premium flows.',
-      ctaLabel: 'Mint test USDC',
+      message: 'You hold a role. Get testnet USDC from the Circle faucet to fund deposits and premium flows.',
+      ctaLabel: 'Open USDC faucet',
+      ctaUrl: USDC_FAUCET_URL,
     };
   }
   const tracks = deriveActiveTracks(input.roles);
@@ -276,8 +277,8 @@ export function computeChecklist(input: PilotInput): ChecklistItem[] {
       ? 'ok'
       : 'todo',
     detail: meetsUsdcRequirement(input.usdc6)
-      ? 'Has test USDC (MockUSDC, test-only).'
-      : 'Mint test USDC from the faucet (MockUSDC, test-only — no real value).',
+      ? 'Holds testnet USDC.'
+      : 'Get testnet USDC from the Circle faucet (testnet only — no real value).',
   };
 
   const kyb: ChecklistItem = {
