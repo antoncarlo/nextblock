@@ -34,8 +34,6 @@ import { DataSourceBadge } from "@/components/shared/DataSourceBadge";
 const EXPLORER_URLS: Record<number, string> = {
   84532: "https://sepolia.basescan.org",
   8453: "https://basescan.org",
-  11155111: "https://sepolia.etherscan.io",
-  5042002: "https://testnet.arcscan.app",
 };
 
 function getExplorerUrl(chainId: number, address: string): string | null {

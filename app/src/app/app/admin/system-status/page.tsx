@@ -5,10 +5,10 @@ import { useAccount, useSignMessage } from 'wagmi';
 import { operatorAuthMessage } from '@/lib/kyb/schema';
 
 /**
- * Admin system status — what's mock, what's real, what's reachable.
+ * Admin system status — which providers are live, which are idle, what's reachable.
  *
  * Reviewer-auth (Sentinel/Committee/Owner). Renders four sections:
- *   - Providers: per-surface mode + key readiness
+ *   - Providers: per-surface state (live / idle / misconfigured) and what it needs
  *   - Platform env vars: present / missing (no values)
  *   - RPC + Supabase health
  *   - Deploy info (commit, environment, region)
@@ -17,13 +17,22 @@ import { operatorAuthMessage } from '@/lib/kyb/schema';
  * flags. Safe to leave open in a browser tab during operations.
  */
 
+type SurfaceState = 'live' | 'idle' | 'dev-fixture' | 'misconfigured';
+
 interface ProviderConfig {
   surface: string;
   selected: string;
-  isMock: boolean;
-  keysReady: boolean;
+  state: SurfaceState;
+  detail: string;
   requiredVars: Array<{ name: string; present: boolean }>;
 }
+
+const STATE_TONE: Record<SurfaceState, 'ok' | 'warn' | 'bad'> = {
+  live: 'ok',
+  idle: 'warn',
+  'dev-fixture': 'warn',
+  misconfigured: 'bad',
+};
 
 interface StatusPayload {
   providers: ProviderConfig[];
@@ -127,8 +136,8 @@ function StatusBody({ payload }: { payload: StatusPayload }) {
             <tr>
               <th className="py-1 pr-3 text-left">Surface</th>
               <th className="py-1 pr-3 text-left">Selected</th>
-              <th className="py-1 pr-3 text-left">Mode</th>
-              <th className="py-1 pr-3 text-left">Keys</th>
+              <th className="py-1 pr-3 text-left">State</th>
+              <th className="py-1 pr-3 text-left">What it does</th>
               <th className="py-1 text-left">Required vars</th>
             </tr>
           </thead>
@@ -138,11 +147,9 @@ function StatusBody({ payload }: { payload: StatusPayload }) {
                 <td className="py-1.5 pr-3 font-medium text-gray-800">{p.surface}</td>
                 <td className="py-1.5 pr-3 text-gray-700">{p.selected}</td>
                 <td className="py-1.5 pr-3">
-                  <Badge tone={p.isMock ? 'warn' : 'ok'} label={p.isMock ? 'mock' : 'live'} />
+                  <Badge tone={STATE_TONE[p.state]} label={p.state} />
                 </td>
-                <td className="py-1.5 pr-3">
-                  <Badge tone={p.keysReady ? 'ok' : 'bad'} label={p.keysReady ? 'ready' : 'missing'} />
-                </td>
+                <td className="py-1.5 pr-3 text-[11px] text-gray-600">{p.detail}</td>
                 <td className="py-1.5 text-[11px] text-gray-600">
                   {p.requiredVars.length === 0 ? (
                     <span className="text-gray-400">—</span>

@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAccount, useReadContract, useWaitForTransactionReceipt, useWriteContract } from 'wagmi';
+import { erc20Abi } from 'viem';
 import {
   PREMIUM_DISTRIBUTOR_ABI,
-  MOCK_USDC_ABI,
 } from '@/config/contracts';
 import { useAddresses } from '@/hooks/useAddresses';
 import { useAllPortfolios, PortfolioStatus, type PortfolioView } from '@/hooks/usePortfolioRegistry';
@@ -239,15 +239,15 @@ function PayPremium({ portfolios }: { portfolios: PortfolioView[] }) {
   const split = Array.isArray(splitRaw) ? (splitRaw as readonly bigint[]) : undefined;
 
   const { data: balanceRaw } = useReadContract({
-    address: addresses.mockUSDC,
-    abi: MOCK_USDC_ABI,
+    address: addresses.usdc,
+    abi: erc20Abi,
     functionName: 'balanceOf',
     args: address ? [address] : undefined,
     query: { enabled: !!address },
   });
   const { data: allowanceRaw, refetch: refetchAllowance } = useReadContract({
-    address: addresses.mockUSDC,
-    abi: MOCK_USDC_ABI,
+    address: addresses.usdc,
+    abi: erc20Abi,
     functionName: 'allowance',
     args: address ? [address, distributor] : undefined,
     query: { enabled: !!address },
@@ -298,8 +298,8 @@ function PayPremium({ portfolios }: { portfolios: PortfolioView[] }) {
     if (needsApproval) {
       paidFor.current = null;
       approveWrite({
-        address: addresses.mockUSDC,
-        abi: MOCK_USDC_ABI,
+        address: addresses.usdc,
+        abi: erc20Abi,
         functionName: 'approve',
         args: [distributor, gross],
       });

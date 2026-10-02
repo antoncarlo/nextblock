@@ -51,13 +51,20 @@ jobs:
       - name: Typecheck
         run: npm run ci:frontend:typecheck
 
-      # Pure and hermetic: the Braino client against an in-process signing fixture, the
-      # recommendation encoding that publishAssessment depends on, the publisher node.
-      - name: AI integration smoke
+      # Pure and hermetic (no network): the Braino client against an in-process signing
+      # fixture, the recommendation encoding publishAssessment depends on, the publisher
+      # node, and the rule that only real providers run on production — sanctions list
+      # parsing and matching, wallet screening against an injected RPC, provider selection.
+      - name: Provider and AI smoke
         run: |
           node --experimental-strip-types app/scripts/ai-assessor-smoke.ts
           node --experimental-strip-types app/scripts/braino-client-smoke.ts
           node --experimental-strip-types app/scripts/oracle-node-smoke.ts
+          node --experimental-strip-types app/scripts/providers-smoke.ts
+          node --experimental-strip-types app/scripts/sanctions-list-smoke.ts
+          node --experimental-strip-types app/scripts/sanctions-smoke.ts
+          node --experimental-strip-types app/scripts/wallet-sanctions-smoke.ts
+          node --experimental-strip-types app/scripts/email-smoke.ts
 
       - name: Build
         run: npm run ci:frontend:build

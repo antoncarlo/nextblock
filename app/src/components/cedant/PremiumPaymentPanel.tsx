@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { erc20Abi } from 'viem';
 import { useAddresses } from '@/hooks/useAddresses';
 import { useUSDCAllowance, useUSDCBalance } from '@/hooks/useVaultData';
-import { INSURANCE_VAULT_ABI, MOCK_USDC_ABI } from '@/config/contracts';
+import { INSURANCE_VAULT_ABI } from '@/config/contracts';
 import { formatUSDC } from '@/lib/formatting';
 
 /**
@@ -24,7 +25,7 @@ import { formatUSDC } from '@/lib/formatting';
  */
 export function PremiumPaymentPanel({ vaultAddress }: { vaultAddress: `0x${string}` }) {
   const { address } = useAccount();
-  const { mockUSDC } = useAddresses();
+  const { usdc } = useAddresses();
   const { data: balance } = useUSDCBalance(address);
   const { data: allowance } = useUSDCAllowance(address, vaultAddress);
 
@@ -108,8 +109,8 @@ export function PremiumPaymentPanel({ vaultAddress }: { vaultAddress: `0x${strin
       setPhase('approving');
       try {
         approve({
-          address: mockUSDC,
-          abi: MOCK_USDC_ABI,
+          address: usdc,
+          abi: erc20Abi,
           functionName: 'approve',
           args: [vaultAddress, amountBaseUnits],
         });

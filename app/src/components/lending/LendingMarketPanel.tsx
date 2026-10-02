@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import { useAccount, useChainId, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { erc20Abi } from 'viem';
 import { useAddresses } from '@/hooks/useAddresses';
 import { useLendingMarket } from '@/hooks/useLendingMarket';
 import { LENDING_MARKET_ABI, LENDING_CHAIN_ID } from '@/config/lending';
-import { MOCK_USDC_ABI } from '@/config/contracts';
 import { parseUSDC, formatUSDC } from '@/lib/formatting';
 import { SHARE_SYMBOL, SHARE_DISCLAIMER } from '@/lib/disclosure';
 
@@ -37,7 +37,7 @@ export function LendingMarketPanel({ marketAddress }: LendingMarketPanelProps) {
 
   function approveUsdc() {
     if (!marketAddress) return;
-    writeContract({ address: addresses.mockUSDC, abi: MOCK_USDC_ABI, functionName: 'approve', args: [marketAddress, parsed] });
+    writeContract({ address: addresses.usdc, abi: erc20Abi, functionName: 'approve', args: [marketAddress, parsed] });
   }
   function doSupply() {
     if (!marketAddress) return;

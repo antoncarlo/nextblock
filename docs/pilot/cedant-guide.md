@@ -42,11 +42,12 @@ faucet (links are shown in the Pilot Hub):
 
 Aim for at least ~0.005 ETH. This ETH is testnet-only and has no value.
 
-## 4. Get test USDC (MockUSDC)
+## 4. Get testnet USDC
 
-The pilot uses a test USDC token (MockUSDC) with no real value. In the Pilot Hub
-use the **"Mint test USDC"** button (mints 10,000 test USDC to your wallet). The
-same faucet exists on the vault deposit screen.
+The pilot settles in Circle's testnet USDC on Base Sepolia, which has no real
+value. Get it from Circle's own faucet (https://faucet.circle.com): choose
+**Base Sepolia** and **USDC**, paste your wallet address. The Pilot Hub and the
+vault deposit screen link to it.
 
 ## 5. Complete KYB
 

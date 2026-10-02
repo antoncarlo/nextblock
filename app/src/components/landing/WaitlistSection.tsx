@@ -36,7 +36,7 @@ const roleCards: RoleCardData[] = [
     id: "institutional lp",
     label: "Institutional Liquidity Provider · LP",
     title: "Provide capital, earn reinsurance yield",
-    content: "Deposit USDC into institutional vaults, hold restricted nbUSDC shares, and earn reinsurance-backed yield — the only RWA uncorrelated to equities, bonds and crypto. Continuous NAV.",
+    content: "Deposit USDC into institutional vaults, hold restricted nbUSDC shares, and earn reinsurance-backed yield, driven by insured events rather than market direction. Continuous NAV.",
     icon: <Key />,
   },
 ];

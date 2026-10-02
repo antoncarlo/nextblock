@@ -40,8 +40,9 @@ this network; the app blocks actions on any other chain and sends no transaction
 
 - Test ETH (gas): obtain from a public Base Sepolia faucet (Coinbase Developer
   Platform faucet or Alchemy Base Sepolia faucet; links in the Pilot Hub).
-- Test USDC: mint from the Pilot Hub or the vault deposit screen ("Mint test
-  USDC"). This is MockUSDC — a valueless test token.
+- Testnet USDC: Circle's faucet (https://faucet.circle.com, network Base
+  Sepolia; linked from the Pilot Hub and the vault deposit screen). It is
+  Circle's testnet USDC — valueless.
 
 ## 5. KYB and 6. LP eligibility (whitelist)
 
@@ -70,7 +71,7 @@ When your wallet is eligible:
 
 | Item | Note |
 |---|---|
-| Asset value | Test ETH and MockUSDC have **no monetary value** |
+| Asset value | Test ETH and testnet USDC have **no monetary value** |
 | Yield | No real yield; any figures are for technical validation only |
 | Redemptions | Not necessarily instant; buffer/queue applies to underwriting capital |
 | Economic loop | Allocation/premium (UPR/NAV) flows may be operator-facilitated in the pilot |

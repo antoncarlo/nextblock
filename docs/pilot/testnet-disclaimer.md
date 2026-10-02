@@ -11,8 +11,8 @@ Read this before participating in the NextBlock pilot.
 ## No real value
 
 - **Test ETH** on Base Sepolia is a valueless testnet asset used only to pay gas.
-- **MockUSDC / test USDC** used in the pilot is a test token with **no monetary
-  value**. It is not USDC, not a stablecoin, and not redeemable for anything.
+- The **testnet USDC** used in the pilot is Circle's test deployment on Base
+  Sepolia and has **no monetary value**. It is not redeemable for anything.
 - Vault shares (`nbUSDC`) minted in the pilot are testnet artifacts with no value.
 
 ## Not a financial offering

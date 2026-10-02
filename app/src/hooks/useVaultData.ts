@@ -1,10 +1,10 @@
 "use client";
 
 import { useReadContract, useReadContracts } from "wagmi";
+import { erc20Abi } from 'viem';
 import {
   VAULT_FACTORY_ABI,
   INSURANCE_VAULT_ABI,
-  MOCK_USDC_ABI,
 } from "@/config/contracts";
 import { POLL_INTERVAL } from "@/config/constants";
 import { useAddresses } from "./useAddresses";
@@ -141,15 +141,15 @@ export function useMaxWithdraw(
 export function useUSDCBalance(userAddress: `0x${string}` | undefined) {
   const addresses = useAddresses();
   return useReadContract({
-    address: addresses.mockUSDC,
-    abi: MOCK_USDC_ABI,
+    address: addresses.usdc,
+    abi: erc20Abi,
     functionName: "balanceOf",
     args: userAddress ? [userAddress] : undefined,
     query: {
       refetchInterval: POLL_INTERVAL,
       enabled:
         !!userAddress &&
-        addresses.mockUSDC !== "0x0000000000000000000000000000000000000000",
+        addresses.usdc !== "0x0000000000000000000000000000000000000000",
     },
   });
 }
@@ -163,8 +163,8 @@ export function useUSDCAllowance(
 ) {
   const addresses = useAddresses();
   return useReadContract({
-    address: addresses.mockUSDC,
-    abi: MOCK_USDC_ABI,
+    address: addresses.usdc,
+    abi: erc20Abi,
     functionName: "allowance",
     args:
       userAddress && spenderAddress ? [userAddress, spenderAddress] : undefined,
@@ -173,7 +173,7 @@ export function useUSDCAllowance(
       enabled:
         !!userAddress &&
         !!spenderAddress &&
-        addresses.mockUSDC !== "0x0000000000000000000000000000000000000000",
+        addresses.usdc !== "0x0000000000000000000000000000000000000000",
     },
   });
 }

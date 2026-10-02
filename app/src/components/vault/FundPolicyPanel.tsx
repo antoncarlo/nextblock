@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAccount, useReadContract, useWaitForTransactionReceipt, useWriteContract } from 'wagmi';
-import { INSURANCE_VAULT_ABI, MOCK_USDC_ABI } from '@/config/contracts';
+import { erc20Abi } from 'viem';
+import { INSURANCE_VAULT_ABI } from '@/config/contracts';
 import { useAddresses } from '@/hooks/useAddresses';
 import { useAllPolicies, usePolicyCount } from '@/hooks/usePolicyRegistry';
 import { formatUSDC } from '@/lib/formatting';
@@ -88,15 +89,15 @@ export function FundPolicyPanel({
   const parsed = parseUSDC(amount);
 
   const { data: usdcBalance } = useReadContract({
-    address: addresses.mockUSDC,
-    abi: MOCK_USDC_ABI,
+    address: addresses.usdc,
+    abi: erc20Abi,
     functionName: 'balanceOf',
     args: address ? [address] : undefined,
     query: { enabled: !!address },
   });
   const { data: allowanceRaw, refetch: refetchAllowance } = useReadContract({
-    address: addresses.mockUSDC,
-    abi: MOCK_USDC_ABI,
+    address: addresses.usdc,
+    abi: erc20Abi,
     functionName: 'allowance',
     args: address ? [address, vaultAddress] : undefined,
     query: { enabled: !!address },
@@ -136,8 +137,8 @@ export function FundPolicyPanel({
     if (needsApproval) {
       depositedFor.current = null;
       approveWrite({
-        address: addresses.mockUSDC,
-        abi: MOCK_USDC_ABI,
+        address: addresses.usdc,
+        abi: erc20Abi,
         functionName: 'approve',
         args: [vaultAddress, parsed],
       });

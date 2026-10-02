@@ -24,17 +24,25 @@ export enum LensDataStatus {
 
 export enum LensDataSource {
   ONCHAIN = 0,
+  // Historical name, kept because the deployed lens reports it: it marks a figure fed by
+  // an off-chain provider through ORACLE_ROLE (NAV, risk score, claim assessment). It is
+  // fixed in the lens bytecode whether the feed is a test publisher or the real provider,
+  // so it says "oracle-fed", not "fabricated". Whether anything has been published is the
+  // data status (NONE until the first attestation), and the report hash identifies it.
   MOCK_ORACLE = 1,
   LEGACY_RETIRED = 2,
   NOT_AVAILABLE = 3,
 }
 
 /**
- * Map an on-chain LensDataSource to the UI DataSourceBadge source key. Only
- * on-chain data is presented as data: any other source is reported unavailable.
+ * Map an on-chain LensDataSource to the UI DataSourceBadge source key: on-chain state,
+ * an oracle-attested figure, or unavailable. Callers show a source badge for a figure
+ * only once the lens reports data for it (status AVAILABLE or STALE).
  */
-export function lensSourceToBadge(source: LensDataSource): 'onchain' | 'unavailable' {
-  return source === LensDataSource.ONCHAIN ? 'onchain' : 'unavailable';
+export function lensSourceToBadge(source: LensDataSource): 'onchain' | 'attested' | 'unavailable' {
+  if (source === LensDataSource.ONCHAIN) return 'onchain';
+  if (source === LensDataSource.MOCK_ORACLE) return 'attested';
+  return 'unavailable';
 }
 
 const QUERY = { refetchInterval: 30_000 };

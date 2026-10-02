@@ -49,9 +49,10 @@ on-chain role, and tells you the single next action for your situation.
 ## What is NOT production
 
 - This is **Base Sepolia testnet**, not Base mainnet.
-- Tokens (including MockUSDC / test USDC) are **valueless test assets**.
-- Governance Stage A (key separation / deployer hand-off) has **not** been
-  executed; the operator wallet still holds protocol roles for the pilot.
+- Tokens (including Circle's testnet USDC) are **valueless test assets**.
+- Governance is a testnet setup: a one-signer Safe and a timelock. The deployer
+  key holds no role, but the operational roles are still held by simulation
+  identities and the Safe has one signer (see `docs/GOVERNANCE_HARDENING.md`).
 - Allocation and premium economic flows (UPR/NAV) may be operator-facilitated
   during the pilot rather than fully self-service.
 - Nothing here is a financial product, an offer, or a promise of return.

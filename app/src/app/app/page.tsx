@@ -241,7 +241,7 @@ function InvestorView() {
       <Hero
         label="Insurance Tokenization Protocol"
         title="Curated Insurance Vaults"
-        subtitle="Deposit capital into syndicate-managed vaults backed by tokenized insurance policies. Earn premiums as yield — uncorrelated to equities, bonds, and crypto."
+        subtitle="Deposit capital into syndicate-managed vaults backed by tokenized insurance policies. Earn premiums as yield, driven by insured events rather than market direction."
         stats={heroStats}
         ctas={[]}
       />

@@ -29,8 +29,6 @@ const ABIS = [
   ['VAULT_FACTORY_ABI', 'VaultFactory'],
   ['INSURANCE_VAULT_ABI', 'InsuranceVault'],
   ['POLICY_REGISTRY_ABI', 'PolicyRegistry'],
-  ['MOCK_USDC_ABI', 'MockUSDC'],
-  ['MOCK_ORACLE_ABI', 'MockOracle'],
   ['CLAIM_RECEIPT_ABI', 'ClaimReceipt'],
   ['PROTOCOL_ROLES_ABI', 'ProtocolRoles'],
   ['COMPLIANCE_REGISTRY_ABI', 'ComplianceRegistry'],

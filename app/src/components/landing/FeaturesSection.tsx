@@ -101,7 +101,7 @@ const FeaturesSection = () => {
               color: '#0F1218',
               lineHeight: 1.2
             }}>
-                Uncorrelated Returns from
+                Returns from
                 <br />
                 Real Insurance Premiums
               </h2>

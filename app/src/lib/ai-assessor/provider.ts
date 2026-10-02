@@ -8,6 +8,9 @@ import {
   type ClaimAssessmentRequest,
 } from '../braino/client.ts';
 import type { CanonicalValue } from '../oracle-node.ts';
+import { isProduction, MockProviderForbiddenError, type Env } from '../providers/production.ts';
+
+export { MockProviderForbiddenError };
 
 /**
  * AI claim assessor — pluggable provider (Pilot Readiness gap #5).
@@ -226,19 +229,8 @@ export class BrainoAIAssessor implements AIAssessorProvider {
   }
 }
 
-/**
- * The mock was selected (or defaulted) where only real data may be shown. The cron
- * route answers "idle" rather than producing a draft nobody can justify on-chain.
- */
-export class MockProviderForbiddenError extends Error {
-  constructor() {
-    super('AI_ASSESSOR_PROVIDER resolves to the mock provider on production');
-    this.name = 'MockProviderForbiddenError';
-  }
-}
-
 export function getAIAssessorProvider(
-  env: Record<string, string | undefined> = process.env,
+  env: Env = process.env,
   fetchImpl?: typeof fetch,
 ): AIAssessorProvider {
   const selected = (env.AI_ASSESSOR_PROVIDER ?? 'mock').toLowerCase();
@@ -247,6 +239,7 @@ export function getAIAssessorProvider(
     if (!cfg.ok) throw new BrainoError('not_configured', cfg.problems.join('; '));
     return new BrainoAIAssessor(cfg.config, fetchImpl);
   }
-  if (env.VERCEL_ENV === 'production') throw new MockProviderForbiddenError();
+  // The cron route answers "idle" rather than producing a draft nobody can justify on-chain.
+  if (isProduction(env)) throw new MockProviderForbiddenError('AI assessor');
   return new MockAIAssessor();
 }

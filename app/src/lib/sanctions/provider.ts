@@ -1,20 +1,25 @@
 /**
  * Sanctions screening provider — pluggable adapter (Pilot Readiness gap #1).
  *
- * Two implementations:
- *   - `ComplyAdvantageProvider` — production HTTPS client against
- *     api.complyadvantage.com (name screening: sanctions / PEP / adverse
- *     media). Requires COMPLY_ADVANTAGE_API_KEY.
+ * Three implementations:
+ *   - `OfacListSanctionsProvider` (`ofac-list`) — the official published lists
+ *     (OFAC SDN, OFAC consolidated, UN Security Council); no account needed.
+ *     The default on production. See list-provider.ts for exactly what it covers.
+ *   - `ComplyAdvantageProvider` — HTTPS client against api.complyadvantage.com
+ *     (sanctions / PEP / adverse media). Requires COMPLY_ADVANTAGE_API_KEY.
  *   - `MockSanctionsProvider`   — deterministic local fixture for local dev
- *     and CI, used until the operator provisions a real key. Returns "match"
- *     only when the subject name contains the magic substring `__SANCTION__`.
+ *     and CI only. Returns "match" only when the subject name contains the magic
+ *     substring `__SANCTION__`. REFUSED on production.
  *
- * The provider is selected by env: `SANCTIONS_PROVIDER=complyadvantage|mock`.
- * Default is `mock`, fail-safe-loud: if `SANCTIONS_PROVIDER=complyadvantage`
- * but the API key is missing, screening returns an `error` result rather
- * than silently falling back to mock — we never tell the operator a subject
- * is clean unless a real provider said so.
+ * The provider is selected by env: `SANCTIONS_PROVIDER=ofac-list|complyadvantage|mock`.
+ * Outside production the default is `mock`; on production it is `ofac-list`, and
+ * `mock` is refused. If `SANCTIONS_PROVIDER=complyadvantage` but the API key is
+ * missing the factory throws — we never tell the operator a subject is clean
+ * unless a real provider said so.
  */
+
+import { isProduction, MockProviderForbiddenError, type Env } from '../providers/production.ts';
+import { OfacListSanctionsProvider } from './list-provider.ts';
 
 export type SanctionsResultCode = 'clear' | 'match' | 'error';
 export type SanctionsSeverity = 'low' | 'medium' | 'high' | 'unknown';
@@ -42,7 +47,7 @@ export interface SanctionsMatch {
 }
 
 export interface SanctionsScreeningResult {
-  provider: 'complyadvantage' | 'mock';
+  provider: 'complyadvantage' | 'ofac-list' | 'mock';
   providerSearchId?: string;
   resultCode: SanctionsResultCode;
   matches: SanctionsMatch[];
@@ -52,7 +57,7 @@ export interface SanctionsScreeningResult {
 }
 
 export interface SanctionsProvider {
-  readonly name: 'complyadvantage' | 'mock';
+  readonly name: 'complyadvantage' | 'ofac-list' | 'mock';
   screen(subject: SanctionsSubject): Promise<SanctionsScreeningResult>;
 }
 
@@ -189,14 +194,18 @@ export class ComplyAdvantageProvider implements SanctionsProvider {
  * Provider factory. Reads env at call time so tests can swap.
  *
  * Behavior:
- *   - SANCTIONS_PROVIDER unset or 'mock'   → MockSanctionsProvider
+ *   - production: unset → ofac-list; 'mock' → MockProviderForbiddenError
+ *   - elsewhere: unset or 'mock' → MockSanctionsProvider
+ *   - SANCTIONS_PROVIDER='ofac-list' → the official lists, anywhere
  *   - SANCTIONS_PROVIDER='complyadvantage' AND key present → real
  *   - SANCTIONS_PROVIDER='complyadvantage' AND key MISSING → throw; the
  *     caller surfaces a 503 to the KYB approval flow rather than silently
  *     letting subjects through unscreened.
  */
-export function getSanctionsProvider(env: NodeJS.ProcessEnv = process.env): SanctionsProvider {
-  const selected = (env.SANCTIONS_PROVIDER ?? 'mock').toLowerCase();
+export function getSanctionsProvider(env: Env = process.env): SanctionsProvider {
+  const production = isProduction(env);
+  const selected = (env.SANCTIONS_PROVIDER ?? (production ? 'ofac-list' : 'mock')).toLowerCase();
+  if (selected === 'ofac-list') return new OfacListSanctionsProvider();
   if (selected === 'complyadvantage') {
     const key = env.COMPLY_ADVANTAGE_API_KEY;
     if (!key) {
@@ -204,7 +213,11 @@ export function getSanctionsProvider(env: NodeJS.ProcessEnv = process.env): Sanc
     }
     return new ComplyAdvantageProvider(key);
   }
-  return new MockSanctionsProvider();
+  if (selected === 'mock') {
+    if (production) throw new MockProviderForbiddenError('sanctions');
+    return new MockSanctionsProvider();
+  }
+  throw new Error(`SANCTIONS_PROVIDER="${selected}" is not a known provider`);
 }
 
 /**

@@ -52,15 +52,15 @@ For role-specific procedures, see the matching `01-…` / `02-…` / `03-…` fi
 
 **Immediate action**:
 1. Triage by severity first (high → medium → low).
-2. Confirm the provider isn't returning a bad response (open ComplyAdvantage dashboard, look at recent searches).
+2. Confirm the screening isn't returning a bad response: open the latest rows of `sanctions_screening_runs`; `raw_response` lists the exact lists consulted (size and SHA-256) and when they were loaded.
 3. If the provider is the issue:
    - Document the incident.
-   - Optionally flip `SANCTIONS_PROVIDER=mock` on Vercel **temporarily** to unblock onboarding (⚠️ this means **no screening**; do it ONLY for non-counterparty-facing test environments, or with regulator clearance).
+   - Do NOT switch screening off. The mock provider is refused on production by design: setting `SANCTIONS_PROVIDER=mock` there makes every approval answer 503 rather than approve unscreened. If the official lists cannot be loaded, approvals answer 502 (`sanctions provider error`) and nothing is approved; wait for the sources, or have a Sentinel screen the entity by hand against the OFAC and UN lists, record the result, and retry.
 4. If the matches are real but the queue is unmanageable, escalate Sentinel staffing.
 
 **Follow-up**:
-- Tune `fuzziness` in `ComplyAdvantageProvider.screen` (currently 0.6) to reduce false positives.
-- Review the matched-name heuristic; consider adding country filter when high confidence.
+- Tune the match thresholds and the generic-word list in `app/src/lib/sanctions/name-matching.ts` to reduce false positives; the scripts in `app/scripts/sanctions-list-smoke.ts` keep the known true hits honest.
+- Remember what the lists cover (`COVERAGE` in `list-provider.ts`): OFAC SDN, OFAC consolidated and UN lists, names only. EU and UK lists, PEP status and adverse media need a commercial provider.
 
 ---
 
