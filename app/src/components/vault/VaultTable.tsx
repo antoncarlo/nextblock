@@ -7,9 +7,11 @@ interface VaultTableProps {
 }
 
 export function VaultTable({ vaultAddresses }: VaultTableProps) {
-  // Curator-supplied offering terms override the illustrative defaults
-  // per-row; one fetch for the whole table.
+  // Curator-published offering terms, per row; one fetch for the whole table.
+  // A vault whose curator has published nothing shows "Not published".
   const { terms } = useOfferingTerms();
+  // The target-APY column exists only when some vault's curator has published one.
+  const showApy = vaultAddresses.some((a) => terms.has(a.toLowerCase()));
   return (
     <div
       className="card-institutional overflow-x-auto"
@@ -31,7 +33,7 @@ export function VaultTable({ vaultAddresses }: VaultTableProps) {
               { label: 'Syndicate', align: 'left' },
               { label: 'Exposure', align: 'left' },
               { label: 'Policies', align: 'center' },
-              { label: 'Illustrative APY', align: 'right' },
+              ...(showApy ? [{ label: 'Target APY', align: 'right' }] : []),
             ].map((col) => (
               <th
                 key={col.label}
@@ -57,25 +59,27 @@ export function VaultTable({ vaultAddresses }: VaultTableProps) {
               key={address}
               vaultAddress={address}
               offeringTerms={terms.get(address.toLowerCase())}
+              showApy={showApy}
             />
           ))}
         </tbody>
       </table>
-      {/* Compliance: target figures must never read as promised yield. */}
-      <p
-        style={{
-          padding: '10px 24px 12px',
-          margin: 0,
-          fontFamily: "'Inter', sans-serif",
-          fontSize: '11px',
-          color: '#9A9A9A',
-          borderTop: '1px solid rgba(0,0,0,0.04)',
-        }}
-      >
-        Target APY figures are illustrative underwriting targets set at vault
-        creation — not measured performance and not a promise of yield. Returns
-        depend on premiums earned and claims incurred; capital is at risk.
-      </p>
+      {showApy && (
+        <p
+          style={{
+            padding: '10px 24px 12px',
+            margin: 0,
+            fontFamily: "'Inter', sans-serif",
+            fontSize: '11px',
+            color: '#9A9A9A',
+            borderTop: '1px solid rgba(0,0,0,0.04)',
+          }}
+        >
+          Target APY is the range the vault&apos;s curator has published, not measured
+          performance and not a promise of yield. Returns depend on premiums earned
+          and claims incurred; capital is at risk.
+        </p>
+      )}
     </div>
   );
 }

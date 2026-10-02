@@ -12,9 +12,10 @@ import { test, expect } from '@playwright/test';
 test('vault list renders real vaults from Base Sepolia', async ({ page }) => {
   await page.goto('/app');
 
-  // The hero + compliance-labeled stat render immediately.
+  // The hero renders immediately; its figures are counted on-chain by the lens, so
+  // they appear once the read lands rather than being fixed text.
   await expect(page.getByText('Curated Insurance Vaults')).toBeVisible();
-  await expect(page.getByText('Illustrative APY Range')).toBeVisible();
+  await expect(page.getByText('Portfolios', { exact: true })).toBeVisible({ timeout: 45_000 });
 
   // Real chain read: at least one vault row links to its detail page.
   const vaultLinks = page.locator('tbody a[href^="/app/vault/0x"]');
@@ -24,8 +25,8 @@ test('vault list renders real vaults from Base Sepolia', async ({ page }) => {
   // alongside rendered rows.
   await expect(page.getByText('Failed to load vaults')).toHaveCount(0);
 
-  // Compliance footnote under the table (PR #75).
-  await expect(page.getByText(/illustrative underwriting targets/i)).toBeVisible();
+  // Only real data is on screen: no invented yield, no placeholder or test wording.
+  await expect(page.getByText(/illustrative|not published|mock/i)).toHaveCount(0);
 });
 
 test('vault detail shows labeled metadata and the deposit sidebar gate', async ({ page }) => {
@@ -35,8 +36,9 @@ test('vault detail shows labeled metadata and the deposit sidebar gate', async (
   await firstVault.click();
 
   await expect(page).toHaveURL(/\/app\/vault\/0x/);
-  // Illustrative-APY relabel (PR #75) — never plain "Target APY".
-  await expect(page.getByText('Illustrative Target APY').first()).toBeVisible({ timeout: 45_000 });
+  // The syndicate block is always there: it carries the on-chain manager, and the
+  // curator's published terms when there are any. No yield figure is invented.
+  await expect(page.getByText('Vault Syndicate').first()).toBeVisible({ timeout: 45_000 });
   // Disconnected visitors get the connect gate, not a broken form.
   await expect(page.getByText(/connect your wallet/i).first()).toBeVisible();
 });

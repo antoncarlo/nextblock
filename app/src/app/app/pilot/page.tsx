@@ -240,7 +240,7 @@ export default function PilotHubPage() {
         <h2 className="mb-1 text-sm font-semibold text-gray-900">Your tracks</h2>
         <p className="mb-3 text-xs text-gray-500">
           Tracks unlock once the operator grants the matching on-chain role after KYB approval.
-          The B2B demo viewer is always available, read-only.
+          The read-only B2B viewer is always available.
         </p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {ROLE_TRACKS.map(t => {

@@ -90,31 +90,35 @@ export function VaultCard({ vaultAddress }: VaultCardProps) {
         <div className="mb-4 flex items-start justify-between">
           <div>
             <h3 className="text-lg font-semibold text-gray-900">{name}</h3>
-            <p className="mt-0.5 text-sm text-gray-500">{display.manager}</p>
+            {display.manager && <p className="mt-0.5 text-sm text-gray-500">{display.manager}</p>}
           </div>
           {/* The shared config carries the grade colour as a hex, not as Tailwind
               classes, so the tint is applied inline. */}
-          <span
-            className="rounded-full px-2.5 py-0.5 text-xs font-medium"
-            style={{ color: display.riskColor, background: `${display.riskColor}14` }}
-          >
-            {display.riskLevel}
-          </span>
+          {display.riskLevel && display.riskColor && (
+            <span
+              className="rounded-full px-2.5 py-0.5 text-xs font-medium"
+              style={{ color: display.riskColor, background: `${display.riskColor}14` }}
+            >
+              {display.riskLevel}
+            </span>
+          )}
         </div>
 
         {/* Strategy */}
-        <p className="mb-4 text-sm text-gray-600">{display.strategy}</p>
+        {display.strategy && <p className="mb-4 text-sm text-gray-600">{display.strategy}</p>}
 
         {/* Key stats */}
         <div className="mb-4 grid grid-cols-2 gap-4">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-400">
-              Illustrative APY
-            </p>
-            <p className="font-mono-num mt-0.5 text-xl font-semibold text-gray-900">
-              {display.targetApy}
-            </p>
-          </div>
+          {display.targetApy && (
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wider text-gray-400">
+                Target APY
+              </p>
+              <p className="font-mono-num mt-0.5 text-xl font-semibold text-gray-900">
+                {display.targetApy}
+              </p>
+            </div>
+          )}
           <div>
             <p className="text-xs font-medium uppercase tracking-wider text-gray-400">
               TVL

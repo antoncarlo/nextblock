@@ -10,12 +10,10 @@ import { LensProtocolStatus } from '@/components/admin/LensProtocolStatus';
 import { KybReviewQueue } from '@/components/admin/KybReviewQueue';
 import { RoleHandoffPanel } from '@/components/admin/RoleHandoffPanel';
 import { WhitelistPanel } from '@/components/admin/WhitelistPanel';
-import { OracleControls } from '@/components/admin/OracleControls';
-import { ClaimTriggers } from '@/components/admin/ClaimTriggers';
+import { NavOracleStatus } from '@/components/admin/NavOracleStatus';
 import { ClaimReceipts } from '@/components/admin/ClaimReceipts';
 import { ClaimLifecyclePanel } from '@/components/claims/ClaimLifecyclePanel';
 import { PolicyPool } from '@/components/admin/PolicyPool';
-import { DemoControls } from '@/components/admin/DemoControls';
 import { useEmailSession } from '@/hooks/useEmailSession';
 
 export default function AdminPage() {
@@ -99,8 +97,8 @@ export default function AdminPage() {
           Admin / Syndicate Panel
         </h1>
         <p className="mt-1 text-sm text-gray-500">
-          Control time, oracles, and claim triggers for the demo. All changes
-          affect both vaults.
+          Protocol operations: onboarding and compliance, claims, offering terms
+          and the status of the on-chain modules.
         </p>
         <p className="mt-1 text-xs text-gray-400">
           This page is a UI surface, not a security boundary: every privileged
@@ -116,7 +114,7 @@ export default function AdminPage() {
         <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">Consoles</h3>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { href: '/app/admin/offering-terms', title: 'Offering terms', desc: 'Publish curator terms per vault (manager, strategy, illustrative APY)' },
+            { href: '/app/admin/offering-terms', title: 'Offering terms', desc: 'Publish curator terms per vault (manager, strategy, target APY)' },
             { href: '/app/admin/governance', title: 'Governance', desc: 'Safe → timelock batches for owner-gated actions' },
             { href: '/app/admin/ai-assessments', title: 'AI assessments', desc: 'Sentinel queue: publish pending assessments on-chain' },
             { href: '/app/admin/bordereau', title: 'Bordereau', desc: 'Review and propose bordereau assertions' },
@@ -144,28 +142,13 @@ export default function AdminPage() {
           <KybReviewQueue />
           <RoleHandoffPanel />
           <WhitelistPanel />
-          {/* Legacy demo tooling (virtual clock, mock oracles, walkthrough
-              controls) — collapsed by default so the institutional review
-              surface stays clean. Useless/no-op once lockRealTime() is live. */}
-          <details className="rounded-xl border border-dashed border-gray-300 bg-white">
-            <summary className="cursor-pointer select-none px-6 py-4 text-sm font-semibold text-gray-500">
-              Legacy demo controls (virtual clock &amp; mock oracles — not part of the institutional protocol)
-            </summary>
-            <div className="space-y-6 border-t border-gray-100 p-6">
-              <TimeControls />
-              <OracleControls />
-              <DemoControls />
-            </div>
-          </details>
+          <NavOracleStatus />
+          <TimeControls />
         </div>
 
         {/* Right column */}
         <div className="space-y-6">
           <ClaimLifecyclePanel />
-          <ClaimTriggers
-            vaultAddresses={vaultAddresses ?? []}
-            vaultNames={vaultNames}
-          />
           <ClaimReceipts />
         </div>
       </div>

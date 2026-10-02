@@ -157,8 +157,8 @@ export default function OfferingTermsPage() {
           Vault offering terms
         </h1>
         <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, color: '#6B7280', marginBottom: 28, lineHeight: 1.6 }}>
-          Published terms replace the illustrative defaults in the vault list and detail page and
-          are labeled <strong>Curated</strong>. Saving requires the on-chain Syndicate
+          Published terms appear in the vault list and detail page, labeled <strong>Curated</strong>;
+          a vault with no published terms shows none. Saving requires the on-chain Syndicate
           (or Owner) role — the API re-verifies the signature and the role on every write.
         </p>
 
@@ -192,17 +192,17 @@ export default function OfferingTermsPage() {
               </select>
             </div>
             <div>
-              <label style={labelStyle} htmlFor="ot-min">Illustrative APY min (%)</label>
+              <label style={labelStyle} htmlFor="ot-min">Target APY min (%)</label>
               <input id="ot-min" style={inputStyle} type="number" min={0} max={50} step={0.5} value={minPct} onChange={(e) => setMinPct(e.target.value)} />
             </div>
             <div>
-              <label style={labelStyle} htmlFor="ot-max">Illustrative APY max (%)</label>
+              <label style={labelStyle} htmlFor="ot-max">Target APY max (%)</label>
               <input id="ot-max" style={inputStyle} type="number" min={0} max={50} step={0.5} value={maxPct} onChange={(e) => setMaxPct(e.target.value)} />
             </div>
           </div>
           <p style={{ fontFamily: "'Inter', sans-serif", fontSize: 12, color: '#9A9A9A', margin: 0 }}>
-            Shown as: <strong>{formatApyRangeBps(Math.round(Number(minPct || '0') * 100), Math.round(Number(maxPct || '0') * 100))}</strong> — an
-            illustrative target, never presented as promised yield.
+            Shown as: <strong>{formatApyRangeBps(Math.round(Number(minPct || '0') * 100), Math.round(Number(maxPct || '0') * 100))}</strong> — the
+            curator&apos;s stated target, never presented as promised yield.
           </p>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>

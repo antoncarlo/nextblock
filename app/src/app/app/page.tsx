@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import { useVaultAddresses, useUserPositions } from "@/hooks/useVaultData";
 import { useProtocolAccess } from "@/hooks/useProtocolAccess";
+import { useLensProtocolStatus } from "@/hooks/useNextBlockLens";
 import { VaultTable } from "@/components/vault/VaultTable";
 import { VerificationBadge } from "@/components/shared/VerificationBadge";
 import { VerificationType } from "@/config/constants";
@@ -17,7 +18,7 @@ function VaultTableSkeleton() {
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr style={{ borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
-            {["Vault", "TVL", "Syndicate", "Exposure", "Policies", "Illustrative APY"].map((h) => (
+            {["Vault", "TVL", "Syndicate", "Exposure", "Policies"].map((h) => (
               <th key={h} style={{ padding: "12px 24px", fontFamily: "'Inter', sans-serif", fontSize: "11px", fontWeight: 500, letterSpacing: "0.1em", textTransform: "uppercase", color: "#9A9A9A", textAlign: "left" }}>{h}</th>
             ))}
           </tr>
@@ -188,6 +189,16 @@ function InvestorView() {
   const { address } = useAccount();
   const { data: vaultAddrs } = useVaultAddresses();
   const { data: positions } = useUserPositions(vaultAddrs, address);
+  // Header figures are counted on-chain by the lens; with no lens answer there are
+  // no figures, not placeholder ones.
+  const { data: protocolStatus, lensDeployed } = useLensProtocolStatus();
+  const heroStats =
+    lensDeployed && protocolStatus
+      ? [
+          { label: "Vaults", value: protocolStatus.vaultCount.toString() },
+          { label: "Portfolios", value: protocolStatus.portfolioCount.toString() },
+        ]
+      : [];
   const [nudgeDismissed, setNudgeDismissed] = useState(false);
   useEffect(() => {
     try {
@@ -231,10 +242,7 @@ function InvestorView() {
         label="Insurance Tokenization Protocol"
         title="Curated Insurance Vaults"
         subtitle="Deposit capital into syndicate-managed vaults backed by tokenized insurance policies. Earn premiums as yield — uncorrelated to equities, bonds, and crypto."
-        // 8–14% is the protocol-level range in the offering documents. This
-        // header used to say 5–18%, the span of eight hand-written per-vault
-        // ranges — a figure that existed nowhere else and matched no document.
-        stats={[{ label: "Illustrative APY Range", value: "8–14%" }, { label: "Verification Types", value: "3" }, { label: "Active Syndicates", value: "8" }]}
+        stats={heroStats}
         ctas={[]}
       />
       {/* How It Works */}

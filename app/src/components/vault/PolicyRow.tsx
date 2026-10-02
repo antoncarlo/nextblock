@@ -16,17 +16,9 @@ interface PolicyRowProps {
   currentTime: bigint;
 }
 
-/** LEGACY DEMO policy names (pre-institutional model). Shown with an explicit
- *  "Legacy demo" qualifier — the institutional model uses PortfolioRegistry. */
-const POLICY_NAMES: Record<number, string> = {
-  1: 'BTC Price Protection (legacy demo)',
-  2: 'Flight Delay (legacy demo)',
-  3: 'Commercial Fire (legacy demo)',
-};
-
 export function PolicyRow({ policy, currentTime }: PolicyRowProps) {
   const { global, vault, policyId } = policy;
-  const policyName = global.name || POLICY_NAMES[Number(policyId)] || `Policy #${policyId}`;
+  const policyName = global.name || `Policy #${policyId}`;
   const endTime = vault.startTime + vault.duration;
   const progress = calculatePolicyProgress(vault.startTime, vault.duration, currentTime);
 

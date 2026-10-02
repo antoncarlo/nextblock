@@ -43,8 +43,7 @@ export function NetworkAvailabilityNotice() {
       <span>
         <strong>Unavailable on this network.</strong> Vaults and strategies of
         the institutional protocol are deployed on Base Sepolia (chain 84532)
-        only; this network carries legacy demo contracts at most. Switch
-        network to operate.
+        only. Switch network to operate.
       </span>
     </div>
   );

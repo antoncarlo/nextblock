@@ -29,20 +29,12 @@ export enum LensDataSource {
   NOT_AVAILABLE = 3,
 }
 
-/** Map an on-chain LensDataSource to the UI DataSourceBadge source key. */
-export function lensSourceToBadge(
-  source: LensDataSource,
-): 'onchain' | 'mock-oracle' | 'demo-legacy' | 'unavailable' {
-  switch (source) {
-    case LensDataSource.ONCHAIN:
-      return 'onchain';
-    case LensDataSource.MOCK_ORACLE:
-      return 'mock-oracle';
-    case LensDataSource.LEGACY_RETIRED:
-      return 'demo-legacy';
-    default:
-      return 'unavailable';
-  }
+/**
+ * Map an on-chain LensDataSource to the UI DataSourceBadge source key. Only
+ * on-chain data is presented as data: any other source is reported unavailable.
+ */
+export function lensSourceToBadge(source: LensDataSource): 'onchain' | 'unavailable' {
+  return source === LensDataSource.ONCHAIN ? 'onchain' : 'unavailable';
 }
 
 const QUERY = { refetchInterval: 30_000 };
