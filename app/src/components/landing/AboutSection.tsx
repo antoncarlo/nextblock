@@ -5,17 +5,17 @@ import DecorativeGrid from "./DecorativeGrid";
 
 const AboutSection = () => {
   const stats = [
-    { 
-      value: "$16T", 
-      label: "Global Insurance Market",
+    {
+      value: "$648B",
+      label: "Global Reinsurance Capital, 2025",
     },
-    { 
-      value: "$700B+", 
-      label: "Annual Reinsurance Capital",
+    {
+      value: "$135B",
+      label: "Of Which Alternative Capital",
     },
-    { 
-      value: "<1%", 
-      label: "Currently Tokenized",
+    {
+      value: "+11%",
+      label: "Capital Growth vs 2024",
     },
   ];
 
@@ -127,6 +127,19 @@ const AboutSection = () => {
             ))}
           </div>
         </div>
+
+        <p className="text-center text-xs mt-8" style={{ color: '#5A6275' }}>
+          Source:{' '}
+          <a
+            href="https://www.ajg.com/gallagherre/news-and-insights/reinsurance-market-report-results-for-full-year-2025/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline"
+          >
+            Gallagher Re, Reinsurance Market Report, full-year 2025
+          </a>
+          .
+        </p>
 
         {/* Bottom tagline */}
         <motion.p

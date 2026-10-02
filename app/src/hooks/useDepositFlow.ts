@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useReducer } from 'react';
 import { useChainId, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { MOCK_USDC_ABI, INSURANCE_VAULT_ABI } from '@/config/contracts';
+import { erc20Abi } from 'viem';
+import { INSURANCE_VAULT_ABI } from '@/config/contracts';
 import { useAddresses } from './useAddresses';
 
 /** The institutional stack lives on Base Sepolia only. */
@@ -154,12 +155,12 @@ export function useDepositFlow({
     dispatch({ type: 'START' });
 
     writeApprove({
-      address: addresses.mockUSDC,
-      abi: MOCK_USDC_ABI,
+      address: addresses.usdc,
+      abi: erc20Abi,
       functionName: 'approve',
       args: [vaultAddress, amount],
     });
-  }, [amount, chainId, vaultAddress, writeApprove, addresses.mockUSDC]);
+  }, [amount, chainId, vaultAddress, writeApprove, addresses.usdc]);
 
   const reset = useCallback(() => {
     dispatch({ type: 'RESET' });

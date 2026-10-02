@@ -4,18 +4,23 @@ const lionImage = "/assets/protocol-stack-lion.png";
 import { SectionConnector } from "./FlowchartLines";
 import DecorativeGrid from "./DecorativeGrid";
 
-interface CorrelationData {
+interface ReturnDriver {
   assetClass: string;
-  vsSP500: string;
-  vsCrypto: string;
+  driver: string;
   isHighlighted?: boolean;
 }
 
-const correlationData: CorrelationData[] = [
-  { assetClass: "Investment Bonds", vsSP500: "0.35", vsCrypto: "0.15" },
-  { assetClass: "Private Credit", vsSP500: "0.42", vsCrypto: "0.28" },
-  { assetClass: "Real Estate", vsSP500: "0.51", vsCrypto: "0.22" },
-  { assetClass: "INSURANCE RISK", vsSP500: "0.05", vsCrypto: "0.03", isHighlighted: true },
+// Qualitative on purpose: what moves the return of each asset class. No coefficients,
+// because none is shown without a published source behind it.
+const returnDrivers: ReturnDriver[] = [
+  { assetClass: "Investment Bonds", driver: "Interest rates and credit spreads" },
+  { assetClass: "Private Credit", driver: "Borrower defaults and the credit cycle" },
+  { assetClass: "Real Estate", driver: "Interest rates, rents and property valuations" },
+  {
+    assetClass: "INSURANCE RISK",
+    driver: "Whether insured events happen, and how severe they are",
+    isHighlighted: true,
+  },
 ];
 
 const ProtocolStackCards = () => {
@@ -73,13 +78,13 @@ const ProtocolStackCards = () => {
                 lineHeight: 1.2,
               }}
             >
-              The Only Yield Truly
+              A Return Driven by
               <br />
-              Uncorrelated to Everything
+              Insured Events, Not Markets
             </h2>
           </motion.div>
 
-          {/* Correlation Table */}
+          {/* What drives each return */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -93,80 +98,60 @@ const ProtocolStackCards = () => {
               backdropFilter: 'blur(8px)',
             }}
           >
-            {/* Table Header */}
-            <div 
-              className="grid grid-cols-3 gap-4 px-6 py-4"
+            <div
+              className="grid gap-4 px-6 py-4"
               style={{
+                gridTemplateColumns: '1fr 1.6fr',
                 borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
               }}
             >
-              <span style={{ 
-                fontSize: '12px', 
-                fontWeight: 500, 
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                color: 'rgba(255, 255, 255, 0.4)',
-              }}>
-                Asset Class
-              </span>
-              <span style={{ 
-                fontSize: '12px', 
-                fontWeight: 500, 
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                color: 'rgba(255, 255, 255, 0.4)',
-                textAlign: 'center',
-              }}>
-                vs S&P 500
-              </span>
-              <span style={{ 
-                fontSize: '12px', 
-                fontWeight: 500, 
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                color: 'rgba(255, 255, 255, 0.4)',
-                textAlign: 'center',
-              }}>
-                vs Crypto
-              </span>
+              {['Asset Class', 'What drives the return'].map((label) => (
+                <span
+                  key={label}
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    color: 'rgba(255, 255, 255, 0.4)',
+                  }}
+                >
+                  {label}
+                </span>
+              ))}
             </div>
 
-            {/* Table Rows */}
-            {correlationData.map((row, index) => (
-              <motion.div 
+            {returnDrivers.map((row, index) => (
+              <motion.div
                 key={row.assetClass}
                 initial={{ opacity: 0, x: -20 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.4, delay: 0.3 + index * 0.1 }}
-                className="grid grid-cols-3 gap-4 px-6 py-5"
+                className="grid gap-4 px-6 py-5"
                 style={{
-                  borderBottom: index < correlationData.length - 1 ? '1px solid rgba(255, 255, 255, 0.06)' : 'none',
+                  gridTemplateColumns: '1fr 1.6fr',
+                  borderBottom: index < returnDrivers.length - 1 ? '1px solid rgba(255, 255, 255, 0.06)' : 'none',
                   backgroundColor: row.isHighlighted ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
                 }}
               >
-                <span style={{ 
-                  fontSize: row.isHighlighted ? '15px' : '14px', 
-                  fontWeight: row.isHighlighted ? 600 : 400,
-                  color: row.isHighlighted ? '#FFFFFF' : 'rgba(255, 255, 255, 0.7)',
-                }}>
+                <span
+                  style={{
+                    fontSize: row.isHighlighted ? '15px' : '14px',
+                    fontWeight: row.isHighlighted ? 600 : 400,
+                    color: row.isHighlighted ? '#FFFFFF' : 'rgba(255, 255, 255, 0.7)',
+                  }}
+                >
                   {row.assetClass}
                 </span>
-                <span style={{ 
-                  fontSize: row.isHighlighted ? '18px' : '14px', 
-                  fontWeight: row.isHighlighted ? 600 : 400,
-                  color: row.isHighlighted ? '#1B3A6B' : 'rgba(255, 255, 255, 0.7)',
-                  textAlign: 'center',
-                }}>
-                  {row.vsSP500}
-                </span>
-                <span style={{ 
-                  fontSize: row.isHighlighted ? '18px' : '14px', 
-                  fontWeight: row.isHighlighted ? 600 : 400,
-                  color: row.isHighlighted ? '#1B3A6B' : 'rgba(255, 255, 255, 0.7)',
-                  textAlign: 'center',
-                }}>
-                  {row.vsCrypto}
+                <span
+                  style={{
+                    fontSize: row.isHighlighted ? '15px' : '14px',
+                    fontWeight: row.isHighlighted ? 600 : 400,
+                    color: row.isHighlighted ? '#FFFFFF' : 'rgba(255, 255, 255, 0.7)',
+                  }}
+                >
+                  {row.driver}
                 </span>
               </motion.div>
             ))}

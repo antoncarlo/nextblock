@@ -57,14 +57,10 @@ export const LEGACY_ADMIN_UI_HINT: string[] = [
 
 /**
  * LEGACY per-chain admin hint — NOT A SECURITY BOUNDARY (see above).
- * Consumed only by the legacy demo WalletRoleIndicator. Base-only MVP plus
- * the legacy demo chains still present in chains.ts; no mainnet entries.
+ * Consumed only by the legacy demo WalletRoleIndicator. Base only; no mainnet entries.
  */
 export const CHAIN_ADMIN_ADDRESS: Record<number, `0x${string}`> = {
   84532: '0x3630082d96065B756E84B8b79e030a525B9583ed', // Base Sepolia staging
-  11155111: '0x3630082d96065B756E84B8b79e030a525B9583ed', // Ethereum Sepolia (legacy demo)
-  5042002: '0x3630082d96065B756E84B8b79e030a525B9583ed', // Arc Testnet (legacy demo)
-  31337: '0x3630082d96065B756E84B8b79e030a525B9583ed', // Anvil local
 };
 
 /**

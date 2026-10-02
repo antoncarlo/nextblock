@@ -114,7 +114,7 @@ Invariant runs/depth are set per-file via inline `forge-config` comments in
 | `RedemptionQueue.sol` | Periodic-window, pro-rata LP exit queue: request → epoch settle (buffer-bounded) → claim, with escrowed nbUSDC and exact dust-safe accounting. Live on staging with a keeper workflow + Goldsky subgraph. |
 | `lending/LendingMarket.sol` + `lending/LendingMarketFactory.sol` | Permissioned lending market using nbUSDC as collateral (isolated-market grammar, explicit parameters). |
 | `lending/NavShareOracle.sol` | Guarded NAV-per-share attestation source for the lending market (advisory-fed). |
-| `MockUSDC.sol` / `MockOracle.sol` | Test/staging mocks (USDC 6 decimals; BTC/flight feeds for the legacy demo). |
+| `MockUSDC.sol` / `MockOracle.sol` | Test and local-anvil fixtures (USDC 6 decimals; BTC/flight feeds for the legacy demo). Base Sepolia settles in Circle's USDC: the deploy script refuses `MockUSDC` there. `MockOracle` is still referenced by `InsuranceVault.oracle` from the legacy design; nothing in the vault reads it. |
 
 Scripts (`script/`): `DeployStack.s.sol` (fresh full-stack generation,
 chain-guarded), `DeployRedemptionQueue.s.sol` (**runs DeployStack internally

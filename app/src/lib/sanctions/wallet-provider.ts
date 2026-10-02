@@ -1,30 +1,28 @@
 /**
  * Wallet-level sanctions screening (Batch F).
  *
- * Distinct from name-screening (`provider.ts` → ComplyAdvantage): this layer
- * screens an ON-CHAIN ADDRESS for ties to OFAC-listed wallets, sanctioned
- * mixers, ransom payments, known-fraud clusters, and so on. Name screening
- * catches sanctioned ENTITIES at onboarding; wallet screening catches the
- * complementary case of an unsanctioned entity onboarding a wallet that has
- * known illicit history (or, post-onboarding, starts receiving funds from one).
+ * Distinct from name-screening (`provider.ts`): this layer screens an ON-CHAIN ADDRESS.
+ * Name screening catches sanctioned ENTITIES at onboarding; wallet screening catches the
+ * complementary case of an unsanctioned entity onboarding a sanctioned wallet.
  *
- * MVP ships:
- *   - `MockWalletScreeningProvider` — deterministic for dev/CI/pilot.
- *      Addresses whose lowercase hex contains "dead" return a high-risk
- *      OFAC match; addresses containing "beef" return a medium mixer match;
- *      everything else is clear.
- *   - `ChainalysisKYTStub` — placeholder that throws "not configured"
- *      until the real Chainalysis KYT (or TRM Labs) integration is
- *      wired up with `WALLET_SCREENING_API_KEY`. Fail-loud so ops never
- *      silently let an address through as "clear" when the real provider
- *      isn't actually running.
+ *   - `ChainalysisOracleProvider` (`chainalysis-oracle`) — reads Chainalysis's public
+ *     sanctions oracle on Base mainnet (`isSanctioned(address)`). Free, no account, no
+ *     key; the oracle reflects the US, EU and UN lists as Chainalysis publishes them.
+ *     The default on production. It answers sanctioned / not sanctioned and nothing
+ *     else: no risk scoring, no mixer or scam clusters, no UK list, and no evidence
+ *     trail beyond the answer — every result says so.
+ *   - `MockWalletScreeningProvider` — deterministic fixture for dev/CI only
+ *     (addresses containing "dead" or "beef"). REFUSED on production.
  *
- * Provider selection: `WALLET_SCREENING_PROVIDER=mock|chainalysis|trm`
- * (default `mock`). With a non-mock value but missing key, the factory
- * throws and callers surface 503 to the KYB approve flow.
+ * Provider selection: `WALLET_SCREENING_PROVIDER=chainalysis-oracle|mock`. Outside
+ * production the default is `mock`; on production it is `chainalysis-oracle`. A failed
+ * read is an `error`, never `clear`.
  *
  * Pure (no DOM, no Next) — strip-types smoke compatible.
  */
+
+import { encodeFunctionData, decodeFunctionResult, parseAbi } from 'viem';
+import { isProduction, MockProviderForbiddenError, type Env } from '../providers/production.ts';
 
 export type WalletRiskCode = 'clear' | 'match' | 'error';
 export type WalletRiskSeverity = 'low' | 'medium' | 'high' | 'unknown';
@@ -48,7 +46,7 @@ export interface WalletScreeningMatch {
 }
 
 export interface WalletScreeningResult {
-  provider: 'mock' | 'chainalysis' | 'trm';
+  provider: 'mock' | 'chainalysis-oracle';
   providerCorrelationId?: string;
   resultCode: WalletRiskCode;
   matches: WalletScreeningMatch[];
@@ -57,7 +55,7 @@ export interface WalletScreeningResult {
 }
 
 export interface WalletScreeningProvider {
-  readonly name: 'mock' | 'chainalysis' | 'trm';
+  readonly name: 'mock' | 'chainalysis-oracle';
   screen(subject: WalletScreeningSubject): Promise<WalletScreeningResult>;
 }
 
@@ -67,8 +65,7 @@ export interface WalletScreeningProvider {
  *   - `beef` → medium mixer match
  *   - everything else → clear
  *
- * Used in dev/CI/pilot until the real provider is wired. Never used in
- * production with real subjects.
+ * For dev and CI only; production refuses it.
  */
 export class MockWalletScreeningProvider implements WalletScreeningProvider {
   readonly name = 'mock' as const;
@@ -116,46 +113,121 @@ export class MockWalletScreeningProvider implements WalletScreeningProvider {
   }
 }
 
-/**
- * Stub for Chainalysis KYT. Throws on call until a real client is wired.
- * This keeps the wiring path explicit: the operator must consciously flip
- * `WALLET_SCREENING_PROVIDER` and the implementation, never accidentally
- * end up calling an unfinished stub in production.
- */
-export class ChainalysisKYTStub implements WalletScreeningProvider {
-  readonly name = 'chainalysis' as const;
-  async screen(_subject: WalletScreeningSubject): Promise<WalletScreeningResult> {
-    throw new Error('ChainalysisKYTStub: provider not configured (no API client)');
-  }
+/** Chainalysis sanctions oracle on Base mainnet (chain id 8453). */
+export const CHAINALYSIS_ORACLE_BASE = '0x3A91A31cB3dC49b4db9Ce721F50a9D076c8D739B';
+export const DEFAULT_ORACLE_RPC = 'https://mainnet.base.org';
+const ORACLE_ABI = parseAbi(['function isSanctioned(address addr) view returns (bool)']);
+
+const ORACLE_COVERAGE =
+  'Chainalysis public sanctions oracle (US, EU and UN lists as Chainalysis publishes them); a yes/no answer per address. ' +
+  'Not covered: risk scoring, mixers, scams, the UK list, transaction history.';
+
+export interface OracleProviderOptions {
+  rpcUrl?: string;
+  oracle?: string;
+  fetchImpl?: typeof fetch;
+  timeoutMs?: number;
 }
 
 /**
- * Stub for TRM Labs. Same posture as the Chainalysis stub.
+ * Reads the oracle with a plain JSON-RPC `eth_call`. Sanctions status belongs to the
+ * address, not to a chain, so the Base mainnet oracle is queried for every wallet,
+ * including the Base Sepolia wallets of the staging deployment.
  */
-export class TRMLabsStub implements WalletScreeningProvider {
-  readonly name = 'trm' as const;
-  async screen(_subject: WalletScreeningSubject): Promise<WalletScreeningResult> {
-    throw new Error('TRMLabsStub: provider not configured (no API client)');
+export class ChainalysisOracleProvider implements WalletScreeningProvider {
+  readonly name = 'chainalysis-oracle' as const;
+  private readonly rpcUrl: string;
+  private readonly oracle: string;
+  private readonly fetchImpl: typeof fetch;
+  private readonly timeoutMs: number;
+
+  constructor(opts: OracleProviderOptions = {}) {
+    this.rpcUrl = opts.rpcUrl ?? DEFAULT_ORACLE_RPC;
+    this.oracle = opts.oracle ?? CHAINALYSIS_ORACLE_BASE;
+    this.fetchImpl = opts.fetchImpl ?? fetch;
+    this.timeoutMs = opts.timeoutMs ?? 15_000;
+  }
+
+  async screen(subject: WalletScreeningSubject): Promise<WalletScreeningResult> {
+    const fail = (message: string): WalletScreeningResult => ({
+      provider: 'chainalysis-oracle',
+      resultCode: 'error',
+      matches: [],
+      errorMessage: message,
+    });
+
+    const data = encodeFunctionData({ abi: ORACLE_ABI, functionName: 'isSanctioned', args: [subject.address] });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    let payload: { result?: string; error?: { message?: string } };
+    try {
+      const res = await this.fetchImpl(this.rpcUrl, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'eth_call',
+          params: [{ to: this.oracle, data }, 'latest'],
+        }),
+        signal: controller.signal,
+      });
+      if (!res.ok) return fail(`oracle RPC answered HTTP ${res.status}`);
+      payload = (await res.json()) as typeof payload;
+    } catch (err) {
+      return fail(
+        controller.signal.aborted
+          ? 'oracle RPC timed out'
+          : `oracle RPC unreachable (${err instanceof Error ? err.name : 'error'})`,
+      );
+    } finally {
+      clearTimeout(timer);
+    }
+    if (payload.error || typeof payload.result !== 'string') {
+      return fail(`oracle call failed: ${payload.error?.message?.slice(0, 120) ?? 'no result'}`);
+    }
+    let sanctioned: boolean;
+    try {
+      sanctioned = decodeFunctionResult({
+        abi: ORACLE_ABI,
+        functionName: 'isSanctioned',
+        data: payload.result as `0x${string}`,
+      });
+    } catch {
+      return fail('oracle returned something that is not a boolean (wrong address or chain?)');
+    }
+
+    const checkedAt = new Date().toISOString();
+    const rawResponse = { coverage: ORACLE_COVERAGE, oracle: this.oracle, chainId: 8453, checkedAt };
+    if (sanctioned) {
+      return {
+        provider: 'chainalysis-oracle',
+        resultCode: 'match',
+        matches: [
+          {
+            providerMatchId: `chainalysis-oracle:${subject.address}`,
+            category: 'sanctioned-address',
+            severity: 'high',
+            score: 1,
+            evidence: { source: 'Chainalysis sanctions oracle', chainId: 8453, oracle: this.oracle, checkedAt },
+          },
+        ],
+        rawResponse,
+      };
+    }
+    return { provider: 'chainalysis-oracle', resultCode: 'clear', matches: [], rawResponse };
   }
 }
 
-export function getWalletScreeningProvider(
-  env: NodeJS.ProcessEnv = process.env,
-): WalletScreeningProvider {
-  const selected = (env.WALLET_SCREENING_PROVIDER ?? 'mock').toLowerCase();
-  if (selected === 'chainalysis') {
-    const key = env.WALLET_SCREENING_API_KEY;
-    if (!key) {
-      throw new Error('WALLET_SCREENING_PROVIDER=chainalysis but WALLET_SCREENING_API_KEY is not set');
-    }
-    return new ChainalysisKYTStub();
+export function getWalletScreeningProvider(env: Env = process.env): WalletScreeningProvider {
+  const production = isProduction(env);
+  const selected = (env.WALLET_SCREENING_PROVIDER ?? (production ? 'chainalysis-oracle' : 'mock')).toLowerCase();
+  if (selected === 'chainalysis-oracle') {
+    return new ChainalysisOracleProvider({ rpcUrl: env.WALLET_SCREENING_RPC_URL || undefined });
   }
-  if (selected === 'trm') {
-    const key = env.WALLET_SCREENING_API_KEY;
-    if (!key) {
-      throw new Error('WALLET_SCREENING_PROVIDER=trm but WALLET_SCREENING_API_KEY is not set');
-    }
-    return new TRMLabsStub();
+  if (selected === 'mock') {
+    if (production) throw new MockProviderForbiddenError('wallet screening');
+    return new MockWalletScreeningProvider();
   }
-  return new MockWalletScreeningProvider();
+  throw new Error(`WALLET_SCREENING_PROVIDER="${selected}" is not a known provider`);
 }

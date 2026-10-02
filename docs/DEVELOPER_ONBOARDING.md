@@ -53,7 +53,10 @@ browser-safe).
 | `BASE_SEPOLIA_RPC_URL` | server | read-only RPC for on-chain role checks (defaults to public endpoint) |
 | `CRON_SECRET` | server | Bearer auth for the scheduled-job endpoints — **must equal the GitHub secret** |
 | `PINATA_JWT` / `PINATA_GATEWAY` | server | IPFS pinning of the public integrity manifest (503 fail-closed when unset) |
-| `EMAIL_PROVIDER` (`mock`\|`resend`) + `RESEND_API_KEY` + `EMAIL_FROM` | server | email channel; `mock` (default) logs instead of sending |
+| `EMAIL_PROVIDER` (`resend`\|`mock`) + `RESEND_API_KEY` + `EMAIL_FROM` | server | email channel; unset on production = nothing is sent (reported as such); `mock` logs and is refused on production |
+| `SANCTIONS_PROVIDER` (`ofac-list`\|`complyadvantage`\|`mock`) | server | entity name screening; production default `ofac-list` (OFAC SDN + consolidated + UN lists, no account); `mock` refused on production |
+| `WALLET_SCREENING_PROVIDER` (`chainalysis-oracle`\|`mock`) | server | wallet screening; production default `chainalysis-oracle` (Chainalysis's public sanctions oracle on Base, no account); optional `WALLET_SCREENING_RPC_URL` for a Base mainnet RPC |
+| `AI_ASSESSOR_PROVIDER` (`braino`) + `BRAINO_BASE_URL` + `BRAINO_HMAC_SECRET` | server | AI claim assessment; unset on production = idle (see `docs/AI_INTEGRATION.md`) |
 | `KYB_NOTIFY_EMAIL` | server | admin alert recipient for new KYB applications (optional) |
 | `NEXT_PUBLIC_APP_URL` | client | canonical URL in emails (defaults to nextblock.finance) |
 | `NEXT_PUBLIC_SUBGRAPH_URL` | client | legacy no-code Goldsky subgraph (redemption history UI) |

@@ -53,6 +53,7 @@ export function NavOracleStatus() {
                 {oracle.updatedAt > 0n
                   ? new Date(Number(oracle.updatedAt) * 1000).toLocaleString()
                   : 'never'}
+                {' '}&middot; report <span className="font-mono">{oracle.sourceHash.slice(0, 10)}…</span>
               </>
             )}
             {oracle.anomalyFlagged && (

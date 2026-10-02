@@ -1,16 +1,15 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useAccount } from 'wagmi';
 import { AmountInput } from './AmountInput';
 import { ShareCalculation } from './ShareCalculation';
 import { useUSDCBalance, useMaxWithdraw } from '@/hooks/useVaultData';
 import { useDepositFlow, type DepositState } from '@/hooks/useDepositFlow';
 import { useWithdrawFlow, type WithdrawState } from '@/hooks/useWithdrawFlow';
-import { useAddresses } from '@/hooks/useAddresses';
 import { useLensLPStatus, LensDataStatus } from '@/hooks/useNextBlockLens';
 import { DataSourceBadge } from '@/components/shared/DataSourceBadge';
-import { MOCK_USDC_ABI } from '@/config/contracts';
+import { USDC_FAUCET_URL } from '@/lib/pilot/status';
 import { parseUSDC, formatUSDC } from '@/lib/formatting';
 import { SHARE_SYMBOL, SHARE_DISCLAIMER } from '@/lib/disclosure';
 
@@ -22,25 +21,6 @@ interface DepositSidebarProps {
   totalSupply: bigint;
   policyCount: number;
   maxWithdrawOverride?: bigint;
-}
-
-/** Faucet: mints 10,000 test USDC to the connected wallet. */
-function useFaucet(userAddress: `0x${string}` | undefined, onSuccess?: () => void) {
-  const addresses = useAddresses();
-  const { writeContract, data: txHash, isPending, error } = useWriteContract();
-  const { isSuccess, isLoading: isConfirming } = useWaitForTransactionReceipt({ hash: txHash });
-
-  const mint = useCallback(() => {
-    if (!userAddress) return;
-    writeContract({
-      address: addresses.mockUSDC,
-      abi: MOCK_USDC_ABI,
-      functionName: 'mint',
-      args: [userAddress, BigInt(10_000 * 1e6)], // 10,000 USDC (6 decimals)
-    });
-  }, [userAddress, addresses.mockUSDC, writeContract]);
-
-  return { mint, isPending, isConfirming, isSuccess, error };
 }
 
 export function DepositSidebar({
@@ -61,7 +41,7 @@ export function DepositSidebar({
   );
 
   // Canonical LP position + compliance from NextBlockLens (read model).
-  // Wallet balance and the faucet stay on direct reads/writes: wallet data
+  // Wallet balance stays on a direct read: wallet data
   // and transactions are outside the lens domain.
   const { data: lpStatus, lensDeployed } = useLensLPStatus(vaultAddress, address);
   const lpVaultAvailable =
@@ -76,8 +56,6 @@ export function DepositSidebar({
   // whitelisted, surface it in the UI instead of letting the on-chain deposit
   // revert. The on-chain ComplianceRegistry check remains the primary barrier.
   const lpNotWhitelisted = lpComplianceAvailable && lpStatus !== undefined && !lpStatus.whitelisted;
-
-  const faucet = useFaucet(address, refetchBalance);
 
   const parsedAmount = parseUSDC(inputValue);
 
@@ -140,7 +118,7 @@ export function DepositSidebar({
           </div>
         ) : (
           <>
-            {/* Wallet USDC balance + faucet */}
+            {/* Wallet USDC balance; testnet USDC comes from Circle's own faucet */}
             <div className="mb-4 flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
               <div>
                 <p className="text-xs text-gray-500">Your USDC Balance</p>
@@ -151,19 +129,14 @@ export function DepositSidebar({
                 </p>
               </div>
               {(usdcBalance === undefined || usdcBalance === 0n) && (
-                <button
-                  type="button"
-                  onClick={faucet.mint}
-                  disabled={faucet.isPending || faucet.isConfirming}
-                  className="rounded-md bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
+                <a
+                  href={USDC_FAUCET_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-md bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-violet-700"
                 >
-                  {faucet.isPending || faucet.isConfirming
-                    ? 'Minting...'
-                    : 'Get Test USDC'}
-                </button>
-              )}
-              {faucet.isSuccess && (
-                <span className="text-xs font-medium text-emerald-600">+10,000 USDC minted!</span>
+                  Get testnet USDC
+                </a>
               )}
             </div>
 

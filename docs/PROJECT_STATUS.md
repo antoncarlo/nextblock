@@ -37,10 +37,16 @@ to trust, and what to build next.
 | Documents (bordereau/treaty/SOV) | ✅ **Real & confidential**: keccak256 of actual bytes on-chain, file in private bucket, public IPFS manifest only |
 | Bordereau ingestion | ✅ Real parser (native .xlsx + CSV, zero-dep) prefilling the on-chain submission |
 | NAV / risk score / AI assessment | ⚠️ **Advisory, not fed** — nothing is produced by an AI today; the NextBlock side is ready ([AI_INTEGRATION.md](AI_INTEGRATION.md)) and waits for the Braino/WAVENURE sandbox (Bucket B) |
+| Sanctions screening of entities | ✅ **Real, no account needed, limited coverage**: the official OFAC SDN, OFAC consolidated and UN Security Council lists, matched by name; every run records the exact lists consulted (size, SHA-256). It does **not** cover the EU or UK lists, PEP status or adverse media: those need a commercial provider (`SANCTIONS_PROVIDER=complyadvantage`) |
+| Sanctions screening of wallets | ✅ **Real, no account needed, yes/no only**: Chainalysis's public sanctions oracle on Base. No risk scoring, mixers or scam clusters |
+| E-mail | ⚠️ **Not configured**: nothing is sent and nothing says it was. Needs a Resend account and a verified domain |
+| Providers that fabricate answers (sanctions, wallet, e-mail, AI fixtures) | ✅ **Cannot run on production**: the factories refuse them, the admin status page reports each surface as live / idle / misconfigured, and `app/scripts/providers-smoke.ts` pins it |
 | Bordereau attestation economics | ⚠️ Liveness real, **no bonds** — needs real UMA OOv3 (Bucket B) |
 | External risk-pool adapters | ⚠️ Interface only (vendor decision) |
 | KYB/KYC pipeline | ⚠️ Real workflow (queue, review, one-click on-chain whitelist, notifications) but **no licensed KYC provider** behind it (Bucket B) |
-| Governance | ⚠️ Timelock + Safe live and the deployer has renounced (2026-10-02); but the Safe has a **single signer** and a one-hour delay: testnet-grade, needs a multi-signer Safe before real value |
+| Governance | ⚠️ Timelock + Safe live and the deployer has renounced (2026-10-02); but the Safe has a **single signer**, the delay is one hour, and the operational roles are held by **simulation identities**: testnet-grade. The steps, with the data prepared, are in [GOVERNANCE_HARDENING.md](GOVERNANCE_HARDENING.md) |
+| Legacy contracts | ⚠️ `MockOracle` (BTC price / flight delay) is still referenced by `InsuranceVault.oracle` from the original design; nothing in the vault reads it, and removing it needs a new vault generation. The deployed lens labels oracle-fed figures `MOCK_ORACLE`, a historical name fixed in its bytecode; the site shows them as "Oracle-attested" once something is published |
+| Market figures on the landing page | ✅ Sourced: Gallagher Re, Reinsurance Market Report, full-year 2025 (capital $648B, of which alternative $135B, +11%). Unsourced figures and the correlation table were removed |
 | Underlying risk | ❌ **Requires the legal wrapper** — SPV/cell + pilot treaty ([Bucket C spec](BUCKET_C_SPV_PILOT.md)). No code makes this real |
 
 ## 3. Shipped workstreams (chronological, with PRs)
@@ -88,11 +94,14 @@ to trust, and what to build next.
 
 **Owner-gated operational (hours):**
 1. **Fresh generation deployed and handed over, 2026-10-02** on Base Sepolia, settling in Circle's USDC: roles on separate holders, lending layer added, governance phases 1 and 2 done (timelock rehearsal executed, then the deployer renounced), security-review fixes F-07…F-12 live, all verified on-chain read-only. The site, the keeper variables and the Goldsky subgraph (`indexer/subgraph.yaml`, v3) point at this generation. Real time locked the same day through the Safe (`lockRealTime()`, block 47592962) — [runbook](../contracts/REDEPLOY_RUNBOOK.md). Owner-gated wiring to keep aligned with `contracts/deployments/84532-staging.json`: GitHub variable `REDEMPTION_QUEUE_ADDRESS` and secrets `KEEPER_PRIVATE_KEY`, `BASE_SEPOLIA_RPC_URL`, `CRON_SECRET`. The Safe is single-signer: make it a real multisig before real value.
+1b. **Governance hardening** — Safe to 2-of-3, timelock delay to 24 h (data prepared and rehearsed on a fork), simulation identities replaced by the real operators: [GOVERNANCE_HARDENING.md](GOVERNANCE_HARDENING.md). Everything in the code that can be made real without a vendor account already is; what is left below is what only an outside party can supply.
 
 **Bucket B — external vendors (blocked on accounts/keys, adapters ready):**
 2. Braino/WAVENURE integration → `NavOracle`/`AIAssessor`/`VaultAllocator` — **formal v2 spec ready to send to the Braino team**: [braino-oracle-spec.md](../contracts/docs/integrations/braino-oracle-spec.md) (5 services incl. agentic allocator; see also [real-providers.md](../contracts/docs/integrations/real-providers.md))
 3. Real UMA OOv3 bordereau assertions with bonds → `BordereauOracle`
 4. Licensed KYC/KYB provider → in front of `ComplianceRegistry`
+4b. E-mail: a Resend account and a verified sending domain (`EMAIL_PROVIDER=resend`)
+4c. If EU/UK lists, PEP or adverse-media screening is required: a ComplyAdvantage account (the adapter exists)
 
 **Bucket C — legal (weeks, parallel):**
 5. SPV/cell + pilot treaty — [spec for counsel](BUCKET_C_SPV_PILOT.md)

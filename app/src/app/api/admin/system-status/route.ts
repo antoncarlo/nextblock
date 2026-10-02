@@ -4,7 +4,7 @@ import { baseSepolia } from 'viem/chains';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { verifyClaimReviewer, type EvidenceAuthInput } from '@/lib/evidence/auth';
 import { NEXTBLOCK_CHAIN_ID } from '@/config/generated/addressBook';
-import { brainoConfigFromEnv } from '@/lib/braino/client';
+import { readProviderStatus } from '@/lib/providers/status';
 
 /**
  * Admin system status — single endpoint that surfaces:
@@ -22,86 +22,8 @@ import { brainoConfigFromEnv } from '@/lib/braino/client';
  * NEVER returns the actual value of any secret; only `present: true|false`.
  */
 
-interface ProviderConfig {
-  surface: 'sanctions' | 'ai' | 'email' | 'wallet';
-  selected: string;
-  isMock: boolean;
-  /** Whether the keys required by the selected provider are present. */
-  keysReady: boolean;
-  /** Free-form list of required env vars (present?). */
-  requiredVars: Array<{ name: string; present: boolean }>;
-}
-
 function isPresent(v: string | undefined): boolean {
   return typeof v === 'string' && v.length > 0;
-}
-
-function readProviders(env: NodeJS.ProcessEnv): ProviderConfig[] {
-  const sanctionsSelected = (env.SANCTIONS_PROVIDER ?? 'mock').toLowerCase();
-  const aiSelected = (env.AI_ASSESSOR_PROVIDER ?? 'mock').toLowerCase();
-  const emailSelected = (env.EMAIL_PROVIDER ?? 'mock').toLowerCase();
-  const walletSelected = (env.WALLET_SCREENING_PROVIDER ?? 'mock').toLowerCase();
-
-  const sanctions: ProviderConfig = {
-    surface: 'sanctions',
-    selected: sanctionsSelected,
-    isMock: sanctionsSelected === 'mock',
-    requiredVars:
-      sanctionsSelected === 'complyadvantage'
-        ? [{ name: 'COMPLY_ADVANTAGE_API_KEY', present: isPresent(env.COMPLY_ADVANTAGE_API_KEY) }]
-        : [],
-    keysReady:
-      sanctionsSelected === 'mock' ? true : isPresent(env.COMPLY_ADVANTAGE_API_KEY),
-  };
-  const ai: ProviderConfig = {
-    surface: 'ai',
-    selected: aiSelected,
-    isMock: aiSelected === 'mock',
-    requiredVars:
-      aiSelected === 'braino'
-        ? [
-            { name: 'BRAINO_BASE_URL', present: isPresent(env.BRAINO_BASE_URL) },
-            { name: 'BRAINO_HMAC_SECRET', present: isPresent(env.BRAINO_HMAC_SECRET) },
-          ]
-        : [],
-    // Braino is ready when the client config validates (https URL + signing secret).
-    // The mock is never "ready" on production: the cron refuses it there.
-    keysReady:
-      aiSelected === 'braino'
-        ? brainoConfigFromEnv(env).ok
-        : aiSelected === 'mock'
-          ? env.VERCEL_ENV !== 'production'
-          : false,
-  };
-  const email: ProviderConfig = {
-    surface: 'email',
-    selected: emailSelected,
-    isMock: emailSelected === 'mock',
-    requiredVars:
-      emailSelected === 'resend'
-        ? [
-            { name: 'RESEND_API_KEY', present: isPresent(env.RESEND_API_KEY) },
-            { name: 'EMAIL_FROM', present: isPresent(env.EMAIL_FROM) },
-          ]
-        : [],
-    keysReady:
-      emailSelected === 'mock'
-        ? true
-        : isPresent(env.RESEND_API_KEY) && isPresent(env.EMAIL_FROM),
-  };
-  const wallet: ProviderConfig = {
-    surface: 'wallet',
-    selected: walletSelected,
-    isMock: walletSelected === 'mock',
-    requiredVars:
-      walletSelected === 'mock'
-        ? []
-        : [{ name: 'WALLET_SCREENING_API_KEY', present: isPresent(env.WALLET_SCREENING_API_KEY) }],
-    keysReady:
-      walletSelected === 'mock' ? true : isPresent(env.WALLET_SCREENING_API_KEY),
-  };
-
-  return [sanctions, ai, email, wallet];
 }
 
 function readPlatformEnv(env: NodeJS.ProcessEnv): Array<{ name: string; present: boolean; required: boolean }> {
@@ -178,7 +100,7 @@ export async function GET(request: NextRequest) {
   };
 
   return NextResponse.json({
-    providers: readProviders(process.env),
+    providers: readProviderStatus(process.env),
     platformEnv: readPlatformEnv(process.env),
     rpc: {
       url: rpc.replace(/(\/\/)([^@]+@)?(.+)$/, '$1$3'), // strip basic-auth credentials if present
