@@ -25,9 +25,9 @@ dataSources:
     name: RedemptionQueue
     network: base-sepolia
     source:
-      address: "0x02F86c80Aa421BA3696873531e586ef72e84800D"
+      address: "0x6f1b7fe25ae8db940de1b5c37196331471e9a740"
       abi: RedemptionQueue
-      startBlock: 47550771
+      startBlock: 47584430
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -56,9 +56,9 @@ dataSources:
     name: VaultFactory
     network: base-sepolia
     source:
-      address: "0x6831323b0CF45B9873d3558C89D259dc2846DB8a"
+      address: "0x70934a059dF0E9313CC34e81c3EC769cA295f97E"
       abi: VaultFactory
-      startBlock: 47550771
+      startBlock: 47584430
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -78,9 +78,9 @@ dataSources:
     name: PortfolioRegistry
     network: base-sepolia
     source:
-      address: "0xEe2cAce41b0ce40d6a102e1Fa9061F457d3dcBbe"
+      address: "0xE641E9fdf299Bd903Fe8c39252D3A9625915dd12"
       abi: PortfolioRegistry
-      startBlock: 47550771
+      startBlock: 47584430
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -116,9 +116,9 @@ dataSources:
     name: PolicyRegistry
     network: base-sepolia
     source:
-      address: "0xD138A09D47919dda626735Af28992eD10F07FB11"
+      address: "0x01F73dc15bC016AFB0653530bd82a3377AB709e2"
       abi: PolicyRegistry
-      startBlock: 47550771
+      startBlock: 47584430
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -142,9 +142,9 @@ dataSources:
     name: ClaimManager
     network: base-sepolia
     source:
-      address: "0xF8cA31650619bf94f19E469038482FE1563f878C"
+      address: "0x80467965d032Cd1d468fE174B3EE0cE351e90711"
       abi: ClaimManager
-      startBlock: 47550771
+      startBlock: 47584430
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -182,9 +182,9 @@ dataSources:
     name: ComplianceRegistry
     network: base-sepolia
     source:
-      address: "0x23BD832fe3f445A34409Ee227494099862D69138"
+      address: "0xFC8451b361239353a8c5631E4298164053be3E00"
       abi: ComplianceRegistry
-      startBlock: 47550771
+      startBlock: 47584430
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -214,9 +214,9 @@ dataSources:
     name: PremiumDistributor
     network: base-sepolia
     source:
-      address: "0xC215C48f3E3ee86BBc89F1293865146388C917C1"
+      address: "0xAc538FdAD984C95353D470669fB7D4CC2b055AcC"
       abi: PremiumDistributor
-      startBlock: 47550771
+      startBlock: 47584430
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -249,9 +249,9 @@ dataSources:
     name: NavOracle
     network: base-sepolia
     source:
-      address: "0x37d72B97B44e5aBDEEdf7De690a421A6B67e691A"
+      address: "0xA46d3628D95a182E27C8Bc13822dF57D6E7e2916"
       abi: NavOracle
-      startBlock: 47550771
+      startBlock: 47584430
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -281,9 +281,9 @@ dataSources:
     name: BordereauOracle
     network: base-sepolia
     source:
-      address: "0x92592DCC0fa3c2B6E15B4450ef4b431E590d6b62"
+      address: "0xF679dd0387B3Cc25eB51fa12a5af1F73587A80F6"
       abi: BordereauOracle
-      startBlock: 47550771
+      startBlock: 47584430
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -311,9 +311,9 @@ dataSources:
     name: VaultAllocator
     network: base-sepolia
     source:
-      address: "0xDDFeace2E2Ca7F74B565C7C8746BF9f6F588b5dD"
+      address: "0x2Ee3E2CDc0397b4b22b414F19f8023568Ba4423c"
       abi: VaultAllocator
-      startBlock: 47550771
+      startBlock: 47584430
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -339,9 +339,9 @@ dataSources:
     name: AIAssessor
     network: base-sepolia
     source:
-      address: "0xd8D8aeDE5Bc72f6e76d18d7Ad3ADD76B9DB513A8"
+      address: "0xF0ae92eEeb2AdDb6f2B4e8cf8000A8FF3614d904"
       abi: AIAssessor
-      startBlock: 47550771
+      startBlock: 47584430
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -361,9 +361,9 @@ dataSources:
     name: AdapterRegistry
     network: base-sepolia
     source:
-      address: "0x50F1FCC97286C0364be73caD7bfd829728971a50"
+      address: "0x9D2F14f59f22A123D88845f9D1EacC1073429C06"
       abi: AdapterRegistry
-      startBlock: 47550771
+      startBlock: 47584430
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7

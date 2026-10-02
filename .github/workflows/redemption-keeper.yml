@@ -10,7 +10,7 @@
 # OWNER-GATED activation (one-time): set these repo secrets/variables —
 #   secret  KEEPER_PRIVATE_KEY        settle: must hold ALLOCATOR_ROLE; claims: any funded key
 #   secret  BASE_SEPOLIA_RPC_URL      Base Sepolia RPC endpoint
-#   var     REDEMPTION_QUEUE_ADDRESS  0x02F86c80Aa421BA3696873531e586ef72e84800D (live queue, 2026-10-01 generation)
+#   var     REDEMPTION_QUEUE_ADDRESS  0x6f1b7fe25ae8db940de1b5c37196331471e9a740 (live queue, USDC generation)
 #   (claims addresses default to the staging deployment record; override with
 #    vars CLAIM_MANAGER_ADDRESS / BORDEREAU_ORACLE_ADDRESS after a redeploy)
 #
@@ -72,8 +72,8 @@ jobs:
           PRIVATE_KEY: ${{ secrets.KEEPER_PRIVATE_KEY }}
           BASE_SEPOLIA_RPC_URL: ${{ secrets.BASE_SEPOLIA_RPC_URL }}
           # Staging deployment record defaults; vars override after a redeploy.
-          CLAIM_MANAGER_ADDRESS: ${{ vars.CLAIM_MANAGER_ADDRESS || '0xF8cA31650619bf94f19E469038482FE1563f878C' }}
-          BORDEREAU_ORACLE_ADDRESS: ${{ vars.BORDEREAU_ORACLE_ADDRESS || '0x92592DCC0fa3c2B6E15B4450ef4b431E590d6b62' }}
+          CLAIM_MANAGER_ADDRESS: ${{ vars.CLAIM_MANAGER_ADDRESS || '0x80467965d032Cd1d468fE174B3EE0cE351e90711' }}
+          BORDEREAU_ORACLE_ADDRESS: ${{ vars.BORDEREAU_ORACLE_ADDRESS || '0xF679dd0387B3Cc25eB51fa12a5af1F73587A80F6' }}
         run: |
           forge script script/ClaimsKeeper.s.sol:ClaimsKeeper \
             --rpc-url base_sepolia --broadcast --skip-simulation
