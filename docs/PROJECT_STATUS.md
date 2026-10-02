@@ -31,7 +31,7 @@ to trust, and what to build next.
 
 | Concern | Verdict |
 |---|---|
-| USDC flows (deposits, premiums, redemptions, claim payouts) | ✅ **Real** (staging asset is MockUSDC; mainnet will use native USDC) |
+| USDC flows (deposits, premiums, redemptions, claim payouts) | ✅ **Real code on a real token**: the vaults settle in Circle's USDC on Base Sepolia (testnet, no monetary value); mainnet will use native USDC |
 | Compliance gate (whitelist, KYC expiry, transfer hooks) | ✅ **Real, on-chain** — never frontend-only |
 | Time (UPR / fees / expiry) | ✅ Real in code via `lockRealTime()` — **flip it on the fresh generation before any company test** ([runbook](../contracts/REDEPLOY_RUNBOOK.md)) |
 | Documents (bordereau/treaty/SOV) | ✅ **Real & confidential**: keccak256 of actual bytes on-chain, file in private bucket, public IPFS manifest only |
