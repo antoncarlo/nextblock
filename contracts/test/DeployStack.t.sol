@@ -124,4 +124,28 @@ contract DeployStackTest is Test {
         assertEq(roles.curator, ANVIL_DEPLOYER, "local default");
         assertEq(roles.kycOperator, ANVIL_DEPLOYER, "local default");
     }
+
+    /// @dev A configured asset with nothing deployed behind it is a mistake (wrong
+    ///      chain, a typo). It used to fall through to a freshly deployed MockUSDC,
+    ///      i.e. a vault settling in a token anyone can mint, without a word.
+    function test_run_refusesAConfiguredAssetThatIsNotDeployed() public {
+        address nothingHere = makeAddr("nothingHere");
+        vm.expectRevert(abi.encodeWithSelector(DeployStack.DeployStack__AssetNotDeployed.selector, nothingHere));
+        deploy.runWithConfig(ANVIL_PK, false, nothingHere);
+    }
+
+    /// @dev On Base Sepolia the env path refuses to fall back to the mock asset.
+    function test_usdcFromEnv_refusesAnUnsetAssetOnBaseSepolia() public {
+        if (vm.envExists("USDC_ADDRESS") || vm.envExists("ALLOW_MOCK_USDC")) vm.skip(true);
+
+        vm.chainId(84532);
+        vm.expectRevert(DeployStack.DeployStack__MockAssetOnSharedChain.selector);
+        deploy.usdcFromEnv();
+    }
+
+    /// @dev Locally the mock stays the default, so every local flow is unchanged.
+    function test_usdcFromEnv_keepsTheMockDefaultLocally() public {
+        if (vm.envExists("USDC_ADDRESS")) vm.skip(true);
+        assertEq(deploy.usdcFromEnv(), address(0));
+    }
 }

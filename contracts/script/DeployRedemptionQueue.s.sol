@@ -50,7 +50,7 @@ contract DeployRedemptionQueue is Script {
         // deploy: a second one just to read env would cost a full copy of every
         // creation code in the protocol.
         stack = new DeployStack();
-        _deploy(pk, writeJson, epochDuration_, stack.rolesFromEnv(vm.addr(pk)));
+        _deploy(pk, writeJson, epochDuration_, stack.rolesFromEnv(vm.addr(pk)), stack.usdcFromEnv());
     }
 
     /// @dev Fully parameterized entrypoint: roles are an argument, not env.
@@ -58,12 +58,31 @@ contract DeployRedemptionQueue is Script {
         public
     {
         stack = new DeployStack();
-        _deploy(pk, writeJson, epochDuration_, roles);
+        _deploy(pk, writeJson, epochDuration_, roles, address(0));
     }
 
-    function _deploy(uint256 pk, bool writeJson, uint64 epochDuration_, DeployStack.RoleConfig memory roles) internal {
+    /// @dev As `runWithRoles`, settling in an existing asset instead of the staging
+    ///      MockUSDC: the Circle USDC on Base Sepolia, in practice.
+    function runWithAsset(
+        uint256 pk,
+        bool writeJson,
+        uint64 epochDuration_,
+        DeployStack.RoleConfig memory roles,
+        address asset
+    ) public {
+        stack = new DeployStack();
+        _deploy(pk, writeJson, epochDuration_, roles, asset);
+    }
+
+    function _deploy(
+        uint256 pk,
+        bool writeJson,
+        uint64 epochDuration_,
+        DeployStack.RoleConfig memory roles,
+        address asset
+    ) internal {
         // 1. Fresh stack generation (chain-guarded inside DeployStack).
-        stack.runWithRoles(pk, writeJson, address(0), roles);
+        stack.runWithRoles(pk, writeJson, asset, roles);
 
         epochDuration = epochDuration_;
 

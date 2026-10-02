@@ -8,6 +8,8 @@ import {DeployStack} from "../script/DeployStack.s.sol";
 import {RedemptionQueue} from "../src/RedemptionQueue.sol";
 import {ComplianceRegistry} from "../src/ComplianceRegistry.sol";
 import {ProtocolRoles} from "../src/ProtocolRoles.sol";
+import {MockUSDC} from "../src/MockUSDC.sol";
+import {InsuranceVault} from "../src/InsuranceVault.sol";
 
 /// @title DeployRedemptionQueueTest
 /// @notice Full-stack-plus-queue deploy on the local chain (31337): one queue
@@ -104,5 +106,30 @@ contract DeployRedemptionQueueTest is Test {
         vm.chainId(1);
         vm.expectRevert();
         deploy.runWithConfig(ANVIL_PK, false, 7 days);
+    }
+
+    /// @dev The generation settles in the asset it is given, not in a mock deployed
+    ///      beside it. A stand-in at a fixed address plays the Circle USDC here; the
+    ///      fork test runs the real one.
+    function test_runWithAsset_settlesInTheGivenAsset() public {
+        address asset = makeAddr("circleUsdc");
+        vm.etch(asset, address(new MockUSDC()).code);
+
+        DeployStack.RoleConfig memory cfg = DeployStack.RoleConfig({
+            owner: makeAddr("owner"),
+            curator: makeAddr("curator"),
+            sentinel: makeAddr("sentinel"),
+            committee: makeAddr("committee"),
+            allocatorBot: makeAddr("allocatorBot"),
+            oracleNode: makeAddr("oracleNode"),
+            cedant: makeAddr("cedant"),
+            kycOperator: makeAddr("kycOperator")
+        });
+
+        deploy.runWithAsset(ANVIL_PK, false, 7 days, cfg, asset);
+
+        assertEq(address(deploy.stack().usdc()), asset, "stack asset");
+        assertEq(InsuranceVault(address(deploy.stack().vault())).asset(), asset, "vault settles in the given asset");
+        assertEq(address(deploy.queue().vault()), address(deploy.stack().vault()), "queue bound to that vault");
     }
 }
