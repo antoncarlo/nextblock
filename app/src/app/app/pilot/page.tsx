@@ -2,21 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import {
-  useAccount,
-  useChainId,
-  useBalance,
-  useWriteContract,
-  useWaitForTransactionReceipt,
-} from 'wagmi';
+import { useAccount, useChainId, useBalance } from 'wagmi';
 import { useProtocolAccess } from '@/hooks/useProtocolAccess';
-import { useAddresses } from '@/hooks/useAddresses';
 import { useUSDCBalance } from '@/hooks/useVaultData';
-import { MOCK_USDC_ABI } from '@/config/contracts';
 import { formatUSDC } from '@/lib/formatting';
 import {
-  PILOT_CHAIN_ID,
-  FAUCET_USDC_AMOUNT_6,
+  USDC_FAUCET_URL,
   ETH_FAUCET_LINKS,
   ROLE_TRACKS,
   VIEWER_TRACK,
@@ -43,10 +34,9 @@ export default function PilotHubPage() {
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
   const access = useProtocolAccess();
-  const { mockUSDC } = useAddresses();
 
   const { data: ethBal } = useBalance({ address, query: { enabled: isConnected } });
-  const { data: usdcBal, refetch: refetchUsdc } = useUSDCBalance(address);
+  const { data: usdcBal } = useUSDCBalance(address);
 
   // --- KYB status (public, no PII): manual refresh, in-flight dedupe, last-checked,
   // and transport-error distinction (offline vs temporary error vs non-OK HTTP).
@@ -150,8 +140,8 @@ export default function PilotHubPage() {
 
       {/* Testnet disclaimer */}
       <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-        <strong>Base Sepolia testnet only.</strong> No real funds. Test tokens (including
-        MockUSDC) have no value. This is not mainnet and not a production-readiness signal. Do not
+        <strong>Base Sepolia testnet only.</strong> No real funds. Test tokens, including the
+        testnet USDC, have no value. This is not mainnet and not a production-readiness signal. Do not
         send mainnet assets to any address shown here.
       </div>
 
@@ -164,7 +154,7 @@ export default function PilotHubPage() {
       )}
 
       {/* Next action */}
-      <NextActionCard action={action} mockUSDC={mockUSDC} chainId={chainId} onFaucet={refetchUsdc} />
+      <NextActionCard action={action} />
 
       {/* Checklist */}
       <section className="mt-6 rounded-xl border border-gray-200 bg-white p-6">
@@ -229,8 +219,15 @@ export default function PilotHubPage() {
             ))}
           </div>
           <div className="flex items-center gap-2">
-            <span className="font-medium text-gray-700">Test USDC (MockUSDC, test-only):</span>
-            <FaucetButton mockUSDC={mockUSDC} chainId={chainId} onSuccess={refetchUsdc} />
+            <span className="font-medium text-gray-700">Testnet USDC:</span>
+            <a
+              href={USDC_FAUCET_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-800 transition-colors hover:bg-gray-50"
+            >
+              Circle faucet
+            </a>
           </div>
         </div>
       </section>
@@ -309,17 +306,7 @@ const SEVERITY_STYLE: Record<NextActionSeverity, { bg: string; border: string; c
   info: { bg: '#F9FAFB', border: '#E5E7EB', color: '#4B5563' },
 };
 
-function NextActionCard({
-  action,
-  mockUSDC,
-  chainId,
-  onFaucet,
-}: {
-  action: ReturnType<typeof nextAction>;
-  mockUSDC: `0x${string}`;
-  chainId: number;
-  onFaucet: () => void;
-}) {
+function NextActionCard({ action }: { action: ReturnType<typeof nextAction> }) {
   const s = SEVERITY_STYLE[action.severity];
   return (
     <div className="mt-4 rounded-xl border p-4" style={{ background: s.bg, borderColor: s.border }}>
@@ -346,53 +333,8 @@ function NextActionCard({
             {action.ctaLabel ?? 'Open'}
           </a>
         )}
-        {action.ctaLabel === 'Mint test USDC' && !action.ctaRoute && !action.ctaUrl && (
-          <FaucetButton mockUSDC={mockUSDC} chainId={chainId} onSuccess={onFaucet} />
-        )}
       </div>
     </div>
-  );
-}
-
-/** Test-only MockUSDC faucet (permissionless mint), chain-guarded to 84532. */
-function FaucetButton({
-  mockUSDC,
-  chainId,
-  onSuccess,
-}: {
-  mockUSDC: `0x${string}`;
-  chainId: number;
-  onSuccess?: () => void;
-}) {
-  const { address } = useAccount();
-  const { writeContract, data: txHash, isPending } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash: txHash });
-  const wrongChain = chainId !== PILOT_CHAIN_ID;
-
-  useEffect(() => {
-    if (isSuccess) onSuccess?.();
-  }, [isSuccess, onSuccess]);
-
-  const mint = useCallback(() => {
-    if (!address || wrongChain) return;
-    writeContract({
-      address: mockUSDC,
-      abi: MOCK_USDC_ABI,
-      functionName: 'mint',
-      args: [address, FAUCET_USDC_AMOUNT_6],
-    });
-  }, [address, wrongChain, writeContract, mockUSDC]);
-
-  return (
-    <button
-      type="button"
-      onClick={mint}
-      disabled={!address || wrongChain || isPending || isConfirming}
-      title={wrongChain ? 'Switch to Base Sepolia (84532)' : undefined}
-      className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-800 transition-colors hover:bg-gray-50 disabled:opacity-50"
-    >
-      {isPending || isConfirming ? 'Minting…' : isSuccess ? 'Minted 10,000 USDC' : 'Mint 10,000 test USDC'}
-    </button>
   );
 }
 

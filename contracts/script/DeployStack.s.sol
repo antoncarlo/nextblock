@@ -61,6 +61,11 @@ contract DeployStack is Script, ProtocolRoleConstants {
     /// @notice An operational role resolved to the deployer on a shared chain.
     /// @param name The environment variable that was left unset or set to the deployer.
     error DeployStack__RoleNotSeparated(string name);
+    /// @notice An asset address was configured but nothing is deployed there.
+    /// @param asset The configured settlement asset.
+    error DeployStack__AssetNotDeployed(address asset);
+    /// @notice No real settlement asset was configured on a shared chain.
+    error DeployStack__MockAssetOnSharedChain();
 
     /// @notice The operator addresses a deployment hands roles to.
     /// @dev Passed as a value so tests and tooling can deploy a separated-roles
@@ -116,8 +121,20 @@ contract DeployStack is Script, ProtocolRoleConstants {
         runWithConfig(
             vm.envUint("PRIVATE_KEY"), // testnet placeholder key only
             vm.envOr("WRITE_DEPLOYMENT_JSON", true),
-            vm.envOr("USDC_ADDRESS", address(0))
+            usdcFromEnv()
         );
+    }
+
+    /// @notice Reads the settlement asset from USDC_ADDRESS.
+    /// @dev On Base Sepolia the vault must settle in a real USDC: an unset variable
+    ///      would otherwise fall through to the staging MockUSDC, which is a token
+    ///      anyone can mint. ALLOW_MOCK_USDC=true is the explicit opt-out for a
+    ///      throwaway deployment. Local chains keep the mock as the default.
+    function usdcFromEnv() public view returns (address asset) {
+        asset = vm.envOr("USDC_ADDRESS", address(0));
+        if (asset == address(0) && block.chainid == BASE_SEPOLIA_CHAIN_ID && !vm.envOr("ALLOW_MOCK_USDC", false)) {
+            revert DeployStack__MockAssetOnSharedChain();
+        }
     }
 
     /// @dev Parameterized entrypoint: tests call this directly so no test ever
@@ -210,7 +227,10 @@ contract DeployStack is Script, ProtocolRoleConstants {
         // Settlement asset: reuse the configured USDC if it is deployed,
         // otherwise deploy the staging MockUSDC faucet.
         address usdcEnv = usdcOverrideAddr;
-        if (usdcEnv != address(0) && usdcEnv.code.length > 0) {
+        if (usdcEnv != address(0)) {
+            // A configured asset that is not there is a mistake (wrong chain, a typo),
+            // not a request for a mock: say so instead of deploying one in silence.
+            if (usdcEnv.code.length == 0) revert DeployStack__AssetNotDeployed(usdcEnv);
             usdc = MockUSDC(usdcEnv);
         } else {
             usdc = new MockUSDC();
@@ -438,7 +458,7 @@ contract DeployStack is Script, ProtocolRoleConstants {
         console2.log("protocolRoles:  ", address(protocolRoles));
         console2.log("lens:           ", address(lens));
         console2.log("vault:          ", address(vault));
-        console2.log("usdc (mock):    ", address(usdc));
+        console2.log("usdc:           ", address(usdc));
         console2.log("NOT idempotent: each run deploys a fresh stack.");
     }
 }

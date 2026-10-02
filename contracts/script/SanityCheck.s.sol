@@ -99,7 +99,11 @@ contract SanityCheck is Script, ProtocolRoleConstants {
 
         // 5. Settlement asset shape + faucet control.
         if (usdc.decimals() != 6) revert SanityCheck__Failed("usdc decimals");
-        if (usdc.FAUCET_CAP() == 0) revert SanityCheck__Failed("usdc faucet cap");
+        // The faucet cap exists only on the staging MockUSDC; a real USDC has no such
+        // function, and its absence is the point.
+        try usdc.FAUCET_CAP() returns (uint256 cap) {
+            if (cap == 0) revert SanityCheck__Failed("usdc faucet cap");
+        } catch {}
 
         console2.log("SANITY OK - modules live, roles set, lens readable, vault bound.");
     }

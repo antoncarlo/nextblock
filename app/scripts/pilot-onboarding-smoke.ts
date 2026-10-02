@@ -91,7 +91,7 @@ check('kyb unavailable -> info', nextAction({ ...base, kyb: 'unavailable' }).sev
 check('kyb error -> info retry', (() => { const a = nextAction({ ...base, kyb: 'error' }); return a.severity === 'info' && a.message.toLowerCase().includes('retry'); })());
 check('approved + roles not resolved -> info', nextAction({ ...base, roles: NO_ROLES, rolesResolved: false }).severity === 'info');
 check('approved + no role -> action grant', (() => { const a = nextAction({ ...base, roles: NO_ROLES, rolesResolved: true }); return a.severity === 'action' && a.message.includes('grant'); })());
-check('cedant role + no usdc -> action mint', (() => { const a = nextAction({ ...base, usdc6: 0n }); return a.severity === 'action' && a.ctaLabel === 'Mint test USDC'; })());
+check('cedant role + no usdc -> action mint', (() => { const a = nextAction({ ...base, usdc6: 0n }); return a.severity === 'action' && a.ctaLabel === 'Open USDC faucet' && typeof a.ctaUrl === 'string'; })());
 check('sentinel role no usdc -> ready (no usdc nudge)', (() => { const a = nextAction({ ...base, roles: ROLES({ isSentinel: true }), usdc6: 0n }); return a.severity === 'ready'; })());
 check('fully ready -> ready w/ route', (() => { const a = nextAction(base); return a.severity === 'ready' && !!a.ctaRoute; })());
 

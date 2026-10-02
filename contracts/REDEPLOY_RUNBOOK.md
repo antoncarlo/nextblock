@@ -22,7 +22,7 @@ otherwise.
 
 **This sequence has been rehearsed.** `scripts/rehearse-redeploy.sh` runs every
 step below against a local fork of Base Sepolia, with throwaway test keys, and
-asserts the on-chain end state after each one (42 checks). Run it first; it takes
+asserts the on-chain end state after each one (47 checks). Run it first; it takes
 a couple of minutes and it is the quickest way to see that your toolchain, your
 RPC and the scripts agree. Where this document and the rehearsal disagree, the
 rehearsal is right and the document is the bug.
@@ -68,6 +68,16 @@ deployer and a deployment like that passes every separation-of-duty check while
 proving nothing — there is no separation left to violate. `OWNER_ADDRESS` is
 exempt. To deploy single-key on purpose, set `ALLOW_SINGLE_KEY=true`, and know
 that you are then testing nothing about role separation.
+
+**The settlement asset is a real USDC.** `USDC_ADDRESS` must name a deployed token: Circle's
+USDC on Base Sepolia, `0x036CbD53842c5426634e7929541eC2318f3dCF7e` (6 decimals; testnet USDC
+comes from faucet.circle.com). The script refuses to run on Base Sepolia without it
+(`DeployStack__MockAssetOnSharedChain`, `ALLOW_MOCK_USDC=true` is the explicit opt-out for a
+throwaway deployment), and refuses an address with nothing deployed behind it
+(`DeployStack__AssetNotDeployed`) instead of deploying a MockUSDC in its place. The asset is fixed
+inside every vault, so changing it means a new generation. A real USDC can blacklist addresses,
+which the mock cannot; the fork test `RealUsdcFork` runs a deposit and an instant redemption
+against it.
 
 The deployer needs Base Sepolia ETH: the deploy costs about 50M gas, roughly
 0.0006 ETH at current prices. Fund it with 0.01 ETH to leave room for the

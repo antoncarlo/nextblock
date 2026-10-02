@@ -41,6 +41,7 @@ KYC=0x976EA74026E726554dB657fA54763abd0C3a0aa9
 ORACLE=0x14dC79964da2C08b23698B3D3cc7Ca32193d9955
 CEDANT=0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f
 SAFE=0x0969B20f1d8a5628613f00fa6aDBE85e715fEf15   # the real protocol Safe (1.5.0, threshold 1); a contract on the fork
+CIRCLE_USDC=0x036CbD53842c5426634e7929541eC2318f3dCF7e   # Circle USDC on Base Sepolia: the settlement asset
 ZERO32=0x0000000000000000000000000000000000000000000000000000000000000000
 
 CHECKS=0
@@ -80,7 +81,7 @@ eq "forked chain id is Base Sepolia" "${CID:-none}" "84532"
 step "1. an unconfigured deploy is refused"
 set +e
 OUT="$(env -u OWNER_ADDRESS -u CURATOR_ADDRESS -u ALLOCATOR_ADDRESS -u SENTINEL_ADDRESS -u COMMITTEE_ADDRESS \
-        -u KYC_OPERATOR_ADDRESS -u ORACLE_ADDRESS -u CEDANT_ADDRESS -u ALLOW_SINGLE_KEY \
+        -u KYC_OPERATOR_ADDRESS -u ORACLE_ADDRESS -u CEDANT_ADDRESS -u ALLOW_SINGLE_KEY -u USDC_ADDRESS -u ALLOW_MOCK_USDC \
         PRIVATE_KEY="$DEPLOYER_KEY" "$FORGE" script script/DeployRedemptionQueue.s.sol --rpc-url "$RPC" 2>&1)"
 RC=$?
 set -e
@@ -90,10 +91,34 @@ else
   die "an unconfigured deploy was not refused (exit $RC)"
 fi
 
+step "1b. roles set but no real settlement asset: refused (no silent MockUSDC)"
+ROLE_ENV=(OWNER_ADDRESS="$OWNER" CURATOR_ADDRESS="$CURATOR" ALLOCATOR_ADDRESS="$ALLOCATOR" SENTINEL_ADDRESS="$SENTINEL"
+          COMMITTEE_ADDRESS="$COMMITTEE" KYC_OPERATOR_ADDRESS="$KYC" ORACLE_ADDRESS="$ORACLE" CEDANT_ADDRESS="$CEDANT")
+set +e
+OUT="$(env -u USDC_ADDRESS -u ALLOW_MOCK_USDC "${ROLE_ENV[@]}" PRIVATE_KEY="$DEPLOYER_KEY" \
+        "$FORGE" script script/DeployRedemptionQueue.s.sol --rpc-url "$RPC" 2>&1)"
+RC=$?
+set -e
+if [ "$RC" -ne 0 ] && echo "$OUT" | grep -q "MockAssetOnSharedChain"; then
+  ok "no USDC_ADDRESS -> refused (MockAssetOnSharedChain)"
+else
+  die "a deploy without a settlement asset was not refused (exit $RC)"
+fi
+set +e
+OUT="$(env "${ROLE_ENV[@]}" USDC_ADDRESS=0x000000000000000000000000000000000000dEaD PRIVATE_KEY="$DEPLOYER_KEY" \
+        "$FORGE" script script/DeployRedemptionQueue.s.sol --rpc-url "$RPC" 2>&1)"
+RC=$?
+set -e
+if [ "$RC" -ne 0 ] && echo "$OUT" | grep -q "AssetNotDeployed"; then
+  ok "an address with no code as USDC_ADDRESS -> refused (AssetNotDeployed)"
+else
+  die "an asset with no code was not refused (exit $RC)"
+fi
+
 step "2. deploy the generation with eight distinct role holders"
 export PRIVATE_KEY="$DEPLOYER_KEY" OWNER_ADDRESS="$OWNER" CURATOR_ADDRESS="$CURATOR" ALLOCATOR_ADDRESS="$ALLOCATOR" \
        SENTINEL_ADDRESS="$SENTINEL" COMMITTEE_ADDRESS="$COMMITTEE" KYC_OPERATOR_ADDRESS="$KYC" \
-       ORACLE_ADDRESS="$ORACLE" CEDANT_ADDRESS="$CEDANT"
+       ORACLE_ADDRESS="$ORACLE" CEDANT_ADDRESS="$CEDANT" USDC_ADDRESS="$CIRCLE_USDC"
 if ! "$FORGE" script script/DeployRedemptionQueue.s.sol --rpc-url "$RPC" --broadcast > "$TMP/deploy.log" 2>&1; then
   tail -25 "$TMP/deploy.log"; die "deploy script failed"
 fi
@@ -115,6 +140,13 @@ for R in UNDERWRITING_CURATOR_ROLE ALLOCATOR_ROLE SENTINEL_ROLE CLAIMS_COMMITTEE
   eq "deployer holds no $R" "$(has "$(role $R)" $DEPLOYER)" false
 done
 eq "the vault factory holds VAULT_FACTORY_ROLE" "$(has "$(role VAULT_FACTORY_ROLE)" "$FACTORY")" true
+
+step "3b. the settlement asset is Circle's USDC"
+lcase() { printf '%s' "$1" | tr 'A-F' 'a-f'; }
+eq "the deployment record names Circle's USDC" "$(lcase "$(jget usdc)")" "$(lcase "$CIRCLE_USDC")"
+eq "the vault settles in Circle's USDC" "$(lcase "$("$CAST" call "$VAULT" "asset()(address)" --rpc-url "$RPC")")" "$(lcase "$CIRCLE_USDC")"
+eq "the asset reports USDC with 6 decimals" \
+   "$("$CAST" call "$CIRCLE_USDC" "symbol()(string)" --rpc-url "$RPC" | tr -d '"') $("$CAST" call "$CIRCLE_USDC" "decimals()(uint8)" --rpc-url "$RPC")" "USDC 6"
 
 step "4. properties of this generation"
 eq "the clock is still movable (lock it deliberately, later)" \
