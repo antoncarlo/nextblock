@@ -33,7 +33,7 @@ to trust, and what to build next.
 |---|---|
 | USDC flows (deposits, premiums, redemptions, claim payouts) | ✅ **Real code on a real token**: the vaults settle in Circle's USDC on Base Sepolia (testnet, no monetary value); mainnet will use native USDC |
 | Compliance gate (whitelist, KYC expiry, transfer hooks) | ✅ **Real, on-chain** — never frontend-only |
-| Time (UPR / fees / expiry) | ✅ Real in code via `lockRealTime()` — **flip it on the fresh generation before any company test** ([runbook](../contracts/REDEPLOY_RUNBOOK.md)) |
+| Time (UPR / fees / expiry) | ✅ **Real and locked**: `lockRealTime()` was executed through the Safe on 2026-10-02 (block 47592962); the clock is the block clock for good and `advanceTime` reverts ([runbook](../contracts/REDEPLOY_RUNBOOK.md)) |
 | Documents (bordereau/treaty/SOV) | ✅ **Real & confidential**: keccak256 of actual bytes on-chain, file in private bucket, public IPFS manifest only |
 | Bordereau ingestion | ✅ Real parser (native .xlsx + CSV, zero-dep) prefilling the on-chain submission |
 | NAV / risk score / AI assessment | ⚠️ **Advisory, not fed** — nothing is produced by an AI today; the NextBlock side is ready ([AI_INTEGRATION.md](AI_INTEGRATION.md)) and waits for the Braino/WAVENURE sandbox (Bucket B) |
@@ -87,7 +87,7 @@ to trust, and what to build next.
 ## 4. Open scope (what to build next)
 
 **Owner-gated operational (hours):**
-1. **Fresh generation deployed and handed over, 2026-10-02** on Base Sepolia, settling in Circle's USDC: roles on separate holders, lending layer added, governance phases 1 and 2 done (timelock rehearsal executed, then the deployer renounced), security-review fixes F-07…F-12 live, all verified on-chain read-only. The site, the keeper variables and the Goldsky subgraph (`indexer/subgraph.yaml`, v3) point at this generation. Remaining: `lockRealTime()` deliberately later, through the Safe — [runbook](../contracts/REDEPLOY_RUNBOOK.md). Owner-gated wiring to keep aligned with `contracts/deployments/84532-staging.json`: GitHub variable `REDEMPTION_QUEUE_ADDRESS` and secrets `KEEPER_PRIVATE_KEY`, `BASE_SEPOLIA_RPC_URL`, `CRON_SECRET`. The Safe is single-signer: make it a real multisig before real value.
+1. **Fresh generation deployed and handed over, 2026-10-02** on Base Sepolia, settling in Circle's USDC: roles on separate holders, lending layer added, governance phases 1 and 2 done (timelock rehearsal executed, then the deployer renounced), security-review fixes F-07…F-12 live, all verified on-chain read-only. The site, the keeper variables and the Goldsky subgraph (`indexer/subgraph.yaml`, v3) point at this generation. Real time locked the same day through the Safe (`lockRealTime()`, block 47592962) — [runbook](../contracts/REDEPLOY_RUNBOOK.md). Owner-gated wiring to keep aligned with `contracts/deployments/84532-staging.json`: GitHub variable `REDEMPTION_QUEUE_ADDRESS` and secrets `KEEPER_PRIVATE_KEY`, `BASE_SEPOLIA_RPC_URL`, `CRON_SECRET`. The Safe is single-signer: make it a real multisig before real value.
 
 **Bucket B — external vendors (blocked on accounts/keys, adapters ready):**
 2. Braino/WAVENURE integration → `NavOracle`/`AIAssessor`/`VaultAllocator` — **formal v2 spec ready to send to the Braino team**: [braino-oracle-spec.md](../contracts/docs/integrations/braino-oracle-spec.md) (5 services incl. agentic allocator; see also [real-providers.md](../contracts/docs/integrations/real-providers.md))

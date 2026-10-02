@@ -13,8 +13,10 @@ the bindings are immutable. A truthful test needs a fresh generation.
 Circle's USDC (deployer `0x090043bF030C12d8761441790EB2CF81F0eDcf2c`, governance Safe
 `0x0969B20f1d8a5628613f00fa6aDBE85e715fEf15`, the lending layer of section 2b included,
 timelock rehearsal executed and the deployer renounced).
-Section 6 (`lockRealTime`) is deliberately still open. The sequence is kept because the
-next generation will follow it.
+Section 6 (`lockRealTime`) is done too: on 2026-10-02 the Safe locked real time on this generation
+(block 47592962, transaction `0x35760383c31dd0317041b95a6a2c22ad007ae41ee932a71199e15bde6341ae6a`).
+`clockLocked` is true and `advanceTime` reverts for good. The sequence is kept because the next
+generation will follow it.
 
 **Who runs this.** The OWNER, with the deployer key. The key is entered only in
 your own terminal. It must never be pasted into a chat, an assistant tool, or a
@@ -221,11 +223,13 @@ deployment made by section 2 satisfies this by construction), and that
 `REHEARSAL_OPERATION_ID` is a done operation on this timelock. Any of them failing
 stops it with a message and changes nothing.
 
-## 6. Do NOT lock real time yet
+## 6. Lock real time (done on the current generation)
 
-`lockRealTime()` is **irreversible** and belongs at the end of the demonstration
-phase, not here. Locking it now costs the ability to show the protocol working end
-to end, and buys nothing that cannot be bought later with one transaction.
+`lockRealTime()` is **irreversible**. On the current generation it was sent from the Safe on
+2026-10-02, before any company test, and the clock has been the block clock since. On a new
+generation it belongs at the end of the demonstration phase, not at deploy: locking it earlier
+costs the ability to show the protocol working end to end, and buys nothing that cannot be
+bought later with one transaction.
 
 What the mutable clock governs is narrow. Only `InsuranceVault` and
 `PolicyRegistry` read `registry.currentTime()`; everything else already runs on
@@ -245,7 +249,9 @@ finding faults, and that is all it is. Lock it when you want the numbers to beco
 evidence. `lockRealTime()` is `OWNER_ROLE`-gated. After phase 2 that role is held by
 `OWNER_ADDRESS` and by the timelock and no longer by the deployer, so send it from the
 owner account (`--interactive` prompts for the key instead of putting it in your shell
-history), or schedule it through the timelock if you want the delay:
+history), or schedule it through the timelock if you want the delay. On the current generation
+it went from the Safe directly (Transaction Builder, custom data `0x29ebe7af`, to the
+PolicyRegistry, no timelock: it removes an owner power, so no delay was needed):
 
 ```bash
 POLICY_REGISTRY=$(node -p "require('./deployments/84532-staging.json').policyRegistry")
