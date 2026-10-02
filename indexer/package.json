@@ -8,7 +8,7 @@
   "scripts": {
     "codegen": "graph codegen",
     "build": "graph build",
-    "deploy:goldsky": "goldsky subgraph deploy nextblock-protocol/v2 --path .",
+    "deploy:goldsky": "goldsky subgraph deploy nextblock-protocol/v3 --path .",
     "deploy:studio": "graph deploy --studio nextblock-protocol"
   },
   "dependencies": {
