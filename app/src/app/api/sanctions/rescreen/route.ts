@@ -4,6 +4,10 @@ import { verifyCronSecret } from '@/lib/notifications/auth';
 import { getSanctionsProvider } from '@/lib/sanctions/provider';
 import { logApiError } from '@/lib/api-log';
 
+// The first screening on a cold instance downloads and indexes the official lists
+// (about 9 MB, 7-10 s); later calls reuse them. Give the function room for it.
+export const maxDuration = 60;
+
 /**
  * Monthly sanctions re-screening cron.
  *

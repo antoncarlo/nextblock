@@ -13,6 +13,10 @@ import { logApiError } from '@/lib/api-log';
 import { getSanctionsProvider } from '@/lib/sanctions/provider';
 import { getWalletScreeningProvider } from '@/lib/sanctions/wallet-provider';
 
+// The first screening on a cold instance downloads and indexes the official lists
+// (about 9 MB, 7-10 s); later calls reuse them. Give the function room for it.
+export const maxDuration = 60;
+
 /**
  * Operator review transition. Wallet reviews bind application id AND target
  * status in the signed message (action "review:<id>:<toStatus>") so one
