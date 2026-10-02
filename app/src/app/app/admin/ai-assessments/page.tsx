@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAccount, useSignMessage, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { operatorAuthMessage } from '@/lib/kyb/schema';
 import { AI_ASSESSOR_ABI } from '@/config/contracts';
+import { toContractRecommendation } from '@/lib/ai-assessor/recommendation';
 import { NEXTBLOCK_ADDRESSES } from '@/config/generated/addressBook';
 
 /**
@@ -163,7 +164,7 @@ function PendingAssessmentRow({
           row.score_bps,
           row.anomaly_score_bps,
           row.confidence_bps,
-          row.recommendation,
+          toContractRecommendation(row.recommendation),
           BigInt(row.recommended_amount),
           row.source_hash,
         ],

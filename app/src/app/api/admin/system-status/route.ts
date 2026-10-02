@@ -4,6 +4,7 @@ import { baseSepolia } from 'viem/chains';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { verifyClaimReviewer, type EvidenceAuthInput } from '@/lib/evidence/auth';
 import { NEXTBLOCK_CHAIN_ID } from '@/config/generated/addressBook';
+import { brainoConfigFromEnv } from '@/lib/braino/client';
 
 /**
  * Admin system status — single endpoint that surfaces:
@@ -58,9 +59,19 @@ function readProviders(env: NodeJS.ProcessEnv): ProviderConfig[] {
     isMock: aiSelected === 'mock',
     requiredVars:
       aiSelected === 'braino'
-        ? [{ name: 'BRAINO_API_KEY', present: isPresent(env.BRAINO_API_KEY) }]
+        ? [
+            { name: 'BRAINO_BASE_URL', present: isPresent(env.BRAINO_BASE_URL) },
+            { name: 'BRAINO_HMAC_SECRET', present: isPresent(env.BRAINO_HMAC_SECRET) },
+          ]
         : [],
-    keysReady: aiSelected === 'mock' ? true : false, // placeholder until Braino client lands
+    // Braino is ready when the client config validates (https URL + signing secret).
+    // The mock is never "ready" on production: the cron refuses it there.
+    keysReady:
+      aiSelected === 'braino'
+        ? brainoConfigFromEnv(env).ok
+        : aiSelected === 'mock'
+          ? env.VERCEL_ENV !== 'production'
+          : false,
   };
   const email: ProviderConfig = {
     surface: 'email',

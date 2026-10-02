@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { verifyCronSecret } from '@/lib/notifications/auth';
 import { getAIAssessorProvider } from '@/lib/ai-assessor/provider';
+import { createChainReader, loadClaimContext } from '@/lib/ai-assessor/context';
+import { BrainoError } from '@/lib/braino/client';
 import { logApiError } from '@/lib/api-log';
 
 /**
@@ -57,16 +59,34 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'provider misconfigured' }, { status: 503 });
   }
 
+  // The real provider assesses what the chain says about the claim, not what the
+  // caller says: the amount and the portfolio terms are read from the contracts.
+  let requestedAmount = BigInt(body.requestedAmount);
+  let context;
+  if (provider.name === 'braino') {
+    try {
+      const loaded = await loadClaimContext(createChainReader(), BigInt(body.claimId));
+      context = loaded.context;
+      requestedAmount = loaded.requestedAmount;
+    } catch (err) {
+      logApiError('ai/assess', 'context_read_failed', {
+        code: err instanceof Error ? err.name : 'unknown',
+      });
+      return NextResponse.json({ error: 'claim not readable on-chain' }, { status: 502 });
+    }
+  }
+
   let draft;
   try {
     draft = await provider.assess({
       claimId: BigInt(body.claimId),
-      requestedAmount: BigInt(body.requestedAmount),
+      requestedAmount,
       description: body.description ?? '',
+      context,
     });
   } catch (err) {
     logApiError('ai/assess', 'provider_failed', {
-      code: err instanceof Error ? err.name : 'unknown',
+      code: err instanceof BrainoError ? `braino_${err.code}` : err instanceof Error ? err.name : 'unknown',
     });
     return NextResponse.json({ error: 'provider failed' }, { status: 503 });
   }

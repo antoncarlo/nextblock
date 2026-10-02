@@ -51,6 +51,14 @@ jobs:
       - name: Typecheck
         run: npm run ci:frontend:typecheck
 
+      # Pure and hermetic: the Braino client against an in-process signing fixture, the
+      # recommendation encoding that publishAssessment depends on, the publisher node.
+      - name: AI integration smoke
+        run: |
+          node --experimental-strip-types app/scripts/ai-assessor-smoke.ts
+          node --experimental-strip-types app/scripts/braino-client-smoke.ts
+          node --experimental-strip-types app/scripts/oracle-node-smoke.ts
+
       - name: Build
         run: npm run ci:frontend:build
 

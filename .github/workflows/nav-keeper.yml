@@ -1,0 +1,65 @@
+# NAV keeper — pulls each vault's NAV from Braino.ai and publishes it to NavOracle.
+#
+# Idle until the vendor is connected: on the schedule the job is skipped while the
+# repository variable BRAINO_BASE_URL is empty, so nothing runs and nothing alarms.
+# A manual run always executes and says plainly what is missing.
+#
+# OWNER-GATED activation (one-time), in Settings -> Secrets and variables -> Actions:
+#   var     BRAINO_BASE_URL        vendor API base, https (switches the schedule on)
+#   secret  BRAINO_HMAC_SECRET     shared secret for X-Braino-Signature
+#   secret  BRAINO_API_KEY         bearer credential, only if the vendor issues one
+#   secret  ORACLE_PRIVATE_KEY     a DEDICATED key holding ORACLE_ROLE (grant it from the
+#                                  Safe; never the deployer, never a key used elsewhere)
+#   secret  BASE_SEPOLIA_RPC_URL   Base Sepolia RPC endpoint
+#
+# Exit codes of the script: 0 all published / unchanged / empty; 1 a vault needs a person
+# (a NAV withheld by the deviation guard or a paused feed, a vendor failure, a failed
+# publish); 2 the keeper is not configured. 1 and 2 turn the run red, which e-mails the
+# owner. Runbook: docs/AI_INTEGRATION.md.
+
+name: nav-keeper
+
+on:
+  schedule:
+    - cron: '*/15 * * * *' # the spec asks for a new attestation within 15 minutes of an input change
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Fetch, verify and decide, but do not publish'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nav-keeper
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: publish vault NAV
+    if: github.event_name == 'workflow_dispatch' || vars.BRAINO_BASE_URL != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies (lockfile)
+        run: npm run ci:frontend:install
+
+      - name: Publish NAV
+        env:
+          BRAINO_BASE_URL: ${{ vars.BRAINO_BASE_URL }}
+          BRAINO_HMAC_SECRET: ${{ secrets.BRAINO_HMAC_SECRET }}
+          BRAINO_API_KEY: ${{ secrets.BRAINO_API_KEY }}
+          ORACLE_PRIVATE_KEY: ${{ secrets.ORACLE_PRIVATE_KEY }}
+          BASE_SEPOLIA_RPC_URL: ${{ secrets.BASE_SEPOLIA_RPC_URL }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '1' || '' }}
+        run: node --experimental-strip-types app/scripts/nav-keeper.ts

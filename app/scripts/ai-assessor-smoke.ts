@@ -8,9 +8,13 @@
 
 import {
   MockAIAssessor,
-  BrainoAIAssessor,
+  MockProviderForbiddenError,
   canonicalAssessmentBytes,
+  getAIAssessorProvider,
+  toContractRecommendation,
+  CONTRACT_RECOMMENDATION,
 } from '../src/lib/ai-assessor/provider.ts';
+import { BrainoError } from '../src/lib/braino/client.ts';
 import { keccak256, toHex } from 'viem';
 
 let failures = 0;
@@ -110,16 +114,52 @@ const mock = new MockAIAssessor();
   check('mock: all scores in [0, 10000]', bounded);
 }
 
-// Braino placeholder throws (fail-loud, never silent).
+// Draft encoding -> on-chain encoding. The contract is 0 MANUAL_REVIEW, 1 APPROVE, 2 REJECT;
+// the draft is 0 APPROVE, 1 REVIEW, 2 REJECT. Passing a draft straight through would
+// publish an approval as a manual review and a review as an approval.
 {
-  const b = new BrainoAIAssessor();
-  let threw = false;
+  check('contract enum: MANUAL_REVIEW=0 APPROVE=1 REJECT=2',
+    CONTRACT_RECOMMENDATION.MANUAL_REVIEW === 0 && CONTRACT_RECOMMENDATION.APPROVE === 1 && CONTRACT_RECOMMENDATION.REJECT === 2);
+  check('draft APPROVE (0) -> contract APPROVE (1)', toContractRecommendation(0) === 1);
+  check('draft REVIEW (1) -> contract MANUAL_REVIEW (0)', toContractRecommendation(1) === 0);
+  check('draft REJECT (2) -> contract REJECT (2)', toContractRecommendation(2) === 2);
+  const a = await mock.assess({ claimId: 9n, requestedAmount: 1_000n, description: 'ordinary' });
+  check('mock approval is published as an on-chain APPROVE', toContractRecommendation(a.recommendation) === CONTRACT_RECOMMENDATION.APPROVE);
+}
+
+// Provider selection. The mock is for CI and development; production refuses it.
+{
+  check('dev default is the mock', getAIAssessorProvider({}).name === 'mock');
+  let forbidden = false;
   try {
-    await b.assess({ claimId: 1n, requestedAmount: 1n });
-  } catch {
-    threw = true;
+    getAIAssessorProvider({ VERCEL_ENV: 'production' });
+  } catch (e) {
+    forbidden = e instanceof MockProviderForbiddenError;
   }
-  check('braino placeholder throws (fail-loud)', threw);
+  check('production with no provider set refuses the mock', forbidden);
+  forbidden = false;
+  try {
+    getAIAssessorProvider({ VERCEL_ENV: 'production', AI_ASSESSOR_PROVIDER: 'mock' });
+  } catch (e) {
+    forbidden = e instanceof MockProviderForbiddenError;
+  }
+  check('production with the mock selected explicitly refuses it', forbidden);
+
+  let code = '';
+  try {
+    getAIAssessorProvider({ AI_ASSESSOR_PROVIDER: 'braino' });
+  } catch (e) {
+    code = e instanceof BrainoError ? e.code : 'other';
+  }
+  check('braino without its config fails loud (not_configured)', code === 'not_configured');
+
+  const ok = getAIAssessorProvider({
+    AI_ASSESSOR_PROVIDER: 'braino',
+    BRAINO_BASE_URL: 'https://api.example.test',
+    BRAINO_HMAC_SECRET: 's3cret',
+    VERCEL_ENV: 'production',
+  });
+  check('braino with its config is selected, also on production', ok.name === 'braino');
 }
 
 console.log(failures === 0 ? '\nALL PASS' : `\n${failures} FAILURES`);

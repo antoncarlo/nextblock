@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { verifyCronSecret } from '@/lib/notifications/auth';
-import { getAIAssessorProvider } from '@/lib/ai-assessor/provider';
+import { getAIAssessorProvider, MockProviderForbiddenError } from '@/lib/ai-assessor/provider';
+import { createChainReader, loadClaimContext } from '@/lib/ai-assessor/context';
+import { BrainoError } from '@/lib/braino/client';
 import { logApiError } from '@/lib/api-log';
 
 /**
@@ -20,6 +22,11 @@ import { logApiError } from '@/lib/api-log';
  * Auth: shared CRON_SECRET (reused from sub-3 / sub-4 / sanctions / ai).
  * Vercel cron schedule: every 15 minutes (lighter than 5min — the AI
  * provider may have non-trivial cost).
+ *
+ * No provider, no drafts: on production the mock provider is refused, and until
+ * AI_ASSESSOR_PROVIDER=braino is configured the route answers `configured: false`
+ * and does nothing. An idle answer is the truthful one; a made-up assessment in
+ * front of the reviewer who publishes on-chain is not.
  */
 
 const MAX_CLAIMS_PER_RUN = 25;
@@ -40,6 +47,9 @@ export async function POST(request: NextRequest) {
   try {
     provider = getAIAssessorProvider();
   } catch (err) {
+    if (err instanceof MockProviderForbiddenError) {
+      return NextResponse.json({ scanned: 0, drafted: 0, configured: false });
+    }
     logApiError('ai/refresh', 'provider_misconfigured', {
       code: err instanceof Error ? err.name : 'unknown',
     });
@@ -72,6 +82,8 @@ export async function POST(request: NextRequest) {
   const seen = new Set((alreadyAssessed ?? []).map((r) => r.claim_id));
   const todo = submitted.filter((r) => !seen.has(r.claim_id)).slice(0, MAX_CLAIMS_PER_RUN);
 
+  const chain = provider.name === 'braino' ? createChainReader() : null;
+
   let drafted = 0;
   for (const row of todo) {
     const requestedAmountStr = row.data?.requestedAmount ?? '0';
@@ -83,19 +95,35 @@ export async function POST(request: NextRequest) {
     }
     if (requestedAmount === 0n) continue;
 
-    // The mock provider derives behavior from a magic-substring description.
-    // For real Braino we'll pass real evidence text; for now an empty string is
-    // fine — the on-chain sourceHash is still anchored to (claimId, amount, '').
+    // The real provider is given what the chain knows about the claim (spec S3);
+    // the amount is re-read from the chain rather than trusted from the mirror.
+    let context;
+    if (chain) {
+      try {
+        const loaded = await loadClaimContext(chain, BigInt(row.claim_id));
+        context = loaded.context;
+        requestedAmount = loaded.requestedAmount;
+      } catch (err) {
+        logApiError('ai/refresh', 'context_read_failed', {
+          code: err instanceof Error ? err.name : 'unknown',
+        });
+        continue; // retried on the next tick
+      }
+      // Parametric claims settle from objective oracle data (spec S3): nothing to assess.
+      if (context.claimType === 'PARAMETRIC') continue;
+    }
+
     let draft;
     try {
       draft = await provider.assess({
         claimId: BigInt(row.claim_id),
         requestedAmount,
         description: '',
+        context,
       });
     } catch (err) {
       logApiError('ai/refresh', 'provider_failed', {
-        code: err instanceof Error ? err.name : 'unknown',
+        code: err instanceof BrainoError ? `braino_${err.code}` : err instanceof Error ? err.name : 'unknown',
       });
       continue;
     }

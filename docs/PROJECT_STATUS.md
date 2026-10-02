@@ -18,9 +18,9 @@ to trust, and what to build next.
 | 4 | `PolicyRegistry` | **Present** | Incl. one-way `lockRealTime()` — flips the whole protocol to the real block clock for truthful tests |
 | 5 | `AdapterRegistry` / `IRiskPoolAdapter` | **Partial** | Registry + interface only; no external risk-pool adapter integrated (needs a vendor decision) |
 | 6 | `PremiumDistributor` | **Present** | Real USDC `safeTransferFrom` splits. Single-vault-per-portfolio (MVP) |
-| 7 | `NavOracle` | **Partial — advisory** | Real attestation store + staleness guards + **publisher node** (reference canonical serializer, HMAC auth, fail-closed CLI — #83); **feed stays manual** until Braino sandbox keys exist |
+| 7 | `NavOracle` | **Partial — advisory** | Real attestation store + staleness guards + **publisher node** (reference canonical serializer, HMAC auth, fail-closed CLI — #83); the NAV keeper (pull from Braino, HMAC-verified, deviation-aware) is built and idle; **the feed stays off** until the Braino sandbox keys exist — [AI_INTEGRATION.md](AI_INTEGRATION.md) |
 | 8 | `ClaimManager` / `ClaimReceipt` | **Present** | 3 verification types, liveness/dispute, committee approval, CEI payout |
-| 9 | `AIAssessor` | **Partial — advisory** | Store is real, can never approve/trigger payouts; Braino/WAVENURE feed not wired |
+| 9 | `AIAssessor` | **Partial — advisory** | Store is real, can never approve/trigger payouts; the Braino claim-assessment client is built and idle, and the mock provider is refused on production — vendor not connected |
 | 10 | `VaultAllocator` | **Present** | Proposal+TTL, concentration caps, advisory NAV guard, fully curator-parametrized (demo split removed) |
 | 11 | `BordereauOracle` | **Partial — advisory** | UMA-style liveness (2d) + committee verify; **no economic bonds** (real UMA OOv3 is future work) |
 | 12 | `NextBlockLens` / frontend / indexer | **Present** | Lens read-model, 24+ app routes, **full-protocol subgraph** (12 datasources + vault factory template, #76) + typed SDK with staleness (#77) — subgraph deploy owner-gated; Supabase backend; DataSource badges label anything mock-fed |
@@ -36,7 +36,7 @@ to trust, and what to build next.
 | Time (UPR / fees / expiry) | ✅ Real in code via `lockRealTime()` — **flip it on the fresh generation before any company test** ([runbook](../contracts/REDEPLOY_RUNBOOK.md)) |
 | Documents (bordereau/treaty/SOV) | ✅ **Real & confidential**: keccak256 of actual bytes on-chain, file in private bucket, public IPFS manifest only |
 | Bordereau ingestion | ✅ Real parser (native .xlsx + CSV, zero-dep) prefilling the on-chain submission |
-| NAV / risk score / AI assessment | ⚠️ **Advisory, manually fed** — needs Braino/WAVENURE API (Bucket B) |
+| NAV / risk score / AI assessment | ⚠️ **Advisory, not fed** — nothing is produced by an AI today; the NextBlock side is ready ([AI_INTEGRATION.md](AI_INTEGRATION.md)) and waits for the Braino/WAVENURE sandbox (Bucket B) |
 | Bordereau attestation economics | ⚠️ Liveness real, **no bonds** — needs real UMA OOv3 (Bucket B) |
 | External risk-pool adapters | ⚠️ Interface only (vendor decision) |
 | KYB/KYC pipeline | ⚠️ Real workflow (queue, review, one-click on-chain whitelist, notifications) but **no licensed KYC provider** behind it (Bucket B) |

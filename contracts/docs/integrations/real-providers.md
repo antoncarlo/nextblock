@@ -1,9 +1,10 @@
 # Real Provider Integration — NAV / AI / Bordereau (adapter seams)
 
 **Author:** Anton Carlo Santoro
-**Status:** integration spec. The mock adapters are live; swapping in real providers is
-owner-gated (accounts, endpoints, keys). This documents the seam, the on-chain authority
-boundary, and the go-live steps for each.
+**Status:** integration spec. The NAV and AI-assessment clients for Braino are built (see
+`docs/AI_INTEGRATION.md` for the runbook and the exact env names); the mock provider is refused
+on production. Connecting the real providers is owner-gated (accounts, endpoints, keys). This
+documents the seam, the on-chain authority boundary, and the go-live steps for each.
 
 ## Authority boundary (non-negotiable)
 
@@ -26,21 +27,22 @@ A real provider only changes WHERE the data comes from, never WHO can act on it.
 - **Hardening (recommended):** verify an EIP-712 NAV attestation on-chain so the publishing key
   and the data-signing key can differ (publisher relays, signer attests). Add a `verifyNavSig`
   step in a thin adapter in front of `publishNav`.
-- **Env / keys (owner):** `ORACLE_SIGNER_KEY`, `BRAINO_NAV_ENDPOINT`. The signer address must be
-  granted ORACLE_ROLE.
+- **Env / keys (owner):** `ORACLE_PRIVATE_KEY`, `BRAINO_BASE_URL`, `BRAINO_HMAC_SECRET`. The
+  signer address must be granted ORACLE_ROLE. Keeper: `app/scripts/nav-keeper.ts`.
 - **Go-live:** grant ORACLE_ROLE to the signer → run the publisher on a schedule → confirm the
   staleness window + deviation guard reject a missing/anomalous feed (Sentinel `pauseFeed` covers
   the anomaly case).
 
 ## 2. AI assessment — Braino.ai provider (backend already pluggable)
 
-- **Seam:** backend `AIAssessorProvider` interface — `Mock` (deterministic, dev/CI) + `Braino`
-  placeholder (fail-loud) already exist. On-chain: `AIAssessor.publishAssessment` (reviewer-signed,
+- **Seam:** backend `AIAssessorProvider` interface — `Mock` (deterministic, dev/CI only) and
+  `Braino` (the real client, S3 of the spec). On-chain: `AIAssessor.publishAssessment` (reviewer-signed,
   via Sentinel/Safe).
 - **Real provider:** implement the `Braino` provider against the real endpoint; the backend
   produces a draft assessment, a reviewer (Sentinel) publishes it on-chain. No server-side private
   key signs business actions — the reviewer signs.
-- **Env / keys (owner):** `AI_ASSESSOR_PROVIDER=braino`, `BRAINO_API_KEY`, `BRAINO_ASSESS_ENDPOINT`.
+- **Env / keys (owner):** `AI_ASSESSOR_PROVIDER=braino`, `BRAINO_BASE_URL`, `BRAINO_HMAC_SECRET`,
+  optional `BRAINO_API_KEY`.
 - **Go-live:** set the provider env on the backend → reviewer publishes via the existing
   `/app/admin/ai-assessments` flow → confirm the claim path still enforces window + committee.
 
