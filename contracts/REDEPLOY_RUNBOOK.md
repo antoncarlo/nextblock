@@ -9,9 +9,10 @@ with no claim manager and then cannot pay (F-09), `PolicyRegistry` has no
 shares, which is why withdrawals fail. None of that can be repaired in place:
 the bindings are immutable. A truthful test needs a fresh generation.
 
-**Status.** Executed on 2026-10-01: sections 1 to 5 are done on Base Sepolia (deployer
-`0x090043bF030C12d8761441790EB2CF81F0eDcf2c`, governance Safe
-`0x0969B20f1d8a5628613f00fa6aDBE85e715fEf15`, the lending layer of section 2b included).
+**Status.** Executed on 2026-10-02: sections 1 to 5 are done on Base Sepolia, settling in
+Circle's USDC (deployer `0x090043bF030C12d8761441790EB2CF81F0eDcf2c`, governance Safe
+`0x0969B20f1d8a5628613f00fa6aDBE85e715fEf15`, the lending layer of section 2b included,
+timelock rehearsal executed and the deployer renounced).
 Section 6 (`lockRealTime`) is deliberately still open. The sequence is kept because the
 next generation will follow it.
 
@@ -92,7 +93,7 @@ borrows `KYC_OPERATOR_ROLE` for that one approval and gives it back, and gives
 back the curator role it needs to create the first vault, so the finished
 deployment holds exactly the roles you configured.
 
-The addresses chosen for the 2026-10-01 testnet generation are in
+The addresses chosen for the 2026-10-02 testnet generation are in
 `redeploy.roles.env` (addresses only, no keys): the governance Safe as owner and the
 simulation identities from `packages/sim/wallets/keys.map.json` for the seven operational
 roles. That file was exercised on a fork end to end. Load it, then add the deployer key

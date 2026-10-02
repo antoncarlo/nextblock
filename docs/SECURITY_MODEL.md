@@ -22,14 +22,14 @@ it; there are no frontend whitelists with authority.
 ## 2. Governance: timelock and Safe (authoritative)
 
 Phase 1 (live on Base Sepolia): `ProtocolTimelock` at
-`0xc2d419c6EEaC865fE81DAFa7C848fD7d5a5674a7` (min delay 3600s, deploy-time
+`0xD94ea36FD19a0D3Cb3A8EA1214C6F97A947e5950` (min delay 3600s, deploy-time
 floor 1h) holds OWNER_ROLE and DEFAULT_ADMIN_ROLE on ProtocolRoles. The Safe
 `0x0969B20f1d8a5628613f00fa6aDBE85e715fEf15` is proposer, executor and
 canceller; the timelock is self-administered. Every risk-increasing action
 flows schedule -> delay -> execute.
 
-Phase 2 (done on Base Sepolia, 2026-10-01, after a timelocked operation was
-rehearsed through the Safe): the deployer EOA renounced OWNER_ROLE and
+Phase 2 (done on Base Sepolia, 2026-10-02, after a timelocked operation was
+rehearsed through the Safe, executed after the delay): the deployer EOA renounced OWNER_ROLE and
 DEFAULT_ADMIN_ROLE and holds no role. The timelock is the sole holder of
 DEFAULT_ADMIN_ROLE, and OWNER_ROLE sits with the timelock and the Safe.
 

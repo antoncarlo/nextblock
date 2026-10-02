@@ -12,7 +12,7 @@ to trust, and what to build next.
 
 | # | Module | Status | Notes |
 |---|---|---|---|
-| 1 | `ProtocolRoles` / `ComplianceRegistry` / `ProtocolTimelock` | **Present** | On-chain RBAC + ERC-3643-style gate (transfer hook `_update`, KYC expiry, venue approval). Governance phases 1 and 2 done on the 2026-10-01 generation (timelock holds OWNER_ROLE and DEFAULT_ADMIN_ROLE, Safe proposer, deployer renounced) |
+| 1 | `ProtocolRoles` / `ComplianceRegistry` / `ProtocolTimelock` | **Present** | On-chain RBAC + ERC-3643-style gate (transfer hook `_update`, KYC expiry, venue approval). Governance phases 1 and 2 done on the 2026-10-02 generation (timelock `0xD94ea36FD19a0D3Cb3A8EA1214C6F97A947e5950` holds OWNER_ROLE and DEFAULT_ADMIN_ROLE, Safe proposer, deployer renounced) |
 | 2 | `VaultFactory` / `VaultDeployer` | **Present** | Permissioned independent vault instances |
 | 3 | `InsuranceVault` (nbUSDC) | **Present** | ERC-4626 + UPR + 20% buffer + compliance hook + management fee. No performance fee (open business decision) |
 | 4 | `PolicyRegistry` | **Present** | Incl. one-way `lockRealTime()` — flips the whole protocol to the real block clock for truthful tests |
@@ -40,7 +40,7 @@ to trust, and what to build next.
 | Bordereau attestation economics | ⚠️ Liveness real, **no bonds** — needs real UMA OOv3 (Bucket B) |
 | External risk-pool adapters | ⚠️ Interface only (vendor decision) |
 | KYB/KYC pipeline | ⚠️ Real workflow (queue, review, one-click on-chain whitelist, notifications) but **no licensed KYC provider** behind it (Bucket B) |
-| Governance | ⚠️ Timelock + Safe live and the deployer has renounced (2026-10-01); but the Safe has a **single signer** and a one-hour delay: testnet-grade, needs a multi-signer Safe before real value |
+| Governance | ⚠️ Timelock + Safe live and the deployer has renounced (2026-10-02); but the Safe has a **single signer** and a one-hour delay: testnet-grade, needs a multi-signer Safe before real value |
 | Underlying risk | ❌ **Requires the legal wrapper** — SPV/cell + pilot treaty ([Bucket C spec](BUCKET_C_SPV_PILOT.md)). No code makes this real |
 
 ## 3. Shipped workstreams (chronological, with PRs)
@@ -87,7 +87,7 @@ to trust, and what to build next.
 ## 4. Open scope (what to build next)
 
 **Owner-gated operational (hours):**
-1. **Fresh generation deployed and handed over, 2026-10-01** on Base Sepolia: roles on separate holders, lending layer added, governance phases 1 and 2 done (the deployer renounced), security-review fixes F-07…F-12 live, all verified on-chain read-only. Remaining: `lockRealTime()` deliberately later, through the Safe — [runbook](../contracts/REDEPLOY_RUNBOOK.md). Owner-gated wiring still open: GitHub variable `REDEMPTION_QUEUE_ADDRESS` and secrets `KEEPER_PRIVATE_KEY`, `BASE_SEPOLIA_RPC_URL`, `CRON_SECRET`; Goldsky redeploy of `indexer/subgraph.yaml` (already re-pointed) and `NEXT_PUBLIC_PROTOCOL_SUBGRAPH_URL`. The Safe is single-signer: make it a real multisig before real value.
+1. **Fresh generation deployed and handed over, 2026-10-02** on Base Sepolia, settling in Circle's USDC: roles on separate holders, lending layer added, governance phases 1 and 2 done (timelock rehearsal executed, then the deployer renounced), security-review fixes F-07…F-12 live, all verified on-chain read-only. The site, the keeper variables and the Goldsky subgraph (`indexer/subgraph.yaml`, v3) point at this generation. Remaining: `lockRealTime()` deliberately later, through the Safe — [runbook](../contracts/REDEPLOY_RUNBOOK.md). Owner-gated wiring to keep aligned with `contracts/deployments/84532-staging.json`: GitHub variable `REDEMPTION_QUEUE_ADDRESS` and secrets `KEEPER_PRIVATE_KEY`, `BASE_SEPOLIA_RPC_URL`, `CRON_SECRET`. The Safe is single-signer: make it a real multisig before real value.
 
 **Bucket B — external vendors (blocked on accounts/keys, adapters ready):**
 2. Braino/WAVENURE integration → `NavOracle`/`AIAssessor`/`VaultAllocator` — **formal v2 spec ready to send to the Braino team**: [braino-oracle-spec.md](../contracts/docs/integrations/braino-oracle-spec.md) (5 services incl. agentic allocator; see also [real-providers.md](../contracts/docs/integrations/real-providers.md))

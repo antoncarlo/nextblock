@@ -2,7 +2,7 @@
 > The governance described below belongs to the June 2026 Base Sepolia generation,
 > whose Safe (`0x8Fd8b45Ba2612E7535bbeB21615554701CfaF870`) is 2-of-2 and cannot be used any more. It is kept as a
 > historical record. Current governance: Safe `0x0969B20f1d8a5628613f00fa6aDBE85e715fEf15`, ProtocolTimelock
-> `0xc2d419c6EEaC865fE81DAFa7C848fD7d5a5674a7`, phase 2 done. See
+> `0xD94ea36FD19a0D3Cb3A8EA1214C6F97A947e5950`, phase 2 done. See
 > `contracts/REDEPLOY_RUNBOOK.md` and `docs/OPERATIONS.md`.
 
 # Governance Phase 2 Stage A - Pre-flight (Base Sepolia) - FINAL
