@@ -1,22 +1,51 @@
 import { keccak256, toHex } from 'viem';
+import {
+  assessClaim,
+  brainoConfigFromEnv,
+  BrainoError,
+  unitsToDecimal,
+  type BrainoConfig,
+  type ClaimAssessmentRequest,
+} from '../braino/client.ts';
+import type { CanonicalValue } from '../oracle-node.ts';
 
 /**
  * AI claim assessor — pluggable provider (Pilot Readiness gap #5).
  *
- * MVP ships with:
- *   - `MockAIAssessor` — deterministic scoring used in pilot/CI, derived
- *      from claim id + requested amount + an optional magic substring in
- *      the description (e.g. `__ANOMALY__` flips anomaly score to 9000).
- *   - `BrainoAIAssessor` — placeholder for the real Braino.ai/WAVENURE
- *      integration; for now returns 'provider_not_configured' fast so
- *      the cron route falls through cleanly.
+ *   - `BrainoAIAssessor` — the real Braino.ai/WAVENURE client (S3 of the integration
+ *      spec): HMAC-verified, fail-closed, sourceHash = keccak256(canonical report).
+ *   - `MockAIAssessor` — deterministic scoring for CI and local development only,
+ *      derived from claim id + requested amount + an optional magic substring in
+ *      the description (e.g. `__ANOMALY__` flips anomaly score to 9000). It is
+ *      REFUSED on production (see getAIAssessorProvider): a mock must never put a
+ *      draft in front of the reviewer who publishes on-chain.
  *
- * Provider selection: `AI_ASSESSOR_PROVIDER=mock|braino` (default mock).
+ * Provider selection: `AI_ASSESSOR_PROVIDER=mock|braino` (default mock outside production).
  *
  * Pure + framework-free — runs under the strip-types smoke loader.
  */
 
-export type Recommendation = 0 | 1 | 2; // APPROVE | REVIEW | REJECT
+import type { Recommendation } from './recommendation.ts';
+export {
+  CONTRACT_RECOMMENDATION,
+  toContractRecommendation,
+  type Recommendation,
+} from './recommendation.ts';
+
+/** Everything about a claim that the vendor needs and the chain already knows. */
+export interface ClaimContext {
+  portfolioId: bigint;
+  vault: string;
+  claimType: 'NON_PARAMETRIC' | 'PARAMETRIC';
+  /** On-chain anchor of the evidence bundle. */
+  evidenceHash: string;
+  submittedAt: number;
+  /** USDC base units. */
+  coverageLimit: bigint;
+  policyTerms: Record<string, CanonicalValue>;
+  /** Documents, when a short-lived signed URL can be minted for them. */
+  evidence?: Array<{ contentHash: string; url: string; contentType: string }>;
+}
 
 export interface ClaimAssessmentInput {
   claimId: bigint;
@@ -24,6 +53,8 @@ export interface ClaimAssessmentInput {
   requestedAmount: bigint;
   /** Free-text payload the cedant attached (description / metadata blob). */
   description?: string;
+  /** On-chain facts about the claim; required by the Braino provider. */
+  context?: ClaimContext;
 }
 
 export interface AssessmentDraft {
@@ -130,20 +161,92 @@ export class MockAIAssessor implements AIAssessorProvider {
 }
 
 /**
- * Placeholder for the real Braino.ai/WAVENURE integration. Until the API
- * contract is provisioned, this throws — the route layer catches and
- * returns 503 to operations rather than silently emitting an assessment
- * we can't justify on-chain.
+ * Real Braino.ai/WAVENURE provider (spec S3, `POST /v1/assess`).
+ *
+ * Advisory only: the draft it returns is reviewed and published by a human holding
+ * ORACLE_ROLE; the Claims Committee and the dispute window are never bypassed.
  */
 export class BrainoAIAssessor implements AIAssessorProvider {
   readonly name = 'braino' as const;
-  async assess(_input: ClaimAssessmentInput): Promise<AssessmentDraft> {
-    throw new Error('BrainoAIAssessor: provider not configured (no API key / endpoint)');
+  private readonly config: BrainoConfig;
+  private readonly fetchImpl: typeof fetch | undefined;
+
+  constructor(config: BrainoConfig, fetchImpl?: typeof fetch) {
+    this.config = config;
+    this.fetchImpl = fetchImpl;
+  }
+
+  async assess(input: ClaimAssessmentInput): Promise<AssessmentDraft> {
+    const ctx = input.context;
+    if (!ctx) throw new BrainoError('context', 'claim context is required to assess a claim');
+    if (ctx.claimType === 'PARAMETRIC') {
+      // Spec §3 S3: parametric claims settle from objective oracle data, not from this path.
+      throw new BrainoError('context', 'parametric claims are not assessed by the AI provider');
+    }
+
+    const evidence =
+      ctx.evidence && ctx.evidence.length > 0
+        ? ctx.evidence
+        : [{ contentHash: ctx.evidenceHash, contentType: 'application/octet-stream' }];
+
+    const request: ClaimAssessmentRequest = {
+      claimId: input.claimId.toString(),
+      portfolioId: ctx.portfolioId.toString(),
+      requestedAmount: unitsToDecimal(input.requestedAmount),
+      coverageLimit: unitsToDecimal(ctx.coverageLimit),
+      policyTerms: ctx.policyTerms,
+      evidence,
+      description: input.description ?? '',
+    };
+
+    const a = await assessClaim(this.config, request, input.requestedAmount, {
+      fetchImpl: this.fetchImpl,
+    });
+    const recommendation: Recommendation =
+      a.recommendation === 'APPROVE' ? 0 : a.recommendation === 'REVIEW' ? 1 : 2;
+
+    return {
+      claimId: input.claimId,
+      scoreBps: a.scoreBps,
+      anomalyScoreBps: a.anomalyScoreBps,
+      confidenceBps: a.confidenceBps,
+      recommendation,
+      recommendedAmount: a.recommendedAmount,
+      sourceHash: a.sourceHash,
+      provider: 'braino',
+      // The raw body is the audit artifact (spec §5): kept byte for byte.
+      raw: {
+        reportId: a.reportId,
+        modelVersion: a.modelVersion,
+        asOf: a.asOf,
+        criteria: a.criteria,
+        rawBody: a.rawBody,
+      },
+    };
   }
 }
 
-export function getAIAssessorProvider(env: NodeJS.ProcessEnv = process.env): AIAssessorProvider {
+/**
+ * The mock was selected (or defaulted) where only real data may be shown. The cron
+ * route answers "idle" rather than producing a draft nobody can justify on-chain.
+ */
+export class MockProviderForbiddenError extends Error {
+  constructor() {
+    super('AI_ASSESSOR_PROVIDER resolves to the mock provider on production');
+    this.name = 'MockProviderForbiddenError';
+  }
+}
+
+export function getAIAssessorProvider(
+  env: Record<string, string | undefined> = process.env,
+  fetchImpl?: typeof fetch,
+): AIAssessorProvider {
   const selected = (env.AI_ASSESSOR_PROVIDER ?? 'mock').toLowerCase();
-  if (selected === 'braino') return new BrainoAIAssessor();
+  if (selected === 'braino') {
+    const cfg = brainoConfigFromEnv(env);
+    if (!cfg.ok) throw new BrainoError('not_configured', cfg.problems.join('; '));
+    return new BrainoAIAssessor(cfg.config, fetchImpl);
+  }
+  if (env.VERCEL_ENV === 'production') throw new MockProviderForbiddenError();
   return new MockAIAssessor();
 }
