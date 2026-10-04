@@ -1,5 +1,6 @@
-import { createPublicClient, http, verifyMessage, keccak256, toBytes } from 'viem';
+import { createPublicClient, verifyMessage, keccak256, toBytes } from 'viem';
 import { baseSepolia } from 'viem/chains';
+import { rpcTransport } from '@/lib/server/chain-client';
 import { NEXTBLOCK_ADDRESSES, NEXTBLOCK_CHAIN_ID } from '@/config/generated/addressBook';
 import { operatorAuthMessage, isTimestampWithinWindow } from '@/lib/kyb/schema';
 
@@ -28,9 +29,6 @@ const HAS_ROLE_ABI = [
 const UNDERWRITING_CURATOR_ROLE = keccak256(toBytes('UNDERWRITING_CURATOR_ROLE'));
 const OWNER_ROLE = keccak256(toBytes('OWNER_ROLE'));
 
-function rpcUrl(): string {
-  return process.env.BASE_SEPOLIA_RPC_URL ?? 'https://sepolia.base.org';
-}
 
 export interface OfferingAuthInput {
   address: `0x${string}`;
@@ -63,7 +61,7 @@ export async function verifyOfferingCurator(
   }
   if (!signatureOk) return { ok: false, status: 401, error: 'invalid signature' };
 
-  const client = createPublicClient({ chain: baseSepolia, transport: http(rpcUrl()) });
+  const client = createPublicClient({ chain: baseSepolia, transport: rpcTransport() });
   const roles = NEXTBLOCK_ADDRESSES.protocolRoles as `0x${string}`;
   try {
     const [curator, owner] = await Promise.all(

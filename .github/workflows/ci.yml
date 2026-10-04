@@ -65,6 +65,7 @@ jobs:
           node --experimental-strip-types app/scripts/sanctions-smoke.ts
           node --experimental-strip-types app/scripts/wallet-sanctions-smoke.ts
           node --experimental-strip-types app/scripts/email-smoke.ts
+          node --experimental-strip-types app/scripts/rpc-smoke.ts
 
       - name: Build
         run: npm run ci:frontend:build

@@ -1,5 +1,6 @@
-import { createPublicClient, http, verifyMessage, keccak256, toBytes } from 'viem';
+import { createPublicClient, verifyMessage, keccak256, toBytes } from 'viem';
 import { baseSepolia } from 'viem/chains';
+import { rpcTransport } from '@/lib/server/chain-client';
 import { NEXTBLOCK_ADDRESSES, NEXTBLOCK_CHAIN_ID } from '@/config/generated/addressBook';
 import { CEDANT_AUTH_WINDOW_SECONDS, cedantAuthMessage } from './authMessage';
 
@@ -34,9 +35,6 @@ const AUTHORIZED_CEDANT_ROLE = keccak256(toBytes('AUTHORIZED_CEDANT_ROLE'));
 const UNDERWRITING_CURATOR_ROLE = keccak256(toBytes('UNDERWRITING_CURATOR_ROLE'));
 const OWNER_ROLE = keccak256(toBytes('OWNER_ROLE'));
 
-function getRpcUrl(): string {
-  return process.env.BASE_SEPOLIA_RPC_URL ?? 'https://sepolia.base.org';
-}
 
 export interface CedantAuthInput {
   address: `0x${string}`;
@@ -75,7 +73,7 @@ export async function verifyCedantAuth(action: string, auth: CedantAuthInput): P
   const signed = await verifySignedAction(action, auth);
   if (!signed.ok) return signed;
 
-  const client = createPublicClient({ chain: baseSepolia, transport: http(getRpcUrl()) });
+  const client = createPublicClient({ chain: baseSepolia, transport: rpcTransport() });
   const protocolRoles = NEXTBLOCK_ADDRESSES.protocolRoles as `0x${string}`;
   try {
     const [isCedant, isOwner] = await Promise.all([
@@ -123,7 +121,7 @@ export async function verifyDocumentAccess(
     return { ok: true, address: auth.address };
   }
 
-  const client = createPublicClient({ chain: baseSepolia, transport: http(getRpcUrl()) });
+  const client = createPublicClient({ chain: baseSepolia, transport: rpcTransport() });
   const protocolRoles = NEXTBLOCK_ADDRESSES.protocolRoles as `0x${string}`;
   try {
     const [isCurator, isOwner] = await Promise.all([
