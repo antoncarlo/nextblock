@@ -88,3 +88,17 @@ write tool, labeled as such, and is not a canonical source.
 - Moderate transitive npm advisories in the wallet stack (0 high/critical).
 - Function search_path advisor warning on the KYB trigger function (fix
   planned in migration 0002).
+
+## Dependency advisories the build carries
+
+CI runs `scripts/audit-gate.mjs`, which is `npm audit --audit-level=high` over the whole
+dependency graph with one allowance: an advisory with **no patched release** that **cannot reach
+production code** may be carried, with a written reason and an expiry date, after which the gate
+fails again. An audit that cannot run fails the gate.
+
+| Advisory | Package | Why it is carried | Until |
+|---|---|---|---|
+| GHSA-vfj7-8cjw-p6xm (high, stack exhaustion on nested brace patterns) | `braces` ≤ 3.0.3 | No patched release exists (3.0.3 is the latest). Reached only through `eslint-config-next` → `@next/eslint-plugin-next` → `fast-glob` → `micromatch`: lint tooling expanding patterns from our own config, never from user input. `npm ls braces --omit=dev` shows it dev-only; `npm audit --omit=dev --audit-level=high` is clean | 2026-12-31 |
+
+When a patched `braces` is published, upgrade and delete the entry; the gate says so when the
+advisory is no longer reported.
