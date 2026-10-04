@@ -83,9 +83,9 @@ write tool, labeled as such, and is not a canonical source.
 
 ## 7. Known accepted residuals (tracked in the gap matrix)
 
-- Deployer EOA still holds owner roles (phase 2 pending authorization).
+- Governance is testnet-grade: the deployer EOA holds no role (renounced 2026-10-02), but the Safe's signer set and the timelock delay are being hardened and the operational roles are still held by simulation identities; see `docs/GOVERNANCE_HARDENING.md`.
 - Operator auth replay window (no nonce store yet).
-- Moderate transitive npm advisories in the wallet stack (0 high/critical).
+- Moderate transitive npm advisories in the wallet stack (0 high/critical in the production graph). One dev-only high advisory with no patched release is carried with an expiry; see "Dependency advisories the build carries".
 - Function search_path advisor warning on the KYB trigger function (fix
   planned in migration 0002).
 
