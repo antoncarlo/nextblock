@@ -1,5 +1,6 @@
-import { createPublicClient, http, verifyMessage, keccak256, toBytes } from 'viem';
+import { createPublicClient, verifyMessage, keccak256, toBytes } from 'viem';
 import { baseSepolia } from 'viem/chains';
+import { rpcTransport } from '@/lib/server/chain-client';
 import { NEXTBLOCK_ADDRESSES, NEXTBLOCK_CHAIN_ID } from '@/config/generated/addressBook';
 import {
   operatorAuthMessage,
@@ -40,9 +41,6 @@ const HAS_ROLE_ABI = [
 const KYC_OPERATOR_ROLE = keccak256(toBytes('KYC_OPERATOR_ROLE'));
 const OWNER_ROLE = keccak256(toBytes('OWNER_ROLE'));
 
-function getRpcUrl(): string {
-  return process.env.BASE_SEPOLIA_RPC_URL ?? 'https://sepolia.base.org';
-}
 
 export interface OperatorAuthInput {
   address: `0x${string}`;
@@ -83,7 +81,7 @@ export async function verifyOperatorAuth(
 
   const client = createPublicClient({
     chain: baseSepolia,
-    transport: http(getRpcUrl()),
+    transport: rpcTransport(),
   });
 
   const protocolRoles = NEXTBLOCK_ADDRESSES.protocolRoles as `0x${string}`;

@@ -1,5 +1,6 @@
-import { createPublicClient, http, verifyMessage, keccak256, toBytes } from 'viem';
+import { createPublicClient, verifyMessage, keccak256, toBytes } from 'viem';
 import { baseSepolia } from 'viem/chains';
+import { rpcTransport } from '@/lib/server/chain-client';
 import { NEXTBLOCK_ADDRESSES, NEXTBLOCK_CHAIN_ID } from '@/config/generated/addressBook';
 import { operatorAuthMessage, isTimestampWithinWindow } from '@/lib/kyb/schema';
 
@@ -59,11 +60,8 @@ const CLAIMS_COMMITTEE_ROLE = keccak256(toBytes('CLAIMS_COMMITTEE_ROLE'));
 const SENTINEL_ROLE = keccak256(toBytes('SENTINEL_ROLE'));
 const OWNER_ROLE = keccak256(toBytes('OWNER_ROLE'));
 
-function rpcUrl(): string {
-  return process.env.BASE_SEPOLIA_RPC_URL ?? 'https://sepolia.base.org';
-}
 function publicClient() {
-  return createPublicClient({ chain: baseSepolia, transport: http(rpcUrl()) });
+  return createPublicClient({ chain: baseSepolia, transport: rpcTransport() });
 }
 
 export interface EvidenceAuthInput {

@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createPublicClient, http } from 'viem';
-import { baseSepolia } from 'viem/chains';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { verifyClaimReviewer, type EvidenceAuthInput } from '@/lib/evidence/auth';
 import { NEXTBLOCK_CHAIN_ID } from '@/config/generated/addressBook';
 import { readProviderStatus } from '@/lib/providers/status';
+import { createChainClient, probeRpc } from '@/lib/server/chain-client';
 
 /**
  * Admin system status — single endpoint that surfaces:
@@ -58,22 +57,18 @@ export async function GET(request: NextRequest) {
   const v = await verifyClaimReviewer('admin:system-status', auth);
   if (!v.ok) return NextResponse.json({ error: v.error }, { status: v.status });
 
-  // RPC probe — latency + latest block, with a hard timeout via Promise.race
-  // so a hanging RPC doesn't stall the whole status response.
-  const rpc = process.env.BASE_SEPOLIA_RPC_URL ?? 'https://sepolia.base.org';
-  const client = createPublicClient({ chain: baseSepolia, transport: http(rpc) });
-  const start = performance.now();
+  // RPC probe: latency, and whether the configured endpoint or the public fallback is serving.
+  const probe = await probeRpc();
   let blockNumber: bigint | null = null;
-  let rpcError: string | null = null;
-  try {
-    blockNumber = await Promise.race<bigint>([
-      client.getBlockNumber(),
-      new Promise<bigint>((_, rej) => setTimeout(() => rej(new Error('rpc_timeout_3s')), 3000)),
-    ]);
-  } catch (err) {
-    rpcError = err instanceof Error ? err.message.slice(0, 120) : 'rpc_error';
+  if (probe.ok) {
+    try {
+      blockNumber = await createChainClient().getBlockNumber();
+    } catch {
+      blockNumber = null;
+    }
   }
-  const rpcLatencyMs = Math.round(performance.now() - start);
+  const rpcError = probe.error;
+  const rpcLatencyMs = probe.ms;
 
   // Supabase service-role reachability — a trivial select against a known table.
   const supabase = getSupabaseServerClient();
@@ -103,7 +98,7 @@ export async function GET(request: NextRequest) {
     providers: readProviderStatus(process.env),
     platformEnv: readPlatformEnv(process.env),
     rpc: {
-      url: rpc.replace(/(\/\/)([^@]+@)?(.+)$/, '$1$3'), // strip basic-auth credentials if present
+      host: probe.host, // the host only: provider URLs carry the API key in the path
       chainId: NEXTBLOCK_CHAIN_ID,
       latestBlock: blockNumber !== null ? blockNumber.toString() : null,
       latencyMs: rpcLatencyMs,

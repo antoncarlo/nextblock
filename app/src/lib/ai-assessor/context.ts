@@ -1,15 +1,14 @@
-import { createPublicClient, http } from 'viem';
+import { createPublicClient } from 'viem';
 import { baseSepolia } from 'viem/chains';
+import { rpcTransport } from '@/lib/server/chain-client';
 import { CLAIM_MANAGER_ABI, PORTFOLIO_REGISTRY_ABI } from '@/config/contracts';
 import { NEXTBLOCK_ADDRESSES } from '@/config/generated/addressBook';
 import { unitsToDecimal } from '../braino/client.ts';
 import type { ClaimContext } from './provider.ts';
 
 /** A read-only client on the protocol's chain. */
-export function createChainReader(
-  rpcUrl: string = process.env.BASE_SEPOLIA_RPC_URL ?? 'https://sepolia.base.org',
-) {
-  return createPublicClient({ chain: baseSepolia, transport: http(rpcUrl) });
+export function createChainReader() {
+  return createPublicClient({ chain: baseSepolia, transport: rpcTransport() });
 }
 export type ChainReader = ReturnType<typeof createChainReader>;
 

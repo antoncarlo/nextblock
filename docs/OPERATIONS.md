@@ -123,6 +123,26 @@ Runbook and authorization gates: `docs/GOVERNANCE_PHASE2.md`.
   cannot be undone for that key; any later change goes through the Safe and the
   timelock (`contracts/script/GovernanceMigration.s.sol`, `RENOUNCE_DEPLOYER=true`).
 
+## RPC provider (BASE_SEPOLIA_RPC_URL)
+
+Every server-side read goes through `app/src/lib/server/chain-client.ts`: the configured
+endpoint first, the public Base Sepolia endpoint if that fails. A provider account can run
+out of quota (HTTP 429, "Monthly capacity limit exceeded") for reasons that have nothing to do
+with this app, because the quota belongs to the whole provider account. When that happens
+the site keeps reading the chain through the public endpoint, and `/api/observability/health`
+answers 200 with an `advisory` on the `rpc` check naming the failing host and the cause.
+
+- A provider URL embeds its API key. Nothing returned by the app or printed in a log may carry
+  it: `describeRpcFailure` produces the only text that leaves the server, and
+  `app/scripts/rpc-smoke.ts` pins it. The scheduled workflows run on a public repository, so a
+  workflow log is a public place.
+- If a key was ever returned by a response or printed in a log, treat it as published: create a
+  new key in the provider dashboard, put it in the Vercel variable and the GitHub secret
+  `BASE_SEPOLIA_RPC_URL`, redeploy, then delete the old key.
+- Give NextBlock its own provider account (or a plan with its own cap). The site uses a few
+  thousand compute units a day; sharing an account with a heavy workload puts the site behind
+  that workload's quota.
+
 ## Incident quick reference
 
 - Suspected key/secret exposure: rotate in Supabase/Vercel dashboards first,

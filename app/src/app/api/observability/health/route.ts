@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createPublicClient, http } from 'viem';
-import { baseSepolia } from 'viem/chains';
+import { probeRpc } from '@/lib/server/chain-client';
 import { getSupabaseServerClient } from '@/lib/supabase-server';
 import { NEXTBLOCK_CHAIN_ID } from '@/config/generated/addressBook';
 
@@ -44,27 +43,11 @@ export async function GET() {
     error: supabaseError,
   });
 
-  // 2. RPC reachability + latency.
-  const rpc = process.env.BASE_SEPOLIA_RPC_URL ?? 'https://sepolia.base.org';
-  const client = createPublicClient({ chain: baseSepolia, transport: http(rpc) });
-  const rpcStart = performance.now();
-  let rpcOk = false;
-  let rpcError: string | null = null;
-  try {
-    await Promise.race<bigint>([
-      client.getBlockNumber(),
-      new Promise<bigint>((_, rej) => setTimeout(() => rej(new Error('rpc_timeout_3s')), 3000)),
-    ]);
-    rpcOk = true;
-  } catch (err) {
-    rpcError = err instanceof Error ? err.message.slice(0, 120) : 'rpc_error';
-  }
-  checks.push({
-    name: 'rpc',
-    ok: rpcOk,
-    ms: Math.round(performance.now() - rpcStart),
-    error: rpcError,
-  });
+  // 2. RPC reachability + latency. The configured endpoint first, the public one if
+  //    that fails; `error` says when the fallback is what answered. Never the raw
+  //    error: provider URLs carry the API key, and this endpoint is public.
+  const rpc = await probeRpc();
+  checks.push({ name: 'rpc', ok: rpc.ok, ms: rpc.ms, error: rpc.error });
 
   // 3. Required configuration. A route that 503s on demand is quiet until
   //    someone hits it; the uptime monitor hitting THIS endpoint makes a
