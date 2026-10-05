@@ -111,7 +111,7 @@ export const ROLE_TRACKS: readonly RoleTrack[] = [
 /** The always-available read-only track (no role required). */
 export const VIEWER_TRACK: RoleTrack = {
   key: 'VIEWER',
-  label: 'B2B Demo Viewer',
+  label: 'Read-only viewer',
   description: 'Browse on-chain protocol state read-only. No role required.',
   route: '/app',
   flag: 'isOwner', // unused for viewer; viewer is always available
