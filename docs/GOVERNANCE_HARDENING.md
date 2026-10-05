@@ -99,10 +99,14 @@ confirm it works, then revoke the simulation identity. Never revoke first.
 | Oracle publisher | `0x899b…Ecd` | the AI node's dedicated key — see `docs/AI_INTEGRATION.md` |
 | Cedant | `0xbF0b…ce4D` | the ceding insurer's own wallet |
 
-The Safe prints the grant for the oracle publisher with `ai-preflight.ts --publisher`. For the
-others the call is `grantRole(role, newAddress)` and `revokeRole(role, oldAddress)` on ProtocolRoles
-`0xB073F2Da83F008be6C3Abce25eDe2aebD621c1ba`; ask for the data and they are prepared and simulated
-the same way.
+Put the real addresses in `contracts/roles.rotation.template.json` (a copy) and run
+`node scripts/prepare-role-rotation.mjs --plan <file>`. It refuses an unfilled role, an address that
+would hold two roles, and the Safe, the timelock or the deployer as a holder; it simulates every call
+as the Safe on the live chain and writes two Transaction Builder batches, `roles-1-grant.json` and
+`roles-2-revoke.json`. Run the first, confirm every new holder can act, then the second. Afterwards
+`--check` reads the chain and says which roles have moved. The calls are `grantRole` and `revokeRole`
+on ProtocolRoles `0xB073F2Da83F008be6C3Abce25eDe2aebD621c1ba`; the Safe administers all of them, so
+no timelock delay applies.
 
 ## 4. After all three
 
