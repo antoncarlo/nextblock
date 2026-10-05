@@ -4,7 +4,7 @@
  *
  * Offering terms are the curator-supplied commercial metadata of a vault
  * (manager identity, strategy statement, risk grade, illustrative target
- * APY range). They REPLACE the static demo map in config/vaultDisplay.ts:
+ * APY range). They are the only source of vault display metadata in config/vaultDisplay.ts:
  * when a row exists for a vault the UI shows it with a Backend data-source
  * badge; when none exists the UI falls back to the illustrative defaults.
  * Writing terms is gated on-chain (UNDERWRITING_CURATOR_ROLE / OWNER_ROLE —

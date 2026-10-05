@@ -2,7 +2,6 @@
 import Link from 'next/link';
 import { useAccount } from 'wagmi';
 import { useWalletRole, useActiveRole } from '@/components/shared/WalletRoleIndicator';
-import { getWalletName } from '@/config/knownWallets';
 import { useVaultAddresses, useVaultInfo } from '@/hooks/useVaultData';
 import { ClaimLifecyclePanel } from '@/components/claims/ClaimLifecyclePanel';
 import { PortfolioPanel } from '@/components/portfolio/PortfolioPanel';
@@ -98,7 +97,6 @@ export default function MyCompanyPage() {
   // On-chain role resolution (ProtocolRoles/ComplianceRegistry)
   const { role: baseRole } = useWalletRole();
   const role = activeRole ?? baseRole;
-  const userName = getWalletName(address);
   const { data: vaultAddresses } = useVaultAddresses();
 
   if (!isConnected) {
@@ -142,7 +140,7 @@ export default function MyCompanyPage() {
     );
   }
 
-  const displayName = userName ?? 'Cedant / Reinsurer';
+  const displayName = 'Cedant / Reinsurer';
 
   return (
     <div data-track-section="company_overview" style={{ minHeight: '100vh', backgroundColor: '#FAFAF8' }}>

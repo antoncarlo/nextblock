@@ -32,7 +32,7 @@ interface VerificationOption {
 }
 
 const VERIFICATION_TYPES: VerificationOption[] = [
-  { value: 0, label: 'Permissionless (legacy)', description: 'Legacy demo verification type — on-chain auto-settlement was removed in Phase 9.5' },
+  { value: 0, label: 'Permissionless (legacy)', description: 'Legacy verification type — on-chain auto-settlement was removed in Phase 9.5' },
   { value: 1, label: 'Oracle Reporter', description: 'Settled by a trusted oracle address' },
   { value: 2, label: 'Insurer Admin', description: 'Manual settlement by the insurer admin' },
 ];

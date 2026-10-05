@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useAccount } from 'wagmi';
 import { useVaultAddresses, useMultiVaultInfo } from '@/hooks/useVaultData';
-import { LEGACY_ADMIN_UI_HINT } from '@/config/constants';
 import { useProtocolAccess } from '@/hooks/useProtocolAccess';
 import { TimeControls } from '@/components/admin/TimeControls';
 import { LensProtocolStatus } from '@/components/admin/LensProtocolStatus';
@@ -20,20 +19,16 @@ export default function AdminPage() {
   const { address, isConnected } = useAccount();
   const emailSession = useEmailSession();
 
-  // PRIMARY gate: on-chain protocol roles read from ProtocolRoles (canonical
-  // RBAC). The legacy hint list is a UI-only fallback for demo wallets and is
-  // explicitly NOT a security boundary: every privileged action behind this
-  // page is enforced on-chain (role-gated contracts) or server-side (signed
-  // KYB APIs), never by this client-side check.
+  // The gate is the on-chain protocol roles read from ProtocolRoles (canonical
+  // RBAC), or an authorised admin e-mail session. No address is written into
+  // this bundle. It decides only what this page shows: every privileged action
+  // behind it is enforced on-chain (role-gated contracts) or server-side
+  // (signed KYB APIs), never by this client-side check.
   const access = useProtocolAccess();
   const hasOnchainAdminRole =
     access.status === 'onchain' && (access.isOwner || access.isSentinel || access.isCommittee);
-  const isLegacyHintWallet =
-    isConnected &&
-    !!address &&
-    LEGACY_ADMIN_UI_HINT.map((a) => a.toLowerCase()).includes(address.toLowerCase());
   const isEmailAdmin = emailSession.isEmailAuthenticated && emailSession.isAppAdmin;
-  const isAdmin = hasOnchainAdminRole || isLegacyHintWallet || isEmailAdmin;
+  const isAdmin = hasOnchainAdminRole || isEmailAdmin;
 
   const { data: vaultAddresses } = useVaultAddresses();
   const { data: vaultInfos } = useMultiVaultInfo(vaultAddresses);

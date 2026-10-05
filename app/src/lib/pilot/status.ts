@@ -15,7 +15,7 @@ export const PILOT_CHAIN_ID = 84532;
 /** Recommended minimum Base Sepolia ETH (wei) to cover gas for a few actions: 0.005 ETH. */
 export const MIN_ETH_WEI = 5_000_000_000_000_000n;
 
-/** Minimum test USDC (6 decimals) to consider a wallet funded for deposit/premium demos: 1 USDC. */
+/** Minimum test USDC (6 decimals) to consider a wallet funded for deposits and premium payments: 1 USDC. */
 export const MIN_USDC_6 = 1_000_000n;
 
 /** Circle's faucet for testnet USDC, the token the vaults settle in. Guidance only. */
@@ -164,7 +164,7 @@ export interface NextAction {
  */
 export function nextAction(input: PilotInput): NextAction {
   if (!input.walletConnected) {
-    return { severity: 'blocked', message: 'Connect your wallet to begin the pilot onboarding.' };
+    return { severity: 'blocked', message: 'Connect your wallet to begin the testnet onboarding.' };
   }
   if (!isCorrectChain(input.chainId)) {
     return { severity: 'blocked', message: 'Switch your wallet to Base Sepolia (chain 84532).' };
@@ -220,7 +220,7 @@ export function nextAction(input: PilotInput): NextAction {
   const primary = tracks[0];
   return {
     severity: 'ready',
-    message: 'You are set up for the pilot. Open your role dashboard to continue.',
+    message: 'You are set up. Open your role dashboard to continue.',
     ctaLabel: `Go to ${primary.label}`,
     ctaRoute: primary.route,
   };

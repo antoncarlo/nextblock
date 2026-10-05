@@ -8,10 +8,9 @@ const INSTITUTIONAL_CHAIN_ID = 84532;
 
 /**
  * Full-width notice rendered across the app area whenever the connected
- * wallet is on a chain other than Base Sepolia. Other configured chains
- * (Ethereum Sepolia, Arc) carry only legacy demo contracts: every vault and
- * strategy is unavailable there, and this banner says so instead of letting
- * pages fail read-by-read.
+ * wallet is on a chain other than Base Sepolia. The protocol is deployed
+ * there only: every vault and strategy is unavailable elsewhere, and this
+ * banner says so instead of letting pages fail read-by-read.
  */
 export function NetworkAvailabilityNotice() {
   const { isConnected } = useAccount();
