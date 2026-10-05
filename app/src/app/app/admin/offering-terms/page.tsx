@@ -176,7 +176,7 @@ export default function OfferingTermsPage() {
           </div>
           <div>
             <label style={labelStyle} htmlFor="ot-manager">Manager name</label>
-            <input id="ot-manager" style={inputStyle} maxLength={80} value={managerName} onChange={(e) => setManagerName(e.target.value)} placeholder="e.g. Klapton Re Partners Ltd" />
+            <input id="ot-manager" style={inputStyle} maxLength={80} value={managerName} onChange={(e) => setManagerName(e.target.value)} placeholder="Name of the managing entity" />
           </div>
           <div>
             <label style={labelStyle} htmlFor="ot-strategy">Strategy statement</label>

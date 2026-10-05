@@ -483,7 +483,7 @@ export default function CuratorDashboardPage() {
                   <h3 style={{ fontFamily: '"Playfair Display", Georgia, serif', fontSize: '20px', color: '#1B3A6B', marginBottom: '24px' }}>Configure Strategy Parameters</h3>
 
                   {[
-                    { key: 'name', label: 'Vault Name', placeholder: 'e.g. Alpine Catastrophe Fund I', hint: 'Public name shown to investors.' },
+                    { key: 'name', label: 'Vault Name', placeholder: 'Public name of the vault', hint: 'Public name shown to investors.' },
                     { key: 'tokenSymbol', label: 'Share Token Symbol', placeholder: 'e.g. ACFI', hint: 'Max 8 characters. ERC-20 symbol for vault shares.' },
                     { key: 'jurisdiction', label: 'Jurisdiction', placeholder: 'e.g. Bermuda, Cayman Islands, SKN', hint: 'Regulatory jurisdiction of the vault manager.' },
                   ].map(field => (

@@ -8,7 +8,6 @@ import { VaultTable } from "@/components/vault/VaultTable";
 import { VerificationBadge } from "@/components/shared/VerificationBadge";
 import { VerificationType } from "@/config/constants";
 import { useWalletRole, useActiveRole } from "@/components/shared/WalletRoleIndicator";
-import { getWalletName } from "@/config/knownWallets";
 import Link from "next/link";
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
@@ -290,8 +289,7 @@ function InvestorView() {
 
 // ─── Vista Insurance Company ──────────────────────────────────────────────────
 function InsuranceCompanyView() {
-  const { address } = useAccount();
-  const userName = getWalletName(address) ?? 'Insurance Company';
+  const userName = 'Insurance Company';
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#FAFAF8" }}>
       <Hero
@@ -321,8 +319,7 @@ function InsuranceCompanyView() {
 
 // ─── Vista Syndicate ──────────────────────────────────────────────────
 function SyndicateManagerView() {
-  const { address } = useAccount();
-  const userName = getWalletName(address) ?? 'Syndicate';
+  const userName = 'Syndicate';
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#FAFAF8" }}>
       <Hero

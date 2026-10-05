@@ -132,9 +132,9 @@ export default function PilotHubPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-      <h1 className="text-2xl font-bold text-gray-900">Pilot Onboarding Hub</h1>
+      <h1 className="text-2xl font-bold text-gray-900">Testnet onboarding</h1>
       <p className="mt-1 text-sm text-gray-500">
-        Your self-service checklist for the NextBlock testnet pilot. It shows what is ready,
+        Your self-service checklist for the NextBlock testnet. It shows what is ready,
         what is missing, and the single next action for your role.
       </p>
 
@@ -260,8 +260,8 @@ export default function PilotHubPage() {
           KYB and role grants are processed by the protocol operator. Submit KYB at{' '}
           <Link href="/app/apply" className="text-blue-700 hover:text-blue-900">/app/apply</Link>, then
           share your connected wallet address so the operator can grant your on-chain role via the
-          admin role-handoff tool. Allocation and premium flows are operator-facilitated during the
-          pilot.
+          admin role-handoff tool. Allocation and premium flows are operator-facilitated on the
+          testnet.
         </p>
       </section>
 
@@ -269,7 +269,7 @@ export default function PilotHubPage() {
       <section className="mt-6 rounded-xl border border-gray-200 bg-white p-6">
         <h2 className="mb-1 text-sm font-semibold text-gray-900">Need help?</h2>
         <p className="mb-3 text-xs text-gray-500">
-          Step-by-step pilot guides (open on GitHub). Base Sepolia testnet only.
+          Step-by-step guides (open on GitHub). Base Sepolia testnet only.
         </p>
         <ul className="grid grid-cols-1 gap-1 text-xs sm:grid-cols-2">
           {DOC_LINKS.map(d => (

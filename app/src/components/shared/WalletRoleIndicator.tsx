@@ -2,7 +2,6 @@
 import { useState, createContext, useContext } from 'react';
 import { useAccount } from 'wagmi';
 import { useProtocolAccess, ProtocolAccessStatus } from '@/hooks/useProtocolAccess';
-import { useAdminAddress } from '@/hooks/useAdminAddress';
 
 export type AppRole = 'admin' | 'insurance' | 'syndicate' | 'investor' | 'none';
 
@@ -31,9 +30,7 @@ export function ActiveRoleProvider({ children }: { children: React.ReactNode }) 
  *
  * When the institutional contracts are not deployed on the active chain the
  * status is 'unavailable': the UI shows that state explicitly instead of
- * inventing access. The only legacy path kept is the chain admin address
- * (read on-chain via useAdminAddress) so legacy demo deployments remain
- * administrable; it is labelled as such.
+ * inventing access.
  */
 export function useWalletRole(): {
   role: AppRole;
@@ -42,15 +39,12 @@ export function useWalletRole(): {
 } {
   const { address, isConnected } = useAccount();
   const access = useProtocolAccess();
-  const adminAddress = useAdminAddress();
 
   if (!isConnected || !address) return { role: 'none', status: 'disconnected', flags: access };
 
-  // Legacy demo chains (institutional stack not deployed): only the on-chain
-  // legacy admin is recognised; everyone else is an unverified visitor.
+  // Institutional stack not deployed on this chain: nobody has a role to show.
   if (access.status === 'unavailable') {
-    const isLegacyAdmin = address.toLowerCase() === adminAddress.toLowerCase();
-    return { role: isLegacyAdmin ? 'admin' : 'none', status: 'unavailable', flags: access };
+    return { role: 'none', status: 'unavailable', flags: access };
   }
 
   if (access.isOwner || access.isSentinel) return { role: 'admin', status: access.status, flags: access };

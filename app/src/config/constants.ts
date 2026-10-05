@@ -39,31 +39,6 @@ export const SECONDS_PER_YEAR = 31_536_000;
 export const BASIS_POINTS = 10_000;
 
 /**
- * LEGACY ADMIN UI HINT — NOT A SECURITY BOUNDARY.
- *
- * These addresses only decide whether the admin dashboard UI renders for a
- * connected wallet, as a fallback for legacy demo wallets that hold no
- * on-chain role yet. Real authorization lives exclusively:
- *   - on-chain, in ProtocolRoles (OWNER/SENTINEL/COMMITTEE checks), and
- *   - server-side, in the KYB APIs (wallet signature + on-chain role check).
- * Anyone can bypass this client-side gate by editing the bundle: nothing
- * privileged is reachable through it. The primary admin gate is the on-chain
- * role check in the admin page (useProtocolAccess).
- */
-export const LEGACY_ADMIN_UI_HINT: string[] = [
-  '0x3630082d96065B756E84B8b79e030a525B9583ed', // legacy demo admin
-  '0x810fa6726eeB6014c2F77Bb4802A5734C28b0F3e', // legacy demo co-admin
-];
-
-/**
- * LEGACY per-chain admin hint — NOT A SECURITY BOUNDARY (see above).
- * Consumed only by the legacy demo WalletRoleIndicator. Base only; no mainnet entries.
- */
-export const CHAIN_ADMIN_ADDRESS: Record<number, `0x${string}`> = {
-  84532: '0x3630082d96065B756E84B8b79e030a525B9583ed', // Base Sepolia staging
-};
-
-/**
  * Verification type enum (matches Solidity PolicyRegistry.VerificationType).
  */
 export enum VerificationType {

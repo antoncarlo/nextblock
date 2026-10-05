@@ -604,7 +604,7 @@ export default function ApplyPage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
                 <div>
                   <label style={labelStyle}>Company Name *</label>
-                  <input required style={inputStyle} placeholder="Klapton Re Ltd." value={insForm.companyName} onChange={e => setInsForm(f => ({ ...f, companyName: e.target.value }))} />
+                  <input required style={inputStyle} placeholder="Legal name of the company" value={insForm.companyName} onChange={e => setInsForm(f => ({ ...f, companyName: e.target.value }))} />
                 </div>
                 <div>
                   <label style={labelStyle}>Legal Entity Type *</label>
@@ -619,7 +619,7 @@ export default function ApplyPage() {
                 </div>
                 <div>
                   <label style={labelStyle}>License / Registration Number *</label>
-                  <input required style={inputStyle} placeholder="e.g. SKN-INS-2024-0042" value={insForm.licenseNumber} onChange={e => setInsForm(f => ({ ...f, licenseNumber: e.target.value }))} />
+                  <input required style={inputStyle} placeholder="Insurance licence number" value={insForm.licenseNumber} onChange={e => setInsForm(f => ({ ...f, licenseNumber: e.target.value }))} />
                 </div>
                 <div>
                   <label style={labelStyle}>Insurance Type *</label>
@@ -763,7 +763,7 @@ export default function ApplyPage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
                 <div>
                   <label style={{ ...labelStyle, color: '#92400E' }}>Entity / Fund Name *</label>
-                  <input required style={inputStyle} placeholder="Alpine Re Capital" value={curForm.entityName} onChange={e => setCurForm(f => ({ ...f, entityName: e.target.value }))} />
+                  <input required style={inputStyle} placeholder="Legal name of the entity" value={curForm.entityName} onChange={e => setCurForm(f => ({ ...f, entityName: e.target.value }))} />
                 </div>
                 <div>
                   <label style={{ ...labelStyle, color: '#92400E' }}>Entity Type *</label>
@@ -909,7 +909,7 @@ export default function ApplyPage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
                 <div>
                   <label style={labelStyle}>Institutional Entity / Fund Name *</label>
-                  <input required style={inputStyle} placeholder="e.g. Helvetia Pension Fund" value={lpForm.entityName} onChange={e => setLpForm(f => ({ ...f, entityName: e.target.value }))} />
+                  <input required style={inputStyle} placeholder="Legal name of the institution" value={lpForm.entityName} onChange={e => setLpForm(f => ({ ...f, entityName: e.target.value }))} />
                 </div>
                 <div>
                   <label style={labelStyle}>Investor Type *</label>
