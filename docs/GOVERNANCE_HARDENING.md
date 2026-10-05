@@ -1,11 +1,11 @@
 # Governance hardening — from testnet governance to governance worth trusting
 
-Status on Base Sepolia, read from the chain on 2026-10-02:
+Status on Base Sepolia, read from the chain on 2026-10-05:
 
 | Control | Today | Target before real value |
 |---|---|---|
-| Governance Safe `0x0969…Ef15` | one owner (a smart-contract wallet, `0x6495…28dB`), threshold 1 | 2 of 3 independent signers |
-| Timelock `0xD94e…5950` delay | 3600 s (1 h) | 24 h on staging, 48 h or more before mainnet |
+| Governance Safe `0x0969…Ef15` | three owners (`0x6495…28dB` a smart-contract wallet, `0x810f…be3e`, `0x312e…3b35`), threshold 2. **The third owner has not yet signed anything**: only the first two have, so in practice it is still two keys | 2 of 3 with every signer proven to sign |
+| Timelock `0xD94e…5950` delay | **86 400 s (24 h)**, changed 2026-10-05 in block 47720526 (`0xf880c49b5e51fa2d0a950cab54c7e30cebd43c27f8a338368ae7c23f54933801`) | 24 h on staging, 48 h or more before mainnet |
 | Deployer EOA | no role anywhere | unchanged |
 | Operational roles (curator, sentinel, committee, KYC operator, allocator, oracle, cedant) | held by the simulation identities from the redeploy | held by the real operators |
 
@@ -37,7 +37,9 @@ In the Safe app → **Settings → Setup**:
 
 After step 4 every Safe transaction needs two signatures, including the timelock operations below.
 
-## 2. Lengthen the timelock delay
+## 2. Lengthen the timelock delay (done on 2026-10-05)
+
+Executed through the Safe (signed by `0x6495…28dB` and `0x810f…be3e`); the timelock emitted `MinDelayChange(3600, 86400)` and `isOperationDone` is true for the operation below. What follows is the procedure as it was run, kept for the next change (48 h before mainnet).
 
 `updateDelay` can only be called by the timelock itself, so the change goes through the timelock
 under the current 1-hour delay: the Safe schedules it, waits an hour, then executes it. Rehearsed on a

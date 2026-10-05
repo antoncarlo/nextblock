@@ -95,10 +95,10 @@ deployer EOA `0x090043bF030C12d8761441790EB2CF81F0eDcf2c` renounced OWNER_ROLE a
 DEFAULT_ADMIN_ROLE; it holds no role at all. Role administration now sits with the
 ProtocolTimelock and the governance Safe `0x0969B20f1d8a5628613f00fa6aDBE85e715fEf15`.
 
-That does not unblock production. The Safe has a single signer (threshold 1, and
-the signer is a smart-contract wallet), so governance is one key behind a
-one-hour delay: acceptable on a testnet, not for real value. Until the governance
-is a multi-signer Safe with a longer delay, and the items in `docs/PROJECT_STATUS.md`
+That does not unblock production. The Safe has three owners and threshold 2, but only
+two of them have ever signed, and the timelock delay is 24 h: better than before, still
+testnet governance. Until the third signer is proven, the operational roles are held by
+real operators, the delay is set for mainnet, and the items in `docs/PROJECT_STATUS.md`
 section 4 (external audit, legal wrapper) are closed:
 
 - no mainnet deployment may be prepared or executed;
@@ -111,7 +111,7 @@ Runbook and authorization gates: `docs/GOVERNANCE_PHASE2.md`.
 ## Governance operations (Base Sepolia)
 
 - Phase 1 (done, 2026-10-02): ProtocolTimelock `0xD94ea36FD19a0D3Cb3A8EA1214C6F97A947e5950`
-  (min delay 3600s) holds OWNER_ROLE + DEFAULT_ADMIN_ROLE on ProtocolRoles; Safe
+  (min delay 3600s at that time, 86 400 s since 2026-10-05) holds OWNER_ROLE + DEFAULT_ADMIN_ROLE on ProtocolRoles; Safe
   `0x0969B20f1d8a5628613f00fa6aDBE85e715fEf15` proposes/executes/cancels. The Safe of the
   previous generation (`0x8Fd8b45Ba2612E7535bbeB21615554701CfaF870`, 2-of-2) is retired.
 - Rehearsal (done, 2026-10-02): one harmless operation scheduled by the Safe on the

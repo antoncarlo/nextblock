@@ -22,8 +22,8 @@ it; there are no frontend whitelists with authority.
 ## 2. Governance: timelock and Safe (authoritative)
 
 Phase 1 (live on Base Sepolia): `ProtocolTimelock` at
-`0xD94ea36FD19a0D3Cb3A8EA1214C6F97A947e5950` (min delay 3600s, deploy-time
-floor 1h) holds OWNER_ROLE and DEFAULT_ADMIN_ROLE on ProtocolRoles. The Safe
+`0xD94ea36FD19a0D3Cb3A8EA1214C6F97A947e5950` (min delay 86 400 s since 2026-10-05, from
+3600 s; deploy-time floor 1h) holds OWNER_ROLE and DEFAULT_ADMIN_ROLE on ProtocolRoles. The Safe
 `0x0969B20f1d8a5628613f00fa6aDBE85e715fEf15` is proposer, executor and
 canceller; the timelock is self-administered. Every risk-increasing action
 flows schedule -> delay -> execute.
@@ -33,10 +33,10 @@ rehearsed through the Safe, executed after the delay): the deployer EOA renounce
 DEFAULT_ADMIN_ROLE and holds no role. The timelock is the sole holder of
 DEFAULT_ADMIN_ROLE, and OWNER_ROLE sits with the timelock and the Safe.
 
-Known limit: the Safe has one signer (threshold 1, and that signer is a
-smart-contract wallet) and the timelock delay is the one-hour floor. That is
-testnet governance. Before real value it has to become a multi-signer Safe with
-a longer delay.
+Known limit: the Safe has three owners and threshold 2, but the third owner has
+never signed, so until it does the set is two proven keys. The delay is 24 h; before
+mainnet it should be 48 h or more. That is testnet governance until the third signer
+is proven and the operational roles are held by real operators.
 
 ## 3. Compliance gate (authoritative)
 
