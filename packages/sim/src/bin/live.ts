@@ -43,6 +43,7 @@ import { runScenario } from '../runner.ts';
 import { SCENARIOS } from '../scenarios/index.ts';
 import { emptyState } from '../shadow/ledger.ts';
 import { toJUnit } from '../report/finding.ts';
+import { fromInvocation } from '../util/invocation.ts';
 
 const [, , rpcUrl = 'http://127.0.0.1:8545', deploymentPath, actionsArg = '200'] = process.argv;
 if (!deploymentPath) {
@@ -50,7 +51,7 @@ if (!deploymentPath) {
   process.exit(2);
 }
 
-const dep = JSON.parse(readFileSync(deploymentPath, 'utf8'));
+const dep = JSON.parse(readFileSync(fromInvocation(deploymentPath), 'utf8'));
 const usdcAddr = (dep.usdc ?? dep.mockUSDC) as Address;
 const maxActions = Number(actionsArg);
 
