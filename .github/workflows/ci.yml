@@ -188,6 +188,11 @@ jobs:
       - name: Frontend ABI drift check
         run: node ../scripts/generate-abis.mjs --check
 
+      # The subgraph's ABIs are a second copy of the same build output. They drifted for
+      # months, hiding every event added since July, so they get the same check.
+      - name: Subgraph ABI drift check
+        run: node ../indexer/scripts/extract-abis.mjs --check
+
       - name: Test
         run: forge test -vvv
 

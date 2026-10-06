@@ -8,8 +8,13 @@
  *   cd indexer && node scripts/extract-abis.mjs
  *
  * Re-run after any contract change that touches events, then update
- * subgraph.yaml/mappings accordingly (CI's addressbook job does not cover
- * this — the subgraph build itself is the drift check).
+ * subgraph.yaml/mappings accordingly.
+ *
+ *   node scripts/extract-abis.mjs --check   fail if a committed ABI differs from the build
+ *
+ * The check is what keeps the ABIs honest: for months they were those of July while the
+ * contracts went on emitting new events, and an event missing from the ABI is an event the
+ * subgraph never sees. CI runs it after the contracts are built.
  */
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -49,7 +54,10 @@ const CONTRACTS = [
 //                     the UMA-backed one; the handlers need no change.
 const SHARED = { BordereauOracle: ['UmaBordereauOracle'] };
 
-mkdirSync(ABIS, { recursive: true });
+const CHECK = process.argv.includes('--check');
+const drift = [];
+
+if (!CHECK) mkdirSync(ABIS, { recursive: true });
 
 function entryKey(e) {
   const types = (e.inputs ?? []).map((i) => i.type).join(',');
@@ -77,8 +85,29 @@ for (const name of CONTRACTS) {
       abi.push(e);
     }
   }
-  writeFileSync(join(ABIS, `${name}.json`), JSON.stringify(abi, null, 2) + '\n');
+  const next = JSON.stringify(abi, null, 2) + '\n';
+  const file = join(ABIS, `${name}.json`);
+  if (CHECK) {
+    let current = '';
+    try {
+      current = readFileSync(file, 'utf8').replace(/\r\n/g, '\n');
+    } catch {
+      // a missing file is drift too
+    }
+    if (current !== next) drift.push(name);
+    continue;
+  }
+  writeFileSync(file, next);
   const events = abi.filter((e) => e.type === 'event');
   console.log(`\n# ${name} (${events.length} events)`);
   for (const ev of events) console.log(`  - event: ${graphSignature(ev)}`);
+}
+
+if (CHECK) {
+  if (drift.length > 0) {
+    console.error(`indexer abis: out of date with the contracts build: ${drift.join(', ')}`);
+    console.error('Run `node scripts/extract-abis.mjs` in indexer/, then add handlers for any new event.');
+    process.exit(1);
+  }
+  console.log(`indexer abis: ok -- ${CONTRACTS.length} ABIs match contracts/out`);
 }
