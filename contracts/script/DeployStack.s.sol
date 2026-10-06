@@ -20,6 +20,7 @@ import {VaultAllocator} from "../src/VaultAllocator.sol";
 import {AIAssessor} from "../src/AIAssessor.sol";
 import {ClaimManager} from "../src/ClaimManager.sol";
 import {BordereauOracle} from "../src/BordereauOracle.sol";
+import {UmaBordereauOracle} from "../src/UmaBordereauOracle.sol";
 import {AdapterRegistry} from "../src/AdapterRegistry.sol";
 import {NextBlockLens} from "../src/NextBlockLens.sol";
 
@@ -39,7 +40,10 @@ import {NextBlockLens} from "../src/NextBlockLens.sol";
 ///           3. Registries + receipt + mock NAV price oracle
 ///           4. Oracle/AI layer (NavOracle, AIAssessor)
 ///           5. Economic modules (PremiumDistributor, VaultAllocator, ClaimManager)
-///           6. Attestation + adapter layer (BordereauOracle, AdapterRegistry)
+///           6. Attestation + adapter layer (bordereau oracle, AdapterRegistry). On Base
+///              Sepolia with a real settlement asset the bordereau oracle is the UMA-backed
+///              one, bonded in that asset; the bond-less stand-in is deployed only on local
+///              chains and for the throwaway mock-asset deployment.
 ///           7. VaultFactory + staging vault
 ///           8. Wiring: ClaimReceipt registrar, vault claimManager/vaultAllocator
 ///              binding (Phase 9.5 sole paths), ClaimManager receipt minter
@@ -56,6 +60,11 @@ contract DeployStack is Script, ProtocolRoleConstants {
     uint256 public constant BASE_SEPOLIA_CHAIN_ID = 84532;
     uint256 public constant ANVIL_CHAIN_ID = 31337;
 
+    /// @notice UMA's Optimistic Oracle V3 on Base Sepolia.
+    address public constant UMA_OOV3_BASE_SEPOLIA = 0x0F7fC5E6482f096380db6158f978167b57388deE;
+    /// @notice The bond a bordereau assertion posts unless BORDEREAU_BOND says otherwise: 10 USDC.
+    uint256 public constant DEFAULT_BORDEREAU_BOND = 10e6;
+
     error DeployStack__UnexpectedChain(uint256 chainId);
     error DeployStack__VerificationFailed(string check);
     /// @notice An operational role resolved to the deployer on a shared chain.
@@ -66,6 +75,9 @@ contract DeployStack is Script, ProtocolRoleConstants {
     error DeployStack__AssetNotDeployed(address asset);
     /// @notice No real settlement asset was configured on a shared chain.
     error DeployStack__MockAssetOnSharedChain();
+    /// @notice The configured UMA oracle has no code on this chain.
+    /// @param oracle The address that was expected to be UMA's Optimistic Oracle V3.
+    error DeployStack__UmaNotDeployed(address oracle);
 
     /// @notice The operator addresses a deployment hands roles to.
     /// @dev Passed as a value so tests and tooling can deploy a separated-roles
@@ -95,7 +107,12 @@ contract DeployStack is Script, ProtocolRoleConstants {
     PremiumDistributor public distributor;
     VaultAllocator public allocator;
     ClaimManager public claimManager;
+    /// @dev The bond-less stand-in. Zero when the UMA-backed oracle is deployed.
     BordereauOracle public bordereau;
+    /// @dev The UMA-backed oracle. Zero when the stand-in is deployed.
+    UmaBordereauOracle public umaBordereau;
+    /// @dev Whichever of the two backs the Lens, the keeper and the app.
+    address public bordereauModule;
     AdapterRegistry public adapterRegistry;
     VaultFactory public factory;
     VaultDeployer public vaultDeployer;
@@ -115,6 +132,10 @@ contract DeployStack is Script, ProtocolRoleConstants {
     /// @dev Optional settlement-asset override (set by runWithConfig; the CLI
     ///      path feeds it from USDC_ADDRESS).
     address internal usdcOverrideAddr;
+    /// @dev Set by runWithUma so tests need no process-global env.
+    bool internal umaOverridden;
+    address internal umaOracleOverride;
+    uint256 internal bordereauBondOverride;
 
     /// @dev CLI entrypoint: reads configuration from env, then delegates.
     function run() external {
@@ -142,6 +163,22 @@ contract DeployStack is Script, ProtocolRoleConstants {
     ///      — a foreign USDC_ADDRESS made lens verification fail flakily).
     function runWithConfig(uint256 pk, bool writeJson, address usdcOverride) public {
         runWithRoles(pk, writeJson, usdcOverride, rolesFromEnv(vm.addr(pk)));
+    }
+
+    /// @dev Like runWithRoles, with the bordereau backend chosen by argument: `umaOracle_` zero
+    ///      deploys the stand-in, anything else deploys the UMA-backed oracle against it.
+    function runWithUma(
+        uint256 pk,
+        bool writeJson,
+        address usdcOverride,
+        RoleConfig memory roles,
+        address umaOracle_,
+        uint256 bond
+    ) public {
+        umaOverridden = true;
+        umaOracleOverride = umaOracle_;
+        bordereauBondOverride = bond;
+        runWithRoles(pk, writeJson, usdcOverride, roles);
     }
 
     /// @dev Fully parameterized entrypoint: roles are an argument, not env.
@@ -252,8 +289,38 @@ contract DeployStack is Script, ProtocolRoleConstants {
         claimManager = new ClaimManager(
             address(protocolRoles), address(portfolioRegistry), address(assessor), address(claimReceipt)
         );
-        bordereau = new BordereauOracle(address(protocolRoles), address(portfolioRegistry));
+        _deployBordereau();
         adapterRegistry = new AdapterRegistry(address(protocolRoles));
+    }
+
+    /// @notice The UMA oracle the bordereau oracle is built on for this deployment, or zero for
+    ///         the stand-in. Base Sepolia with a real settlement asset uses UMA's deployment.
+    ///         The throwaway mock-asset deployment keeps the stand-in, because a token anyone
+    ///         can mint is not on UMA's bond whitelist. Local chains keep the stand-in unless
+    ///         UMA_OOV3_ADDRESS names an oracle (a fork of Base Sepolia, for rehearsal).
+    function umaOracle() public view returns (address) {
+        if (umaOverridden) return umaOracleOverride;
+        if (block.chainid == BASE_SEPOLIA_CHAIN_ID) {
+            return usdcOverrideAddr == address(0) ? address(0) : UMA_OOV3_BASE_SEPOLIA;
+        }
+        return vm.envOr("UMA_OOV3_ADDRESS", address(0));
+    }
+
+    function _deployBordereau() internal {
+        address uma = umaOracle();
+        if (uma == address(0)) {
+            bordereau = new BordereauOracle(address(protocolRoles), address(portfolioRegistry));
+            bordereauModule = address(bordereau);
+            return;
+        }
+        // A wrong address would otherwise surface as an opaque revert in the constructor.
+        if (uma.code.length == 0) revert DeployStack__UmaNotDeployed(uma);
+        uint256 bond = umaOverridden ? bordereauBondOverride : vm.envOr("BORDEREAU_BOND", DEFAULT_BORDEREAU_BOND);
+        // The constructor asks UMA to accept the settlement asset as the bond currency and
+        // reverts at deployment if it does not.
+        umaBordereau =
+            new UmaBordereauOracle(address(protocolRoles), address(portfolioRegistry), uma, address(usdc), bond);
+        bordereauModule = address(umaBordereau);
     }
 
     function _deployVault() internal {
@@ -337,7 +404,7 @@ contract DeployStack is Script, ProtocolRoleConstants {
                 vaultAllocator: address(allocator),
                 claimManager: address(claimManager),
                 aiAssessor: address(assessor),
-                bordereauOracle: address(bordereau),
+                bordereauOracle: bordereauModule,
                 adapterRegistry: address(adapterRegistry)
             })
         );
@@ -359,7 +426,8 @@ contract DeployStack is Script, ProtocolRoleConstants {
         _requireCode(address(distributor), "distributor");
         _requireCode(address(allocator), "allocator");
         _requireCode(address(claimManager), "claimManager");
-        _requireCode(address(bordereau), "bordereau");
+        _requireCode(bordereauModule, "bordereau");
+        if (address(umaBordereau) != address(0)) _verifyUmaBordereau();
         _requireCode(address(adapterRegistry), "adapterRegistry");
         _requireCode(address(factory), "factory");
         _requireCode(address(vaultDeployer), "vaultDeployer");
@@ -401,6 +469,23 @@ contract DeployStack is Script, ProtocolRoleConstants {
         if (usdc.decimals() != 6) revert DeployStack__VerificationFailed("usdc decimals");
     }
 
+    /// @dev The UMA-backed oracle is wired to the oracle and the asset the deployment named.
+    function _verifyUmaBordereau() internal view {
+        if (address(umaBordereau.oracle()) != umaOracle()) {
+            revert DeployStack__VerificationFailed("bordereau oracle address");
+        }
+        if (address(umaBordereau.bondCurrency()) != address(usdc)) {
+            revert DeployStack__VerificationFailed("bordereau bond currency");
+        }
+        if (address(umaBordereau.protocolRoles()) != address(protocolRoles)) {
+            revert DeployStack__VerificationFailed("bordereau roles");
+        }
+        // Readable end to end: asks UMA for its minimum bond on the currency.
+        if (umaBordereau.effectiveBond() > umaBordereau.maxBond()) {
+            revert DeployStack__VerificationFailed("bordereau bond above ceiling");
+        }
+    }
+
     function _requireCode(address target, string memory tag) internal view {
         if (target.code.length == 0) revert DeployStack__VerificationFailed(string.concat("no code: ", tag));
     }
@@ -432,7 +517,13 @@ contract DeployStack is Script, ProtocolRoleConstants {
         vm.serializeAddress(obj, "premiumDistributor", address(distributor));
         vm.serializeAddress(obj, "vaultAllocator", address(allocator));
         vm.serializeAddress(obj, "claimManager", address(claimManager));
-        vm.serializeAddress(obj, "bordereauOracle", address(bordereau));
+        vm.serializeAddress(obj, "bordereauOracle", bordereauModule);
+        vm.serializeString(obj, "bordereauBackend", address(umaBordereau) == address(0) ? "standin" : "uma");
+        vm.serializeAddress(
+            obj,
+            "umaOptimisticOracleV3",
+            address(umaBordereau) == address(0) ? address(0) : address(umaBordereau.oracle())
+        );
         vm.serializeAddress(obj, "adapterRegistry", address(adapterRegistry));
         vm.serializeAddress(obj, "vaultFactory", address(factory));
         vm.serializeAddress(obj, "vaultDeployer", address(vaultDeployer));
@@ -459,6 +550,8 @@ contract DeployStack is Script, ProtocolRoleConstants {
         console2.log("lens:           ", address(lens));
         console2.log("vault:          ", address(vault));
         console2.log("usdc:           ", address(usdc));
+        console2.log("bordereau:      ", bordereauModule);
+        console2.log(address(umaBordereau) == address(0) ? "bordereau backend: stand-in" : "bordereau backend: UMA");
         console2.log("NOT idempotent: each run deploys a fresh stack.");
     }
 }

@@ -41,6 +41,11 @@
         "name": "vaultDeployer_",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "claimManager_",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "nonpayable"
@@ -190,6 +195,19 @@
   },
   {
     "type": "function",
+    "name": "claimManagerAddr",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "claimReceiptAddr",
     "inputs": [],
     "outputs": [
@@ -213,6 +231,45 @@
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "createUnassignedVault",
+    "inputs": [
+      {
+        "name": "name",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "symbol",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "vaultName",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "bufferRatioBps_",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "managementFeeBps_",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "vault",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",

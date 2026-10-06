@@ -142,7 +142,8 @@ export function BordereauUploadPanel() {
       <p className="mb-3 text-xs text-gray-500">
         Upload the bordereau file. The file is stored in private Storage; only its{' '}
         <code>keccak256</code> hash is committed on-chain by the Sentinel via{' '}
-        <code>BordereauOracle.proposeAssertion</code>.
+        <code>BordereauOracle.proposeAssertion</code>. Where the oracle is bonded, the wallet that proposes puts
+        up a USDC bond, which comes back if the assertion stands.
       </p>
 
       <div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">

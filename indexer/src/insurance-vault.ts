@@ -14,6 +14,8 @@ import {
   PortfolioClaimReserveReleased,
   PortfolioClaimPaid,
   FeesCollected,
+  PortfolioUnderwritten,
+  SyndicateAssigned,
 } from "../generated/templates/InsuranceVault/InsuranceVault";
 import { Vault, VaultDeposit, VaultWithdrawal, Portfolio, Claim } from "../generated/schema";
 import { eventId, logEvent, LogParams } from "./helpers";
@@ -207,4 +209,25 @@ export function handleFeesCollected(event: FeesCollected): void {
   p.actor = event.params.recipient;
   p.amount = event.params.amount;
   logEvent(event, "InsuranceVault", "FeesCollected", p);
+}
+
+// The first time a vault takes on a portfolio's risk. Sticky on-chain: it fires once per portfolio.
+export function handlePortfolioUnderwritten(event: PortfolioUnderwritten): void {
+  const p = new LogParams();
+  p.vault = event.address;
+  p.portfolioId = event.params.portfolioId;
+  logEvent(event, "InsuranceVault", "PortfolioUnderwritten", p);
+}
+
+// An unassigned vault gains its syndicate. The vault was recorded with no curator when it was
+// created, so the manager the app and the analytics show is this address from now on.
+export function handleSyndicateAssigned(event: SyndicateAssigned): void {
+  const v = vaultOf(event.address, event.block);
+  v.manager = event.params.syndicate;
+  v.save();
+
+  const p = new LogParams();
+  p.vault = event.address;
+  p.actor = event.params.syndicate;
+  logEvent(event, "InsuranceVault", "SyndicateAssigned", p);
 }
