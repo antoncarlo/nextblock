@@ -65,7 +65,7 @@ export default function TermsPage() {
         {
           heading: '6. No advice, no offer',
           body: [
-            'Nothing in the application, documentation or protocol output is financial, legal, tax, actuarial or investment advice, and nothing constitutes an offer to sell, or a solicitation to buy, securities, insurance or reinsurance in any jurisdiction. Insurance-linked figures shown in staging are simulated or illustrative.',
+            'Nothing in the application, documentation or protocol output is financial, legal, tax, actuarial or investment advice, and nothing constitutes an offer to sell, or a solicitation to buy, securities, insurance or reinsurance in any jurisdiction. The application runs on the Base Sepolia testnet: amounts shown are testnet values with no monetary value, and no figure shown is a forecast of any return.',
           ],
         },
         {

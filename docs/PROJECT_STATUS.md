@@ -29,6 +29,8 @@ to trust, and what to build next.
 
 ## 2. Real vs mock — the honest table
 
+The full register of what is not real, what closed it and what is left is [NOT_REAL_YET.md](NOT_REAL_YET.md).
+
 | Concern | Verdict |
 |---|---|
 | USDC flows (deposits, premiums, redemptions, claim payouts) | ✅ **Real code on a real token**: the vaults settle in Circle's USDC on Base Sepolia (testnet, no monetary value); mainnet will use native USDC |
@@ -100,7 +102,7 @@ to trust, and what to build next.
 
 **Bucket B — external vendors (blocked on accounts/keys, adapters ready):**
 2. Braino/WAVENURE integration → `NavOracle`/`AIAssessor`/`VaultAllocator` — **formal v2 spec ready to send to the Braino team**: [braino-oracle-spec.md](../contracts/docs/integrations/braino-oracle-spec.md) (5 services incl. agentic allocator; see also [real-providers.md](../contracts/docs/integrations/real-providers.md))
-3. Real UMA OOv3 bordereau assertions with bonds → `BordereauOracle`
+3. Real UMA OOv3 bordereau assertions with bonds → `BordereauOracle`. Not blocked on a vendor: UMA's Optimistic Oracle V3 is deployed on Base Sepolia and Circle's USDC is an accepted bond currency; what is missing is our contract ([NOT_REAL_YET.md](NOT_REAL_YET.md) §3b)
 4. Licensed KYC/KYB provider → in front of `ComplianceRegistry`
 4b. E-mail: a Resend account and a verified sending domain (`EMAIL_PROVIDER=resend`)
 4c. If EU/UK lists, PEP or adverse-media screening is required: a ComplyAdvantage account (the adapter exists)
