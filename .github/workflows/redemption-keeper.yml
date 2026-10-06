@@ -43,6 +43,18 @@ jobs:
           submodules: recursive # forge-std + openzeppelin needed to compile the keeper script
 
       - name: Install Foundry
+        id: foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        continue-on-error: true
+
+      # The release download is the one step here that waits on a third party. It has
+      # answered HTTP 500 on a run whose code was fine, so a failure gets one more try.
+      - name: Wait before retrying the Foundry download
+        if: steps.foundry.outcome == 'failure'
+        run: sleep 30
+
+      - name: Install Foundry (retry)
+        if: steps.foundry.outcome == 'failure'
         uses: foundry-rs/foundry-toolchain@v1
 
       - name: Settle matured epoch (no-op if nothing due)
@@ -65,6 +77,18 @@ jobs:
           submodules: recursive
 
       - name: Install Foundry
+        id: foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        continue-on-error: true
+
+      # The release download is the one step here that waits on a third party. It has
+      # answered HTTP 500 on a run whose code was fine, so a failure gets one more try.
+      - name: Wait before retrying the Foundry download
+        if: steps.foundry.outcome == 'failure'
+        run: sleep 30
+
+      - name: Install Foundry (retry)
+        if: steps.foundry.outcome == 'failure'
         uses: foundry-rs/foundry-toolchain@v1
 
       - name: Pay approved claims + finalize elapsed assertions (no-op if none due)
