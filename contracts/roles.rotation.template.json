@@ -1,0 +1,9 @@
+{
+  "UNDERWRITING_CURATOR_ROLE": null,
+  "SENTINEL_ROLE": null,
+  "CLAIMS_COMMITTEE_ROLE": null,
+  "KYC_OPERATOR_ROLE": null,
+  "ALLOCATOR_ROLE": null,
+  "ORACLE_ROLE": null,
+  "AUTHORIZED_CEDANT_ROLE": null
+}

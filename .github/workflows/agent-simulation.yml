@@ -56,10 +56,13 @@ jobs:
         with:
           submodules: recursive
 
+      # Pinned to the version the pull-request workflow uses. A floating "stable" lets
+      # a nightly campaign start failing, or passing differently, on the day Foundry
+      # publishes, with no change in this repository to point at.
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: stable
+          version: v1.8.3
 
       - name: Build
         working-directory: contracts

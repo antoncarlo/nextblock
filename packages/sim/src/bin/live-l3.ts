@@ -36,6 +36,7 @@ import { runScenario } from '../runner.ts';
 import { SCENARIOS } from '../scenarios/index.ts';
 import { emptyState } from '../shadow/ledger.ts';
 import { toJUnit, type Finding } from '../report/finding.ts';
+import { fromInvocation } from '../util/invocation.ts';
 
 const BASE_SEPOLIA = 84_532;
 
@@ -50,9 +51,10 @@ const rpcUrlRaw = process.env.BASE_SEPOLIA_RPC_URL ?? process.env.RPC_URL;
 if (!rpcUrlRaw) throw new Error('BASE_SEPOLIA_RPC_URL is not set');
 const rpcUrl: string = rpcUrlRaw;
 
-const mapFile = arg('map');
-const secretFile = arg('secret');
-const deploymentFile = arg('deployment');
+// Paths are written relative to where the command was typed, not to the npm workspace.
+const mapFile = fromInvocation(arg('map'));
+const secretFile = fromInvocation(arg('secret'));
+const deploymentFile = fromInvocation(arg('deployment'));
 const maxActions = Number(arg('actions', '300'));
 
 const keyMap = JSON.parse(readFileSync(mapFile, 'utf8'));

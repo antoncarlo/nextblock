@@ -23,6 +23,7 @@ import { ANVIL_KEYS } from '../adapters/anvil.ts';
 import { assertWritableChain } from '../guards/chain-guard.ts';
 import { assertDistinctSigners } from '../guards/key-guard.ts';
 import { emptyState, sharePrice, compare, type ShadowState } from '../shadow/ledger.ts';
+import { fromInvocation } from '../util/invocation.ts';
 import { classify, toJUnit, type Finding } from '../report/finding.ts';
 
 const [, , rpcUrl = 'http://127.0.0.1:8545', deploymentPath] = process.argv;
@@ -31,7 +32,7 @@ if (!deploymentPath) {
   process.exit(2);
 }
 
-const dep = JSON.parse(readFileSync(deploymentPath, 'utf8'));
+const dep = JSON.parse(readFileSync(fromInvocation(deploymentPath), 'utf8'));
 const vault = dep.vault as Address;
 const usdc = (dep.mockUSDC ?? dep.usdc) as Address;
 const compliance = dep.complianceRegistry as Address;
