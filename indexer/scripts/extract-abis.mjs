@@ -38,7 +38,27 @@ const CONTRACTS = [
   'RedemptionQueue',
 ];
 
+// A data source names one ABI, so the contracts that share a data source are written as one
+// file: the first contract's entries, then whatever the others add. Where two define the same
+// event (same name and parameter types) the first one's entry stays, because the mapping is
+// written against its parameter names; handlers read parameters by position, so the later
+// contract's event of that signature is decoded by it all the same.
+//   BordereauOracle   the stand-in deployed today, then UmaBordereauOracle, which keeps its events
+//                     and adds AssertionBonded, AssertionSettled, DisputeReasonGiven and
+//                     BondAmountUpdated. After the next deployment the data source points at
+//                     the UMA-backed one; the handlers need no change.
+const SHARED = { BordereauOracle: ['UmaBordereauOracle'] };
+
 mkdirSync(ABIS, { recursive: true });
+
+function entryKey(e) {
+  const types = (e.inputs ?? []).map((i) => i.type).join(',');
+  return `${e.type}:${e.name ?? ''}(${types})`;
+}
+
+function readAbi(name) {
+  return JSON.parse(readFileSync(join(OUT, `${name}.sol`, `${name}.json`), 'utf8')).abi;
+}
 
 function graphSignature(ev) {
   const params = ev.inputs
@@ -48,14 +68,17 @@ function graphSignature(ev) {
 }
 
 for (const name of CONTRACTS) {
-  const artifact = JSON.parse(
-    readFileSync(join(OUT, `${name}.sol`, `${name}.json`), 'utf8'),
-  );
-  writeFileSync(
-    join(ABIS, `${name}.json`),
-    JSON.stringify(artifact.abi, null, 2) + '\n',
-  );
-  const events = artifact.abi.filter((e) => e.type === 'event');
+  const abi = readAbi(name);
+  for (const other of SHARED[name] ?? []) {
+    const seen = new Set(abi.map(entryKey));
+    for (const e of readAbi(other)) {
+      if (e.type === 'constructor' || seen.has(entryKey(e))) continue;
+      seen.add(entryKey(e));
+      abi.push(e);
+    }
+  }
+  writeFileSync(join(ABIS, `${name}.json`), JSON.stringify(abi, null, 2) + '\n');
+  const events = abi.filter((e) => e.type === 'event');
   console.log(`\n# ${name} (${events.length} events)`);
   for (const ev of events) console.log(`  - event: ${graphSignature(ev)}`);
 }

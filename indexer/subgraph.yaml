@@ -305,6 +305,14 @@ dataSources:
           handler: handleAssertionFinalized
         - event: AssertionRejected(indexed uint256)
           handler: handleAssertionRejected
+        - event: AssertionBonded(indexed uint256,indexed bytes32,indexed address,uint256)
+          handler: handleAssertionBonded
+        - event: AssertionSettled(indexed uint256,indexed bytes32,bool,bool)
+          handler: handleAssertionSettled
+        - event: DisputeReasonGiven(indexed uint256,indexed address,string)
+          handler: handleDisputeReasonGiven
+        - event: BondAmountUpdated(uint256)
+          handler: handleBondAmountUpdated
       file: ./src/bordereau-oracle.ts
 
   - kind: ethereum

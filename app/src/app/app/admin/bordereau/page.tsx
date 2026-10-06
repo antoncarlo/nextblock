@@ -1,10 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useAccount, useSignMessage, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useAccount, useReadContract, useSignMessage, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { erc20Abi } from 'viem';
 import { operatorAuthMessage } from '@/lib/kyb/schema';
-import { BORDEREAU_ORACLE_ABI } from '@/config/contracts';
+import { BORDEREAU_ORACLE_ABI, UMA_BORDEREAU_ORACLE_ABI } from '@/config/contracts';
 import { NEXTBLOCK_ADDRESSES } from '@/config/generated/addressBook';
+import { useAddresses } from '@/hooks/useAddresses';
+import { formatUSDC } from '@/lib/formatting';
+import { bondActionable, bondButtonLabel, bondStep } from '@/lib/bordereau-bond';
 
 /**
  * Sentinel queue: bordereau assertions awaiting on-chain propose.
@@ -16,6 +20,11 @@ import { NEXTBLOCK_ADDRESSES } from '@/config/generated/addressBook';
  *
  * On-chain auth: proposeAssertion requires AUTHORIZED_CEDANT_ROLE or
  * ORACLE_ROLE on the signing wallet — tx reverts otherwise.
+ *
+ * Bond: when the oracle is the UMA-backed one, proposeAssertion pulls a USDC bond from the
+ * signer (returned if the assertion stands), so the row first asks for an approval for exactly
+ * that bond. The stand-in oracle takes no bond; reading `effectiveBond()` from it fails, which
+ * the row treats as "no bond" and behaves as it always did.
  */
 
 interface Row {
@@ -147,11 +156,71 @@ function PendingBordereauRow({
   const receipt = useWaitForTransactionReceipt({ hash: txHash });
   const [error, setError] = useState<string | null>(null);
 
-  const propose = () => {
+  const { usdc } = useAddresses();
+  const oracle = NEXTBLOCK_ADDRESSES.bordereauOracle as `0x${string}`;
+  const bondRead = useReadContract({
+    address: oracle,
+    abi: UMA_BORDEREAU_ORACLE_ABI,
+    functionName: 'effectiveBond',
+    query: { retry: false },
+  });
+  const allowanceRead = useReadContract({
+    address: usdc,
+    abi: erc20Abi,
+    functionName: 'allowance',
+    args: [walletAddress, oracle],
+    query: { refetchInterval: 5_000 },
+  });
+  const balanceRead = useReadContract({
+    address: usdc,
+    abi: erc20Abi,
+    functionName: 'balanceOf',
+    args: [walletAddress],
+    query: { refetchInterval: 5_000 },
+  });
+  const {
+    writeContract: approve,
+    data: approveTx,
+    isPending: approvePending,
+    reset: resetApprove,
+  } = useWriteContract();
+  const approveReceipt = useWaitForTransactionReceipt({ hash: approveTx });
+  useEffect(() => {
+    if (approveReceipt.isSuccess) void allowanceRead.refetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [approveReceipt.isSuccess]);
+
+  // undefined while reading, null when the oracle has no bond to read (the stand-in).
+  const bond: bigint | null | undefined = bondRead.isError
+    ? null
+    : bondRead.isPending
+      ? undefined
+      : (bondRead.data as bigint);
+  const step = bondStep({
+    bond,
+    allowance: allowanceRead.data as bigint | undefined,
+    balance: balanceRead.data as bigint | undefined,
+  });
+
+  const approveBond = (amount: bigint) => {
     setError(null);
     try {
+      resetApprove();
+      approve({ address: usdc, abi: erc20Abi, functionName: 'approve', args: [oracle, amount] });
+    } catch (e) {
+      setError(e instanceof Error ? e.message.slice(0, 200) : 'approve failed');
+    }
+  };
+
+  const propose = () => {
+    setError(null);
+    if (step.kind === 'approve') {
+      approveBond(step.bond);
+      return;
+    }
+    try {
       writeContract({
-        address: NEXTBLOCK_ADDRESSES.bordereauOracle as `0x${string}`,
+        address: oracle,
         abi: BORDEREAU_ORACLE_ABI,
         functionName: 'proposeAssertion',
         args: [BigInt(row.portfolio_id), row.assertion_type, row.data_hash, row.data_uri, BigInt(row.declared_amount)],
@@ -200,21 +269,41 @@ function PendingBordereauRow({
           submittedBy: {row.submitted_by.slice(0, 10)}… · {new Date(row.created_at).toLocaleString()}
         </div>
       </div>
+      {step.kind !== 'none' && step.kind !== 'loading' && (
+        <p className="mt-2 text-[11px] text-gray-600">
+          Bond: {formatUSDC(step.bond)} USDC, held by UMA while the assertion is open and returned to the signer if
+          it stands. If it is disputed and ruled false, the bond goes to the disputer.
+          {step.kind === 'insufficient-balance' && (
+            <span className="text-red-700"> This wallet holds {formatUSDC(step.balance)} USDC.</span>
+          )}
+        </p>
+      )}
       {error && <p className="mt-2 text-xs text-red-700">{error}</p>}
       <div className="mt-3 flex items-center gap-2">
         <button
           type="button"
           onClick={propose}
-          disabled={isPending || receipt.isLoading || receipt.isSuccess}
+          disabled={
+            !bondActionable(step) ||
+            isPending ||
+            approvePending ||
+            approveReceipt.isLoading ||
+            receipt.isLoading ||
+            receipt.isSuccess
+          }
           className="rounded-md bg-violet-600 px-3 py-1 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
         >
-          {isPending
-            ? 'Sign tx…'
-            : receipt.isLoading
-              ? 'Proposing…'
-              : receipt.isSuccess
-                ? 'Proposed ✓'
-                : 'Propose on-chain'}
+          {bondButtonLabel(
+            step,
+            {
+              approving: approveReceipt.isLoading,
+              approved: approveReceipt.isSuccess,
+              proposing: receipt.isLoading,
+              proposed: receipt.isSuccess,
+              signing: isPending || approvePending,
+            },
+            formatUSDC,
+          )}
         </button>
       </div>
     </div>

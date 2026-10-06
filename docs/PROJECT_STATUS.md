@@ -102,7 +102,7 @@ The full register of what is not real, what closed it and what is left is [NOT_R
 
 **Bucket B — external vendors (blocked on accounts/keys, adapters ready):**
 2. Braino/WAVENURE integration → `NavOracle`/`AIAssessor`/`VaultAllocator` — **formal v2 spec ready to send to the Braino team**: [braino-oracle-spec.md](../contracts/docs/integrations/braino-oracle-spec.md) (5 services incl. agentic allocator; see also [real-providers.md](../contracts/docs/integrations/real-providers.md))
-3. Real UMA OOv3 bordereau assertions with bonds. The contract is built (`UmaBordereauOracle`, [UMA_BORDEREAU_ORACLE.md](UMA_BORDEREAU_ORACLE.md)); what remains is deploying it, the app's USDC approval and the subgraph's new events ([NOT_REAL_YET.md](NOT_REAL_YET.md) §3b)
+3. Real UMA OOv3 bordereau assertions with bonds. The contract is built (`UmaBordereauOracle`, [UMA_BORDEREAU_ORACLE.md](UMA_BORDEREAU_ORACLE.md)); the app and the subgraph already handle it, so what remains is deploying it and pointing the subgraph at the new address ([NOT_REAL_YET.md](NOT_REAL_YET.md) §3b)
 4. Licensed KYC/KYB provider → in front of `ComplianceRegistry`
 4b. E-mail: a Resend account and a verified sending domain (`EMAIL_PROVIDER=resend`)
 4c. If EU/UK lists, PEP or adverse-media screening is required: a ComplyAdvantage account (the adapter exists)

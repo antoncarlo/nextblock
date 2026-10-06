@@ -260,6 +260,14 @@ type Assertion @entity {
   proposedAt: BigInt!
   finalizedAt: BigInt
   updatedAt: BigInt!
+  "the assertion UMA holds for this one; empty on the oracle without bonds"
+  umaAssertionId: Bytes
+  "the USDC bond posted behind the assertion, in base units; empty on the oracle without bonds"
+  bond: BigInt
+  "true when UMA settled the assertion as truthful, false when as false; empty until it settles"
+  settledTruthfully: Boolean
+  "true when the assertion was disputed before UMA settled it; empty until it settles"
+  settledAfterDispute: Boolean
 }
 
 type Assessment @entity(immutable: true) {

@@ -39,6 +39,7 @@ const ABIS = [
   ['CLAIM_MANAGER_ABI', 'ClaimManager'],
   ['AI_ASSESSOR_ABI', 'AIAssessor'],
   ['BORDEREAU_ORACLE_ABI', 'BordereauOracle'],
+  ['UMA_BORDEREAU_ORACLE_ABI', 'UmaBordereauOracle'],
   ['ADAPTER_REGISTRY_ABI', 'AdapterRegistry'],
   ['NEXTBLOCK_LENS_ABI', 'NextBlockLens'],
 ];
