@@ -48,10 +48,12 @@ export async function GET(request: NextRequest) {
     .eq('application_id', app.id)
     .maybeSingle();
 
+  // Only runs that prove something: the fixture provider's history is excluded.
   const { data: screening } = await supabase
     .from('sanctions_screening_runs')
     .select('result_code, match_count, ts')
     .eq('kyb_application_id', app.id)
+    .eq('evidential', true)
     .order('ts', { ascending: false })
     .limit(1);
 

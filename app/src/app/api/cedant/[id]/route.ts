@@ -55,11 +55,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: 'storage error' }, { status: 502 });
   }
 
-  // Has the screening run already completed for this application?
+  // Has a real screening run already completed for this application? Runs by the
+  // fixture provider are history, not evidence (evidential = false), so they never count.
   const { data: screening } = await supabase
     .from('sanctions_screening_runs')
     .select('result_code, match_count, ts')
     .eq('kyb_application_id', id)
+    .eq('evidential', true)
     .order('ts', { ascending: false })
     .limit(1);
 
