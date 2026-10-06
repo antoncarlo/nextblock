@@ -22,7 +22,7 @@ to trust, and what to build next.
 | 8 | `ClaimManager` / `ClaimReceipt` | **Present** | 3 verification types, liveness/dispute, committee approval, CEI payout |
 | 9 | `AIAssessor` | **Partial — advisory** | Store is real, can never approve/trigger payouts; the Braino claim-assessment client is built and idle, and the mock provider is refused on production — vendor not connected |
 | 10 | `VaultAllocator` | **Present** | Proposal+TTL, concentration caps, advisory NAV guard, fully curator-parametrized (demo split removed) |
-| 11 | `BordereauOracle` | **Partial — advisory** | UMA-style liveness (2d) + committee verify; **no economic bonds** (real UMA OOv3 is future work) |
+| 11 | `BordereauOracle` | **Partial — advisory** | Deployed: UMA-style liveness (2d) + committee verify, **no economic bonds**. `UmaBordereauOracle` (real UMA OOv3 bonds, no committee override) is built and fork-tested, awaiting the next deployment |
 | 12 | `NextBlockLens` / frontend / indexer | **Present** | Lens read-model, 24+ app routes, **full-protocol subgraph** (12 datasources + vault factory template, #76) + typed SDK with staleness (#77) — subgraph deploy owner-gated; Supabase backend; DataSource badges label anything mock-fed |
 | + | `RedemptionQueue` | **Present, live** | Periodic-window pro-rata LP exit + keeper workflow + subgraph |
 | + | `lending/` (LendingMarket + NavShareOracle) | **Present** | nbUSDC-collateral borrow market (guarded NAV attestation) |
@@ -45,7 +45,7 @@ The full register of what is not real, what closed it and what is left is [NOT_R
 | Sanctions screening of wallets | ✅ **Real, no account needed, yes/no only**: Chainalysis's public sanctions oracle on Base. No risk scoring, mixers or scam clusters |
 | E-mail | ⚠️ **Not configured**: nothing is sent and nothing says it was. Needs a Resend account and a verified domain |
 | Providers that fabricate answers (sanctions, wallet, e-mail, AI fixtures) | ✅ **Cannot run on production**: the factories refuse them, the admin status page reports each surface as live / idle / misconfigured, and `app/scripts/providers-smoke.ts` pins it |
-| Bordereau attestation economics | ⚠️ Liveness real, **no bonds** — needs real UMA OOv3 (Bucket B) |
+| Bordereau attestation economics | ⚠️ Liveness real, **no bonds** on what is deployed. The UMA-backed contract is built and tested against the real oracle; it goes live with the next deployment |
 | External risk-pool adapters | ⚠️ Interface only (vendor decision) |
 | KYB/KYC pipeline | ⚠️ Real workflow (queue, review, one-click on-chain whitelist, notifications) but **no licensed KYC provider** behind it (Bucket B) |
 | Governance | ⚠️ Timelock + Safe live; the deployer renounced (2026-10-02); the timelock delay is now **24 h** (2026-10-05); the Safe has **three owners and threshold 2**, but the third owner has never signed, so it is not yet proven; the operational roles are still held by **simulation identities**. Testnet-grade: [GOVERNANCE_HARDENING.md](GOVERNANCE_HARDENING.md) |
@@ -102,7 +102,7 @@ The full register of what is not real, what closed it and what is left is [NOT_R
 
 **Bucket B — external vendors (blocked on accounts/keys, adapters ready):**
 2. Braino/WAVENURE integration → `NavOracle`/`AIAssessor`/`VaultAllocator` — **formal v2 spec ready to send to the Braino team**: [braino-oracle-spec.md](../contracts/docs/integrations/braino-oracle-spec.md) (5 services incl. agentic allocator; see also [real-providers.md](../contracts/docs/integrations/real-providers.md))
-3. Real UMA OOv3 bordereau assertions with bonds → `BordereauOracle`. Not blocked on a vendor: UMA's Optimistic Oracle V3 is deployed on Base Sepolia and Circle's USDC is an accepted bond currency; what is missing is our contract ([NOT_REAL_YET.md](NOT_REAL_YET.md) §3b)
+3. Real UMA OOv3 bordereau assertions with bonds. The contract is built (`UmaBordereauOracle`, [UMA_BORDEREAU_ORACLE.md](UMA_BORDEREAU_ORACLE.md)); the app and the subgraph already handle it, so what remains is deploying it and pointing the subgraph at the new address ([NOT_REAL_YET.md](NOT_REAL_YET.md) §3b)
 4. Licensed KYC/KYB provider → in front of `ComplianceRegistry`
 4b. E-mail: a Resend account and a verified sending domain (`EMAIL_PROVIDER=resend`)
 4c. If EU/UK lists, PEP or adverse-media screening is required: a ComplyAdvantage account (the adapter exists)

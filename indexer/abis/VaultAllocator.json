@@ -378,6 +378,30 @@
   },
   {
     "type": "function",
+    "name": "isInPassiveBreach",
+    "inputs": [
+      {
+        "name": "vault",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "portfolioId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "markExpired",
     "inputs": [
       {
@@ -404,7 +428,33 @@
   },
   {
     "type": "function",
+    "name": "maxCedantExposure",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "maxPortfolioConcentrationBps",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "maxPortfolioExposure",
     "inputs": [],
     "outputs": [
       {
@@ -435,6 +485,45 @@
     "outputs": [
       {
         "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "passiveBreachStatus",
+    "inputs": [
+      {
+        "name": "vault",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "portfolioId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "portfolioBreached",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "cedantBreached",
+        "type": "bool",
+        "internalType": "bool"
+      },
+      {
+        "name": "portfolioExcess",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "cedantExcess",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -561,6 +650,30 @@
   },
   {
     "type": "function",
+    "name": "protocolCedantExposure",
+    "inputs": [
+      {
+        "name": "fallbackVault",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "cedant",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "total",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "protocolRoles",
     "inputs": [],
     "outputs": [
@@ -571,6 +684,24 @@
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "setAbsoluteExposureCaps",
+    "inputs": [
+      {
+        "name": "portfolioCap",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "cedantCap",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -615,6 +746,51 @@
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setVaultFactory",
+    "inputs": [
+      {
+        "name": "vaultFactory_",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "vaultFactory",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract VaultFactory"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "AbsoluteExposureCapsUpdated",
+    "inputs": [
+      {
+        "name": "maxPortfolioExposure",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "maxCedantExposure",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
   },
   {
     "type": "event",
@@ -762,6 +938,19 @@
     "anonymous": false
   },
   {
+    "type": "event",
+    "name": "VaultFactorySet",
+    "inputs": [
+      {
+        "name": "vaultFactory",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
     "type": "error",
     "name": "VaultAllocator__CedantConcentrationExceeded",
     "inputs": [
@@ -777,6 +966,27 @@
       },
       {
         "name": "limit",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "VaultAllocator__CedantExposureCapExceeded",
+    "inputs": [
+      {
+        "name": "cedant",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "wouldBe",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "cap",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -814,6 +1024,27 @@
       },
       {
         "name": "limit",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "VaultAllocator__PortfolioExposureCapExceeded",
+    "inputs": [
+      {
+        "name": "portfolioId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "wouldBe",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "cap",
         "type": "uint256",
         "internalType": "uint256"
       }

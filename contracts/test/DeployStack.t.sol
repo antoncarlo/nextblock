@@ -7,6 +7,28 @@ import {DeployStack} from "../script/DeployStack.s.sol";
 import {ProtocolRoles} from "../src/ProtocolRoles.sol";
 import {MockUSDC} from "../src/MockUSDC.sol";
 import {NextBlockLens} from "../src/NextBlockLens.sol";
+import {UmaBordereauOracle} from "../src/UmaBordereauOracle.sol";
+import {BordereauOracle} from "../src/BordereauOracle.sol";
+import {PortfolioRegistry} from "../src/PortfolioRegistry.sol";
+import {MockOptimisticOracleV3} from "./mocks/MockOptimisticOracleV3.sol";
+
+/// @dev A valid portfolio submission for tests that only need a portfolio to exist.
+library PortfolioRegistryParams {
+    function make(uint256 nowTs) internal pure returns (PortfolioRegistry.SubmissionParams memory p) {
+        p = PortfolioRegistry.SubmissionParams({
+            name: "EU Property CAT QS 2026",
+            metadataURI: "ipfs://QmDocs",
+            documentHash: keccak256("docs"),
+            lineOfBusiness: "Property CAT",
+            jurisdiction: "EU",
+            structureType: PortfolioRegistry.StructureType.QUOTA_SHARE,
+            coverageLimit: 1_000_000e6,
+            cededPremium: 100_000e6,
+            inceptionTime: uint64(nowTs),
+            expiryTime: uint64(nowTs + 365 days)
+        });
+    }
+}
 
 /// @title DeployStackTest
 /// @notice Phase 11 suite: full-stack deploy on the local chain (31337), chain
@@ -147,5 +169,134 @@ contract DeployStackTest is Test {
     function test_usdcFromEnv_keepsTheMockDefaultLocally() public {
         if (vm.envExists("USDC_ADDRESS")) vm.skip(true);
         assertEq(deploy.usdcFromEnv(), address(0));
+    }
+
+    // ------------------------------------------------------------------ bordereau backend
+
+    function _roles(address who) internal pure returns (DeployStack.RoleConfig memory r) {
+        r = DeployStack.RoleConfig({
+            owner: who,
+            curator: who,
+            sentinel: who,
+            committee: who,
+            allocatorBot: who,
+            oracleNode: who,
+            cedant: who,
+            kycOperator: who
+        });
+    }
+
+    /// @dev Local chains deploy the bond-less stand-in, and the Lens is pointed at it.
+    function test_run_localChainsKeepTheStandInBordereau() public {
+        if (vm.envExists("UMA_OOV3_ADDRESS")) vm.skip(true);
+
+        deploy.runWithConfig(ANVIL_PK, false, address(0));
+
+        assertTrue(address(deploy.bordereau()) != address(0));
+        assertEq(address(deploy.umaBordereau()), address(0));
+        assertEq(deploy.bordereauModule(), address(deploy.bordereau()));
+        assertEq(deploy.umaOracle(), address(0));
+        assertEq(deploy.lens().getProtocolStatus().modules.bordereauOracle, address(deploy.bordereau()));
+    }
+
+    /// @dev Given an oracle, the UMA-backed one is deployed against it, bonded in the settlement
+    ///      asset, with the roles, the Lens and the verification all pointing at it.
+    function test_run_withUmaDeploysTheBondedBordereau() public {
+        MockUSDC asset = new MockUSDC();
+        MockOptimisticOracleV3 uma = new MockOptimisticOracleV3(0.5e18);
+        uma.setWhitelisted(address(asset), true);
+
+        deploy.runWithUma(ANVIL_PK, false, address(asset), _roles(ANVIL_DEPLOYER), address(uma), 25e6);
+
+        UmaBordereauOracle module = deploy.umaBordereau();
+        assertEq(address(deploy.bordereau()), address(0), "the stand-in is not deployed beside it");
+        assertEq(deploy.bordereauModule(), address(module));
+        assertEq(address(module.oracle()), address(uma));
+        assertEq(address(module.bondCurrency()), address(asset));
+        assertEq(address(module.protocolRoles()), address(deploy.protocolRoles()));
+        assertEq(address(module.portfolioRegistry()), address(deploy.portfolioRegistry()));
+        assertEq(module.bondAmount(), 25e6);
+        assertTrue(uma.synced(address(asset)), "UMA cached the asset at deployment");
+        assertEq(deploy.lens().getProtocolStatus().modules.bordereauOracle, address(module));
+    }
+
+    /// @dev The deployed oracle works end to end for the operators the deployment named.
+    function test_run_withUmaTheNamedOperatorsCanUseIt() public {
+        MockUSDC asset = new MockUSDC();
+        MockOptimisticOracleV3 uma = new MockOptimisticOracleV3(0.5e18);
+        uma.setWhitelisted(address(asset), true);
+        deploy.runWithUma(ANVIL_PK, false, address(asset), _roles(ANVIL_DEPLOYER), address(uma), 10e6);
+
+        UmaBordereauOracle module = deploy.umaBordereau();
+        ProtocolRoles roles = deploy.protocolRoles();
+        assertTrue(roles.hasRole(roles.ORACLE_ROLE(), ANVIL_DEPLOYER));
+        assertTrue(roles.hasRole(roles.SENTINEL_ROLE(), ANVIL_DEPLOYER));
+
+        // A portfolio the feed can assert on, a bond, and one assertion carried to finality.
+        vm.startPrank(ANVIL_DEPLOYER);
+        uint256 pid = deploy.portfolioRegistry().submitPortfolio(PortfolioRegistryParams.make(block.timestamp));
+        asset.mint(ANVIL_DEPLOYER, 10e6);
+        asset.approve(address(module), type(uint256).max);
+        asset.approve(address(uma), type(uint256).max);
+        uint256 id = module.proposeAssertion(
+            pid, BordereauOracle.AssertionType.PREMIUM_BORDEREAU, keccak256("d"), "ipfs://x", 1
+        );
+        vm.stopPrank();
+
+        vm.warp(block.timestamp + 2 days);
+        module.finalizeAssertion(id);
+        assertTrue(module.isFinalized(id));
+        assertEq(asset.balanceOf(ANVIL_DEPLOYER), 10e6, "the bond came back");
+        assertEq(asset.balanceOf(address(module)), 0);
+    }
+
+    /// @dev An oracle address with nothing behind it is refused by name, not as a bare revert.
+    function test_run_withUmaRefusesAnOracleWithNoCode() public {
+        MockUSDC asset = new MockUSDC();
+        address nothingHere = makeAddr("noUmaHere");
+        vm.expectRevert(abi.encodeWithSelector(DeployStack.DeployStack__UmaNotDeployed.selector, nothingHere));
+        deploy.runWithUma(ANVIL_PK, false, address(asset), _roles(ANVIL_DEPLOYER), nothingHere, 10e6);
+    }
+
+    /// @dev UMA must accept the settlement asset as a bond: a deployment whose asset is not on its
+    ///      whitelist fails at the constructor, not later at the first proposal.
+    function test_run_withUmaRefusesAnAssetUmaDoesNotAccept() public {
+        MockUSDC asset = new MockUSDC();
+        MockOptimisticOracleV3 uma = new MockOptimisticOracleV3(0.5e18); // nothing whitelisted
+        vm.expectRevert(bytes("Unsupported currency"));
+        deploy.runWithUma(ANVIL_PK, false, address(asset), _roles(ANVIL_DEPLOYER), address(uma), 10e6);
+    }
+
+    /// @dev On Base Sepolia with a real asset the choice is UMA's deployment, with no env involved.
+    function test_run_baseSepoliaWithARealAssetUsesUmasDeployment() public {
+        if (vm.envExists("UMA_OOV3_ADDRESS") || vm.envExists("BORDEREAU_BOND")) vm.skip(true);
+
+        vm.chainId(84532);
+        MockOptimisticOracleV3 template = new MockOptimisticOracleV3(0.5e18);
+        address umaAt = deploy.UMA_OOV3_BASE_SEPOLIA();
+        vm.etch(umaAt, address(template).code);
+        MockUSDC asset = new MockUSDC(); // stands for Circle's USDC, whitelisted by UMA
+        MockOptimisticOracleV3(umaAt).setWhitelisted(address(asset), true);
+
+        address who = makeAddr("operator");
+        deploy.runWithRoles(ANVIL_PK, false, address(asset), _roles(who));
+
+        assertEq(deploy.umaOracle(), umaAt);
+        assertEq(address(deploy.umaBordereau().oracle()), umaAt);
+        assertEq(deploy.umaBordereau().bondAmount(), deploy.DEFAULT_BORDEREAU_BOND());
+        assertEq(address(deploy.bordereau()), address(0), "no stand-in on the shared chain");
+    }
+
+    /// @dev The throwaway mock-asset deployment keeps the stand-in: a token anyone can mint is not
+    ///      on UMA's bond whitelist, and the opt-out is explicit.
+    function test_run_baseSepoliaWithTheMockAssetKeepsTheStandIn() public {
+        if (vm.envExists("UMA_OOV3_ADDRESS")) vm.skip(true);
+
+        vm.chainId(84532);
+        deploy.runWithRoles(ANVIL_PK, false, address(0), _roles(makeAddr("operator")));
+
+        assertEq(deploy.umaOracle(), address(0));
+        assertTrue(address(deploy.bordereau()) != address(0));
+        assertEq(address(deploy.umaBordereau()), address(0));
     }
 }

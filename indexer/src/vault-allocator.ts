@@ -7,6 +7,8 @@ import {
   AllocationExecuted,
   AllocationCancelled,
   AllocationExpired,
+  AbsoluteExposureCapsUpdated,
+  VaultFactorySet,
 } from "../generated/VaultAllocator/VaultAllocator";
 import { AllocationProposal } from "../generated/schema";
 import { logEvent, LogParams } from "./helpers";
@@ -64,4 +66,16 @@ export function handleAllocationExpired(event: AllocationExpired): void {
   if (pr != null) pr.save();
   const p = new LogParams();
   logEvent(event, "VaultAllocator", "AllocationExpired", p);
+}
+
+// The two absolute ceilings are read on-chain; the feed records that they changed.
+export function handleAbsoluteExposureCapsUpdated(event: AbsoluteExposureCapsUpdated): void {
+  const p = new LogParams();
+  logEvent(event, "VaultAllocator", "AbsoluteExposureCapsUpdated", p);
+}
+
+export function handleVaultFactorySet(event: VaultFactorySet): void {
+  const p = new LogParams();
+  p.actor = event.params.vaultFactory;
+  logEvent(event, "VaultAllocator", "VaultFactorySet", p);
 }
