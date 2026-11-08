@@ -10,7 +10,6 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {PolicyRegistry} from "./PolicyRegistry.sol";
-import {MockOracle} from "./MockOracle.sol";
 import {ClaimReceipt} from "./ClaimReceipt.sol";
 import {ProtocolRoles, ProtocolRoleConstants} from "./ProtocolRoles.sol";
 import {IComplianceRegistry} from "./ComplianceRegistry.sol";
@@ -101,8 +100,6 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
     // --- References ---
     /// @notice Policy registry + protocol clock source.
     PolicyRegistry public registry;
-    /// @notice Legacy demo mock oracle (BTC/flight feeds).
-    MockOracle public oracle;
     /// @notice Soulbound receipt NFT used on the claim payout path.
     ClaimReceipt public claimReceipt;
 
@@ -302,7 +299,6 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
         uint256 bufferRatioBps;
         uint256 managementFeeBps;
         address registry;
-        address oracle;
         address claimReceipt;
         address protocolRoles;
         address complianceRegistry;
@@ -327,7 +323,6 @@ contract InsuranceVault is ERC4626, Ownable, ReentrancyGuard, ProtocolRoleConsta
         bufferRatioBps = p.bufferRatioBps;
         managementFeeBps = p.managementFeeBps;
         registry = PolicyRegistry(p.registry);
-        oracle = MockOracle(p.oracle);
         claimReceipt = ClaimReceipt(p.claimReceipt);
         protocolRoles = ProtocolRoles(p.protocolRoles);
         complianceRegistry = IComplianceRegistry(p.complianceRegistry);

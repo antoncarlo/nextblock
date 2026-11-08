@@ -62,7 +62,7 @@ contract NextBlockLens is ProtocolRoleConstants {
     /// @notice Explicit provenance of the data (UI labelling requirement).
     enum DataSource {
         ONCHAIN, // 0: canonical on-chain protocol state
-        MOCK_ORACLE, // 1: Braino.ai/WAVENURE MOCK feed (testnet, not verified)
+        ORACLE_ATTESTED, // 1: figure published by an authorised oracle node (Braino.ai/WAVENURE or the protocol NAV publisher); advisory
         LEGACY_RETIRED, // 2: surface removed in Phase 9.5 (kept for labelling)
         NOT_AVAILABLE // 3: no source (module missing)
     }
@@ -147,7 +147,7 @@ contract NextBlockLens is ProtocolRoleConstants {
         uint256 allocatedExposure; // in the queried vault (0 if vault unset)
         uint256 premiumRecorded; // vault-recorded portfolio premium
         DataStatus riskStatus; // NavOracle risk attestation availability
-        DataSource riskSource; // MOCK_ORACLE while Braino.ai feed is mocked
+        DataSource riskSource; // ORACLE_ATTESTED once a node has published
         uint16 riskScoreBps;
         uint16 riskConfidenceBps;
         uint64 riskUpdatedAt;
@@ -177,7 +177,7 @@ contract NextBlockLens is ProtocolRoleConstants {
         uint64 disputeWindow;
         bool disputeWindowElapsed;
         bool hasAssessment;
-        DataSource assessmentSource; // MOCK_ORACLE: advisory only, never authority
+        DataSource assessmentSource; // ORACLE_ATTESTED: advisory only, never authority
         AIAssessor.Assessment assessment; // zeroed when hasAssessment == false
         bool anomalous;
     }
@@ -185,7 +185,7 @@ contract NextBlockLens is ProtocolRoleConstants {
     struct OracleDashboardView {
         uint8 schemaVersion;
         DataStatus status; // PAUSED > NONE > STALE > AVAILABLE precedence
-        DataSource source; // MOCK_ORACLE while feeds are mocked
+        DataSource source; // ORACLE_ATTESTED once a node has published
         uint256 nav;
         uint16 confidenceBps;
         uint64 updatedAt;
@@ -435,7 +435,7 @@ contract NextBlockLens is ProtocolRoleConstants {
         if (_live(modules.navOracle)) {
             (bool valid, NavOracle.RiskAttestation memory att) =
                 NavOracle(modules.navOracle).tryGetPortfolioRisk(portfolioId);
-            v.riskSource = DataSource.MOCK_ORACLE;
+            v.riskSource = DataSource.ORACLE_ATTESTED;
             if (att.updatedAt == 0) {
                 v.riskStatus = DataStatus.NONE;
             } else {
@@ -502,7 +502,7 @@ contract NextBlockLens is ProtocolRoleConstants {
     // =========================================================================
 
     /// @notice Claim lifecycle + advisory AI assessment. Never reverts:
-    ///         unknown claim => NONE. The AI block is labelled MOCK_ORACLE and
+    ///         unknown claim => NONE. The AI block is labelled ORACLE_ATTESTED and
     ///         is advisory only — approval authority stays with the committee.
     function getClaimDashboard(uint256 claimId) external view returns (ClaimDashboardView memory v) {
         v.schemaVersion = SCHEMA_VERSION;
@@ -524,7 +524,7 @@ contract NextBlockLens is ProtocolRoleConstants {
             AIAssessor ai = AIAssessor(modules.aiAssessor);
             if (ai.hasAssessment(claimId)) {
                 v.hasAssessment = true;
-                v.assessmentSource = DataSource.MOCK_ORACLE;
+                v.assessmentSource = DataSource.ORACLE_ATTESTED;
                 v.assessment = ai.getAssessment(claimId);
                 v.anomalous = ai.isAnomalous(claimId);
             }
@@ -544,7 +544,7 @@ contract NextBlockLens is ProtocolRoleConstants {
         if (!_live(modules.navOracle)) return v;
 
         NavOracle oracle = NavOracle(modules.navOracle);
-        v.source = DataSource.MOCK_ORACLE;
+        v.source = DataSource.ORACLE_ATTESTED;
 
         NavOracle.NavAttestation memory att = oracle.rawNavAttestation(vault);
         v.nav = att.nav;

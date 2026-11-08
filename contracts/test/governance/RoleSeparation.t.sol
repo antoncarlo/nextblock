@@ -5,7 +5,6 @@ import {Test} from "forge-std/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {MockUSDC} from "../../src/MockUSDC.sol";
-import {MockOracle} from "../../src/MockOracle.sol";
 import {PolicyRegistry} from "../../src/PolicyRegistry.sol";
 import {ClaimReceipt} from "../../src/ClaimReceipt.sol";
 import {InsuranceVault} from "../../src/InsuranceVault.sol";
@@ -26,7 +25,6 @@ import {NavOracle} from "../../src/NavOracle.sol";
 ///         asserts fund conservation across every attempted fund-moving call.
 contract RoleSeparationTest is Test {
     MockUSDC usdc;
-    MockOracle oracle;
     PolicyRegistry registry;
     ClaimReceipt claimReceipt;
     InsuranceVault vault;
@@ -51,7 +49,6 @@ contract RoleSeparationTest is Test {
         vm.startPrank(admin);
         roles = new ProtocolRoles(admin);
         usdc = new MockUSDC();
-        oracle = new MockOracle();
         registry = new PolicyRegistry(address(roles));
         claimReceipt = new ClaimReceipt(address(roles));
         compliance = new ComplianceRegistry(address(roles));
@@ -77,7 +74,6 @@ contract RoleSeparationTest is Test {
                 bufferRatioBps: 2000,
                 managementFeeBps: 0,
                 registry: address(registry),
-                oracle: address(oracle),
                 claimReceipt: address(claimReceipt),
                 protocolRoles: address(roles),
                 complianceRegistry: address(compliance),

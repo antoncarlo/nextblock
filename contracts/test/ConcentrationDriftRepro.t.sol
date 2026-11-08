@@ -10,7 +10,6 @@ import {PortfolioRegistry} from "../src/PortfolioRegistry.sol";
 import {PolicyRegistry} from "../src/PolicyRegistry.sol";
 import {ClaimReceipt} from "../src/ClaimReceipt.sol";
 import {MockUSDC} from "../src/MockUSDC.sol";
-import {MockOracle} from "../src/MockOracle.sol";
 import {InsuranceVault} from "../src/InsuranceVault.sol";
 import {VaultAllocator} from "../src/VaultAllocator.sol";
 
@@ -40,7 +39,6 @@ contract ConcentrationDriftReproTest is Test {
     PolicyRegistry internal policies;
     ClaimReceipt internal receipts;
     MockUSDC internal usdc;
-    MockOracle internal oracle;
     InsuranceVault internal vault;
     VaultAllocator internal allocatorC;
 
@@ -57,7 +55,6 @@ contract ConcentrationDriftReproTest is Test {
         vm.startPrank(governance);
         roles = new ProtocolRoles(governance);
         usdc = new MockUSDC();
-        oracle = new MockOracle();
         policies = new PolicyRegistry(address(roles));
         receipts = new ClaimReceipt(address(roles));
         compliance = new ComplianceRegistry(address(roles));
@@ -81,7 +78,6 @@ contract ConcentrationDriftReproTest is Test {
                 bufferRatioBps: 2_000,
                 managementFeeBps: 0,
                 registry: address(policies),
-                oracle: address(oracle),
                 claimReceipt: address(receipts),
                 protocolRoles: address(roles),
                 complianceRegistry: address(compliance),

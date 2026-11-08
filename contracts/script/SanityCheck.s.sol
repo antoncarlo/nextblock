@@ -36,12 +36,11 @@ contract SanityCheck is Script, ProtocolRoleConstants {
         console2.log("checking deployment:", path);
 
         // 1. Address book: every module must have code.
-        string[17] memory keys = [
+        string[16] memory keys = [
             "usdc",
             "protocolRoles",
             "policyRegistry",
             "claimReceipt",
-            "mockOracle",
             "complianceRegistry",
             "portfolioRegistry",
             "navOracle",

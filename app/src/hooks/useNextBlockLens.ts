@@ -29,7 +29,7 @@ export enum LensDataSource {
   // fixed in the lens bytecode whether the feed is a test publisher or the real provider,
   // so it says "oracle-fed", not "fabricated". Whether anything has been published is the
   // data status (NONE until the first attestation), and the report hash identifies it.
-  MOCK_ORACLE = 1,
+  ORACLE_ATTESTED = 1,
   LEGACY_RETIRED = 2,
   NOT_AVAILABLE = 3,
 }
@@ -41,7 +41,7 @@ export enum LensDataSource {
  */
 export function lensSourceToBadge(source: LensDataSource): 'onchain' | 'attested' | 'unavailable' {
   if (source === LensDataSource.ONCHAIN) return 'onchain';
-  if (source === LensDataSource.MOCK_ORACLE) return 'attested';
+  if (source === LensDataSource.ORACLE_ATTESTED) return 'attested';
   return 'unavailable';
 }
 

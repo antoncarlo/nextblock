@@ -193,7 +193,7 @@ contract DemoFlow is Script, ProtocolRoleConstants {
     function _step8_oracle() internal {
         navOracle.publishNav(address(vault), vault.totalAssets(), 9_000, keccak256("braino-nav-demo"));
         navOracle.publishPortfolioRisk(pid, 6_200, 9_000, keccak256("braino-risk-demo"));
-        console2.log("step 8  mock NAV + risk published (MOCK_ORACLE source)");
+        console2.log("step 8  mock NAV + risk published (ORACLE_ATTESTED source)");
     }
 
     function _step9_claim() internal {
@@ -254,7 +254,9 @@ contract DemoFlow is Script, ProtocolRoleConstants {
         NextBlockLens.PortfolioStatusView memory pf = lens.getPortfolioStatus(pid, address(vault));
         if (pf.status != NextBlockLens.DataStatus.AVAILABLE) revert DemoFlow__CheckFailed("portfolio status");
         if (pf.riskStatus != NextBlockLens.DataStatus.AVAILABLE) revert DemoFlow__CheckFailed("risk status");
-        if (pf.riskSource != NextBlockLens.DataSource.MOCK_ORACLE) revert DemoFlow__CheckFailed("risk source label");
+        if (pf.riskSource != NextBlockLens.DataSource.ORACLE_ATTESTED) {
+            revert DemoFlow__CheckFailed("risk source label");
+        }
 
         // Premium dashboard with exact conservation of the split
         NextBlockLens.PremiumDashboardView memory pm = lens.getPremiumDashboard(pid);
@@ -267,7 +269,7 @@ contract DemoFlow is Script, ProtocolRoleConstants {
         NextBlockLens.ClaimDashboardView memory cd = lens.getClaimDashboard(claimId);
         if (cd.status != NextBlockLens.DataStatus.AVAILABLE) revert DemoFlow__CheckFailed("claim dashboard");
         if (cd.claim.status != ClaimManager.ClaimStatus.PAID) revert DemoFlow__CheckFailed("claim PAID");
-        if (cd.assessmentSource != NextBlockLens.DataSource.MOCK_ORACLE) revert DemoFlow__CheckFailed("ai label");
+        if (cd.assessmentSource != NextBlockLens.DataSource.ORACLE_ATTESTED) revert DemoFlow__CheckFailed("ai label");
 
         // Oracle AVAILABLE; bordereau correctly NONE until finalized (no fake data)
         NextBlockLens.OracleDashboardView memory od = lens.getOracleDashboard(address(vault));

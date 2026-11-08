@@ -12,7 +12,6 @@ import {ClaimReceipt} from "../src/ClaimReceipt.sol";
 import {ClaimManager} from "../src/ClaimManager.sol";
 import {AIAssessor} from "../src/AIAssessor.sol";
 import {MockUSDC} from "../src/MockUSDC.sol";
-import {MockOracle} from "../src/MockOracle.sol";
 import {InsuranceVault} from "../src/InsuranceVault.sol";
 
 /// @title ClaimOwnershipTest
@@ -38,7 +37,6 @@ contract ClaimOwnershipTest is Test {
     ClaimManager internal claims;
     AIAssessor internal assessor;
     MockUSDC internal usdc;
-    MockOracle internal oracle;
     InsuranceVault internal vault;
 
     address internal governance = makeAddr("governance");
@@ -59,7 +57,6 @@ contract ClaimOwnershipTest is Test {
         vm.startPrank(governance);
         roles = new ProtocolRoles(governance);
         usdc = new MockUSDC();
-        oracle = new MockOracle();
         policies = new PolicyRegistry(address(roles));
         receipts = new ClaimReceipt(address(roles));
         compliance = new ComplianceRegistry(address(roles));
@@ -81,7 +78,6 @@ contract ClaimOwnershipTest is Test {
                 bufferRatioBps: 2_000,
                 managementFeeBps: 0,
                 registry: address(policies),
-                oracle: address(oracle),
                 claimReceipt: address(receipts),
                 protocolRoles: address(roles),
                 complianceRegistry: address(compliance),
