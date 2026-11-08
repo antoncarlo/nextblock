@@ -60,6 +60,7 @@ jobs:
           node --experimental-strip-types app/scripts/ai-assessor-smoke.ts
           node --experimental-strip-types app/scripts/braino-client-smoke.ts
           node --experimental-strip-types app/scripts/oracle-node-smoke.ts
+          node --experimental-strip-types app/scripts/protocol-nav-smoke.ts
           node --experimental-strip-types app/scripts/providers-smoke.ts
           node --experimental-strip-types app/scripts/sanctions-list-smoke.ts
           node --experimental-strip-types app/scripts/sanctions-smoke.ts
