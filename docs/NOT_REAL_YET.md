@@ -55,6 +55,8 @@ is what it is, and the interface says so in those words and no others.
 
 ## 4. Deferred to the next deployment, because it changes a deployed contract
 
+**Generation 3 (branch `feat/gen3-prep`): the source changes below are done and tested; the redeployment is not.** The deployed stack still carries `MockOracle` until the owner authorises the redeploy.
+
 - Remove `MockOracle` from `InsuranceVault` (the `oracle` field and the `p.oracle` initialiser
   parameter), `VaultDeployer`, `VaultFactory` and `DeployStack`, with the tests that construct it;
   regenerate the ABIs and the subgraph.

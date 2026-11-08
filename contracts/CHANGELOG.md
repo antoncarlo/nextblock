@@ -3,6 +3,22 @@
 All notable contract/ABI changes and security-relevant decisions.
 Companion to `README.md` (audit package, part 1).
 
+## [Generation 3 preparation] — branch `feat/gen3-prep`
+
+### Removed (BREAKING ABI)
+- `MockOracle` and its test. `InsuranceVault` loses the `oracle` field and the `oracle` member of
+  `VaultInitParams`; `VaultFactory` loses the `oracle_` constructor parameter and the `oracle()` getter.
+  Nothing in the vault ever read the oracle. `test/Gen3NoMockOracle.t.sol` pins both absences.
+
+### Changed
+- `NextBlockLens.DataSource.MOCK_ORACLE` is now `ORACLE_ATTESTED` (same ordinal 2, same ABI).
+- OpenZeppelin Contracts 5.4.0 to 5.7.0; the full suite passes unchanged.
+
+### Added
+- `script/SeedVault.s.sol`: first test capital through the normal deposit path (default 120,000 USDC,
+  hard ceiling 1,000,000), LP eligibility never implicit, never mints: the LP must hold the vault's real USDC.
+- Off-chain: `protocol-nav` (book-value NAV from `totalAssets`) and `NAV_SOURCE=protocol` in the nav keeper.
+
 ## [Phase 12.1] — EIP-170 fix found by the Base Sepolia dry run
 
 ### Added

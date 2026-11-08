@@ -41,8 +41,8 @@ window, bordereau liveness) and the bypass-closure negative tests.
 | 5 | Portfolio onboarding | Cedant submits; Underwriting Curator reviews, approves (`expectedLossBps` mock), activates | Portfolio `ACTIVE` in `PortfolioRegistry`; routing set in distributor | `getPortfolioStatus()`: `AVAILABLE`, `allocatable true` |
 | 6 | Premium payment | Cedant | `PremiumDistributor.receivePremium`: split (LP quota -> vault UPR, protocol + underwriting fees accrued) | `getPremiumDashboard()`: `AVAILABLE`, `gross = lpQuota + fees` exactly |
 | 7 | Allocation | Allocator (proposal) -> `VaultAllocator` contract (execution, **sole path**) | 150K exposure booked in the vault | `getVaultDashboard()`: `portfolioAllocated = 150K` |
-| 8 | NAV / risk attestation | Oracle node (Braino.ai **mock**) | `NavOracle.publishNav` + `publishPortfolioRisk`, confidence 90% | `getOracleDashboard()`: `AVAILABLE`, source `MOCK_ORACLE` |
-| 9 | Claim lifecycle | Cedant submits; AI Assessor publishes **advisory** assessment; Claims Committee approves; vault reserves and pays (**sole path**) | 40K paid: `ClaimManager -> InsuranceVault.payPortfolioClaim` | `getClaimDashboard()`: `PAID`, AI labelled `MOCK_ORACLE` |
+| 8 | NAV / risk attestation | Oracle node (Braino.ai **mock**) | `NavOracle.publishNav` + `publishPortfolioRisk`, confidence 90% | `getOracleDashboard()`: `AVAILABLE`, source `ORACLE_ATTESTED` |
+| 9 | Claim lifecycle | Cedant submits; AI Assessor publishes **advisory** assessment; Claims Committee approves; vault reserves and pays (**sole path**) | 40K paid: `ClaimManager -> InsuranceVault.payPortfolioClaim` | `getClaimDashboard()`: `PAID`, AI labelled `ORACLE_ATTESTED` |
 | 10 | Bordereau attestation | Cedant proposes; liveness runs | Assertion `PROPOSED` in `BordereauOracle` | `getBordereauDashboard()`: **`NONE`** until finalized (correct: unverified = absent) |
 | 11 | Lens verification | — (read-only) | Script reverts unless every expected state is `AVAILABLE` | All dashboards |
 | 12 | Conservation + frontend | — (read-only) | Delta-exact USDC accounting; address book pointer | — |
@@ -88,5 +88,5 @@ bordereau data as absent rather than showing fake/fallback values.
 The frontend reads `deployments/<chainId>-staging.json` as its address book
 (`app/src/config/contracts.ts` keys match; unset modules stay ZERO and the UI
 shows **Unavailable** — never invented data). Every datum is labelled by the
-Lens `DataSource`: `ONCHAIN`, `MOCK_ORACLE` (Braino.ai/WAVENURE mock,
+Lens `DataSource`: `ONCHAIN`, `ORACLE_ATTESTED` (Braino.ai/WAVENURE or the protocol NAV publisher,
 advisory), `LEGACY_RETIRED`, `NOT_AVAILABLE`.
