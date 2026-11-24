@@ -4,7 +4,6 @@ pragma solidity ^0.8.24;
 import {Test} from "forge-std/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MockUSDC} from "../src/MockUSDC.sol";
-import {MockOracle} from "../src/MockOracle.sol";
 import {PolicyRegistry} from "../src/PolicyRegistry.sol";
 import {ClaimReceipt} from "../src/ClaimReceipt.sol";
 import {InsuranceVault} from "../src/InsuranceVault.sol";
@@ -18,7 +17,6 @@ import {ClaimManager} from "../src/ClaimManager.sol";
 
 contract VaultFactoryTest is Test {
     MockUSDC public usdc;
-    MockOracle public oracle;
     PolicyRegistry public registry;
     ClaimReceipt public claimReceipt;
     VaultFactory public factory;
@@ -36,7 +34,6 @@ contract VaultFactoryTest is Test {
 
         protocolRoles = new ProtocolRoles(admin);
         usdc = new MockUSDC();
-        oracle = new MockOracle();
         registry = new PolicyRegistry(address(protocolRoles));
         claimReceipt = new ClaimReceipt(address(protocolRoles));
         compliance = new ComplianceRegistry(address(protocolRoles));
@@ -52,7 +49,6 @@ contract VaultFactoryTest is Test {
         factory = new VaultFactory(
             address(usdc),
             address(registry),
-            address(oracle),
             address(claimReceipt),
             address(protocolRoles),
             address(compliance),
@@ -209,7 +205,6 @@ contract VaultFactoryTest is Test {
     function test_immutables() public view {
         assertEq(factory.asset(), address(usdc));
         assertEq(factory.policyRegistry(), address(registry));
-        assertEq(factory.oracle(), address(oracle));
         assertEq(factory.claimReceiptAddr(), address(claimReceipt));
     }
 
@@ -220,7 +215,6 @@ contract VaultFactoryTest is Test {
         new VaultFactory(
             address(0),
             address(registry),
-            address(oracle),
             address(claimReceipt),
             address(protocolRoles),
             address(compliance),
@@ -233,7 +227,6 @@ contract VaultFactoryTest is Test {
         new VaultFactory(
             address(usdc),
             address(0),
-            address(oracle),
             address(claimReceipt),
             address(protocolRoles),
             address(compliance),
@@ -246,7 +239,6 @@ contract VaultFactoryTest is Test {
         new VaultFactory(
             address(usdc),
             address(registry),
-            address(oracle),
             address(claimReceipt),
             address(0),
             address(compliance),
@@ -259,7 +251,6 @@ contract VaultFactoryTest is Test {
         new VaultFactory(
             address(usdc),
             address(registry),
-            address(oracle),
             address(claimReceipt),
             address(protocolRoles),
             address(0),
@@ -272,7 +263,6 @@ contract VaultFactoryTest is Test {
         new VaultFactory(
             address(usdc),
             address(registry),
-            address(oracle),
             address(claimReceipt),
             address(protocolRoles),
             address(compliance),
@@ -340,7 +330,6 @@ contract VaultFactoryTest is Test {
             bufferRatioBps: 2000,
             managementFeeBps: 0,
             registry: address(registry),
-            oracle: address(oracle),
             claimReceipt: address(claimReceipt),
             protocolRoles: address(protocolRoles),
             complianceRegistry: address(compliance),

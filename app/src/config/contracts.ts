@@ -31,11 +31,6 @@ export const VAULT_FACTORY_ABI = [
         "internalType": "address"
       },
       {
-        "name": "oracle_",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
         "name": "claimReceipt_",
         "type": "address",
         "internalType": "address"
@@ -399,19 +394,6 @@ export const VAULT_FACTORY_ABI = [
   },
   {
     "type": "function",
-    "name": "oracle",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "owner",
     "inputs": [],
     "outputs": [
@@ -670,11 +652,6 @@ export const INSURANCE_VAULT_ABI = [
           },
           {
             "name": "registry",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
-            "name": "oracle",
             "type": "address",
             "internalType": "address"
           },
@@ -1594,19 +1571,6 @@ export const INSURANCE_VAULT_ABI = [
         "name": "",
         "type": "string",
         "internalType": "string"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "oracle",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "contract MockOracle"
       }
     ],
     "stateMutability": "view"

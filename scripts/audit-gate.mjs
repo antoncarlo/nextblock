@@ -14,19 +14,43 @@
 
 import { spawnSync } from 'node:child_process';
 
-// An exception is only ever for an advisory that (a) has no patched release to move to and
-// (b) cannot reach production code or untrusted input. Both facts are checked by a person
-// when the entry is written and again when it expires.
+// An entry may carry `nodes`, the installed copies (paths in package-lock.json) it covers. The
+// advisory is then carried only while every copy npm reports is one of them: a new or moved copy,
+// say our own code resolving the vulnerable version again, fails the gate. Without `nodes` the
+// entry covers the advisory wherever it is.
+//
+// An exception is only ever for an advisory that (a) has no patched release this project can
+// move to and (b) cannot reach production code or untrusted input. Both facts are checked by a
+// person when the entry is written and again when it expires. A patched release that exists but
+// would break its only consumer counts as one this project cannot move to, and the entry says why.
 const ALLOWLIST = [
   {
-    id: 'GHSA-vfj7-8cjw-p6xm',
-    package: 'braces',
+    id: 'GHSA-qr28-fpjm-wq7f',
+    package: 'decode-uri-component',
     reason:
-      'Stack exhaustion on deeply nested brace patterns. No patched release exists (the latest braces, 3.0.3, is the ' +
-      'affected one). It is reached only through eslint-config-next -> @next/eslint-plugin-next -> fast-glob -> ' +
-      'micromatch, i.e. lint tooling that expands glob patterns from our own config files, never from user input; ' +
-      '`npm ls braces --omit=dev` shows it is dev-only and `npm audit --omit=dev --audit-level=high` is clean.',
-    expires: '2026-12-31',
+      'Quadratic-time replacement of long runs of percent-encoded characters (denial of service). The patched ' +
+      '0.5.1 is ESM-only, while its only consumer, query-string 7.1.3, loads it with require, so forcing it would ' +
+      'break the parsing of WalletConnect pairing URIs in the browser. It is reached only through ' +
+      '@walletconnect/utils -> query-string, in wallet-connection code that runs in the visitor\'s own browser on ' +
+      'URIs their own wallet hands over: the worst case is a stalled tab for that visitor. No server-side code ' +
+      'imports it (checked: nothing under app/src/app/api, app/src/lib/server or app/src/lib/providers imports the ' +
+      'wallet stack). @walletconnect/utils 2.26 no longer depends on query-string; moving the wallet stack to it ' +
+      'is a change to test with a real wallet, not to slip into an advisory fix.',
+    expires: '2027-01-31',
+  },
+  {
+    id: 'GHSA-mrhx-c7xc-m3w5',
+    package: 'zod',
+    nodes: ['node_modules/zod', 'node_modules/@reown/appkit-wallet/node_modules/zod'],
+    reason:
+      'Memory exhaustion when validating oversized constrained collections. Every zod 3.x is affected and 3.25.76 ' +
+      'is the last of that line; the patched line is 4.6.6 and later. Our own validation of request bodies ' +
+      '(app/src/app/api and app/src/lib) runs on zod 4.6.7. The copies still on 3.x belong to third-party packages ' +
+      'that pin the 3 line: @coinbase/cdp-sdk and @reown/appkit-wallet, wallet SDKs that run in the visitor\'s ' +
+      'browser and validate their own provider messages, and eslint-plugin-react-hooks, lint tooling. None is ' +
+      'reached by input to our API. `nodes` pins the exception to those two installed copies, so if the app ' +
+      'resolves zod 3 again the gate fails.',
+    expires: '2027-01-31',
   },
 ];
 
@@ -59,7 +83,9 @@ for (const vuln of Object.values(report.vulnerabilities ?? {})) {
     if (typeof via !== 'object' || !via.url) continue;
     const id = via.url.split('/').pop();
     if (via.severity !== 'high' && via.severity !== 'critical') continue;
-    found.set(id, { id, package: via.name, severity: via.severity, title: via.title, url: via.url, range: via.range });
+    const known = found.get(id);
+    const nodes = new Set([...(known?.nodes ?? []), ...(vuln.nodes ?? [])]);
+    found.set(id, { id, package: via.name, severity: via.severity, title: via.title, url: via.url, range: via.range, nodes: [...nodes] });
   }
 }
 
@@ -69,7 +95,10 @@ for (const adv of found.values()) {
   const entry = useAllowlist ? ALLOWLIST.find((a) => a.id === adv.id) : undefined;
   if (!entry) blocking.push({ adv, why: 'not allowed' });
   else if (entry.expires < today) blocking.push({ adv, why: `its exception expired on ${entry.expires}` });
-  else carried.push({ adv, entry });
+  else if (entry.nodes && adv.nodes.some((n) => !entry.nodes.includes(n))) {
+    const extra = adv.nodes.filter((n) => !entry.nodes.includes(n));
+    blocking.push({ adv, why: `it is also present in ${extra.join(', ')}, which its exception does not cover` });
+  } else carried.push({ adv, entry });
 }
 const stale = useAllowlist ? ALLOWLIST.filter((a) => !found.has(a.id)) : [];
 
@@ -78,6 +107,7 @@ for (const { adv, entry } of carried) {
   console.log(`\n  carried   ${adv.id}  ${adv.package}  (${adv.severity}, affects ${adv.range})`);
   console.log(`            ${adv.title}`);
   console.log(`            until ${entry.expires}: ${entry.reason}`);
+  if (entry.nodes) console.log(`            covers only: ${entry.nodes.join(', ')}`);
 }
 for (const e of stale) {
   console.log(`\n  note      ${e.id} (${e.package}) is no longer reported: remove its exception from scripts/audit-gate.mjs.`);

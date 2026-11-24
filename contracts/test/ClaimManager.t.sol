@@ -10,7 +10,6 @@ import {PortfolioRegistry} from "../src/PortfolioRegistry.sol";
 import {PolicyRegistry} from "../src/PolicyRegistry.sol";
 import {ClaimReceipt} from "../src/ClaimReceipt.sol";
 import {MockUSDC} from "../src/MockUSDC.sol";
-import {MockOracle} from "../src/MockOracle.sol";
 import {InsuranceVault} from "../src/InsuranceVault.sol";
 import {AIAssessor} from "../src/AIAssessor.sol";
 import {ClaimManager} from "../src/ClaimManager.sol";
@@ -26,7 +25,6 @@ contract ClaimManagerTest is Test {
     PolicyRegistry public policyRegistry;
     ClaimReceipt public claimReceipt;
     MockUSDC public usdc;
-    MockOracle public oracle;
     InsuranceVault public vault;
     AIAssessor public assessor;
     ClaimManager public claimManager;
@@ -56,7 +54,6 @@ contract ClaimManagerTest is Test {
 
         protocolRoles = new ProtocolRoles(admin);
         usdc = new MockUSDC();
-        oracle = new MockOracle();
         policyRegistry = new PolicyRegistry(address(protocolRoles));
         claimReceipt = new ClaimReceipt(address(protocolRoles));
         compliance = new ComplianceRegistry(address(protocolRoles));
@@ -92,7 +89,6 @@ contract ClaimManagerTest is Test {
                 bufferRatioBps: 2000,
                 managementFeeBps: 0,
                 registry: address(policyRegistry),
-                oracle: address(oracle),
                 claimReceipt: address(claimReceipt),
                 protocolRoles: address(protocolRoles),
                 complianceRegistry: address(compliance),

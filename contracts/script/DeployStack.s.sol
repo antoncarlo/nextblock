@@ -10,7 +10,6 @@ import {PortfolioRegistry} from "../src/PortfolioRegistry.sol";
 import {PolicyRegistry} from "../src/PolicyRegistry.sol";
 import {ClaimReceipt} from "../src/ClaimReceipt.sol";
 import {MockUSDC} from "../src/MockUSDC.sol";
-import {MockOracle} from "../src/MockOracle.sol";
 import {InsuranceVault} from "../src/InsuranceVault.sol";
 import {VaultFactory} from "../src/VaultFactory.sol";
 import {VaultDeployer} from "../src/VaultDeployer.sol";
@@ -37,7 +36,7 @@ import {NextBlockLens} from "../src/NextBlockLens.sol";
 ///         Order of operations (documented; tested in DeployStack.t.sol):
 ///           1. Settlement asset (MockUSDC staging faucet, or USDC_ADDRESS reuse)
 ///           2. ProtocolRoles (deployer = initial OWNER)
-///           3. Registries + receipt + mock NAV price oracle
+///           3. Registries + receipt + compliance registry
 ///           4. Oracle/AI layer (NavOracle, AIAssessor)
 ///           5. Economic modules (PremiumDistributor, VaultAllocator, ClaimManager)
 ///           6. Attestation + adapter layer (bordereau oracle, AdapterRegistry). On Base
@@ -99,7 +98,6 @@ contract DeployStack is Script, ProtocolRoleConstants {
     ProtocolRoles public protocolRoles;
     PolicyRegistry public policyRegistry;
     ClaimReceipt public claimReceipt;
-    MockOracle public mockOracle;
     ComplianceRegistry public compliance;
     PortfolioRegistry public portfolioRegistry;
     NavOracle public navOracle;
@@ -276,7 +274,6 @@ contract DeployStack is Script, ProtocolRoleConstants {
         protocolRoles = new ProtocolRoles(deployer);
         policyRegistry = new PolicyRegistry(address(protocolRoles));
         claimReceipt = new ClaimReceipt(address(protocolRoles));
-        mockOracle = new MockOracle();
         compliance = new ComplianceRegistry(address(protocolRoles));
         portfolioRegistry = new PortfolioRegistry(address(protocolRoles));
     }
@@ -328,7 +325,6 @@ contract DeployStack is Script, ProtocolRoleConstants {
         factory = new VaultFactory(
             address(usdc),
             address(policyRegistry),
-            address(mockOracle),
             address(claimReceipt),
             address(protocolRoles),
             address(compliance),
@@ -418,7 +414,6 @@ contract DeployStack is Script, ProtocolRoleConstants {
         _requireCode(address(protocolRoles), "protocolRoles");
         _requireCode(address(policyRegistry), "policyRegistry");
         _requireCode(address(claimReceipt), "claimReceipt");
-        _requireCode(address(mockOracle), "mockOracle");
         _requireCode(address(compliance), "compliance");
         _requireCode(address(portfolioRegistry), "portfolioRegistry");
         _requireCode(address(navOracle), "navOracle");
@@ -509,7 +504,6 @@ contract DeployStack is Script, ProtocolRoleConstants {
         vm.serializeAddress(obj, "protocolRoles", address(protocolRoles));
         vm.serializeAddress(obj, "policyRegistry", address(policyRegistry));
         vm.serializeAddress(obj, "claimReceipt", address(claimReceipt));
-        vm.serializeAddress(obj, "mockOracle", address(mockOracle));
         vm.serializeAddress(obj, "complianceRegistry", address(compliance));
         vm.serializeAddress(obj, "portfolioRegistry", address(portfolioRegistry));
         vm.serializeAddress(obj, "navOracle", address(navOracle));

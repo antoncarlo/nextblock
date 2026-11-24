@@ -10,7 +10,6 @@ import {PortfolioRegistry} from "../../src/PortfolioRegistry.sol";
 import {PolicyRegistry} from "../../src/PolicyRegistry.sol";
 import {ClaimReceipt} from "../../src/ClaimReceipt.sol";
 import {MockUSDC} from "../../src/MockUSDC.sol";
-import {MockOracle} from "../../src/MockOracle.sol";
 import {InsuranceVault} from "../../src/InsuranceVault.sol";
 import {PremiumDistributor} from "../../src/PremiumDistributor.sol";
 import {VaultAllocator} from "../../src/VaultAllocator.sol";
@@ -259,7 +258,6 @@ contract VaultInvariantTest is Test {
     PolicyRegistry public policyRegistry;
     ClaimReceipt public claimReceipt;
     MockUSDC public usdc;
-    MockOracle public oracle;
     InsuranceVault public vault;
     PremiumDistributor public distributor;
     VaultAllocator public vaultAllocator;
@@ -287,7 +285,6 @@ contract VaultInvariantTest is Test {
 
         protocolRoles = new ProtocolRoles(admin);
         usdc = new MockUSDC();
-        oracle = new MockOracle();
         policyRegistry = new PolicyRegistry(address(protocolRoles));
         claimReceipt = new ClaimReceipt(address(protocolRoles));
         compliance = new ComplianceRegistry(address(protocolRoles));
@@ -322,7 +319,6 @@ contract VaultInvariantTest is Test {
                 bufferRatioBps: 2000,
                 managementFeeBps: 0, // fee accrual excluded: isolates conservation accounting
                 registry: address(policyRegistry),
-                oracle: address(oracle),
                 claimReceipt: address(claimReceipt),
                 protocolRoles: address(protocolRoles),
                 complianceRegistry: address(compliance),

@@ -53,11 +53,6 @@
             "internalType": "address"
           },
           {
-            "name": "oracle",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
             "name": "claimReceipt",
             "type": "address",
             "internalType": "address"
@@ -973,19 +968,6 @@
         "name": "",
         "type": "string",
         "internalType": "string"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "oracle",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "contract MockOracle"
       }
     ],
     "stateMutability": "view"

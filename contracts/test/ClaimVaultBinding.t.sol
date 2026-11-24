@@ -10,7 +10,6 @@ import {PortfolioRegistry} from "../src/PortfolioRegistry.sol";
 import {PolicyRegistry} from "../src/PolicyRegistry.sol";
 import {ClaimReceipt} from "../src/ClaimReceipt.sol";
 import {MockUSDC} from "../src/MockUSDC.sol";
-import {MockOracle} from "../src/MockOracle.sol";
 import {InsuranceVault} from "../src/InsuranceVault.sol";
 import {AIAssessor} from "../src/AIAssessor.sol";
 import {ClaimManager} from "../src/ClaimManager.sol";
@@ -45,7 +44,6 @@ contract ClaimVaultBindingTest is Test {
     PolicyRegistry internal policies;
     ClaimReceipt internal receipts;
     MockUSDC internal usdc;
-    MockOracle internal oracle;
     AIAssessor internal assessor;
     ClaimManager internal claims;
 
@@ -75,7 +73,6 @@ contract ClaimVaultBindingTest is Test {
         vm.startPrank(admin);
         roles = new ProtocolRoles(admin);
         usdc = new MockUSDC();
-        oracle = new MockOracle();
         policies = new PolicyRegistry(address(roles));
         receipts = new ClaimReceipt(address(roles));
         compliance = new ComplianceRegistry(address(roles));
@@ -215,7 +212,6 @@ contract ClaimVaultBindingTest is Test {
                 bufferRatioBps: 2_000,
                 managementFeeBps: 0,
                 registry: address(policies),
-                oracle: address(oracle),
                 claimReceipt: address(receipts),
                 protocolRoles: address(roles),
                 complianceRegistry: address(compliance),

@@ -10,7 +10,6 @@ import {PortfolioRegistry} from "../src/PortfolioRegistry.sol";
 import {PolicyRegistry} from "../src/PolicyRegistry.sol";
 import {ClaimReceipt} from "../src/ClaimReceipt.sol";
 import {MockUSDC} from "../src/MockUSDC.sol";
-import {MockOracle} from "../src/MockOracle.sol";
 import {InsuranceVault} from "../src/InsuranceVault.sol";
 import {PremiumDistributor} from "../src/PremiumDistributor.sol";
 import {NavOracle} from "../src/NavOracle.sol";
@@ -32,7 +31,6 @@ contract NextBlockLensTest is Test {
     PolicyRegistry public policyRegistry;
     ClaimReceipt public claimReceipt;
     MockUSDC public usdc;
-    MockOracle public oracle;
     InsuranceVault public vault;
     PremiumDistributor public distributor;
     NavOracle public navOracle;
@@ -70,7 +68,6 @@ contract NextBlockLensTest is Test {
 
         protocolRoles = new ProtocolRoles(admin);
         usdc = new MockUSDC();
-        oracle = new MockOracle();
         policyRegistry = new PolicyRegistry(address(protocolRoles));
         claimReceipt = new ClaimReceipt(address(protocolRoles));
         compliance = new ComplianceRegistry(address(protocolRoles));
@@ -113,7 +110,6 @@ contract NextBlockLensTest is Test {
                 bufferRatioBps: 2000,
                 managementFeeBps: 0,
                 registry: address(policyRegistry),
-                oracle: address(oracle),
                 claimReceipt: address(claimReceipt),
                 protocolRoles: address(protocolRoles),
                 complianceRegistry: address(compliance),
@@ -355,9 +351,9 @@ contract NextBlockLensTest is Test {
         assertEq(v.allocatedExposure, vault.portfolioAllocation(pid));
         assertEq(v.premiumRecorded, vault.portfolioPremium(pid));
 
-        // Risk: NONE before publish, labelled MOCK_ORACLE
+        // Risk: NONE before publish, labelled ORACLE_ATTESTED
         assertEq(uint8(v.riskStatus), uint8(NextBlockLens.DataStatus.NONE));
-        assertEq(uint8(v.riskSource), uint8(NextBlockLens.DataSource.MOCK_ORACLE));
+        assertEq(uint8(v.riskSource), uint8(NextBlockLens.DataSource.ORACLE_ATTESTED));
 
         vm.prank(oracleNode);
         navOracle.publishPortfolioRisk(pid, 6_200, 9_000, SOURCE);
@@ -418,13 +414,13 @@ contract NextBlockLensTest is Test {
         assertEq(uint8(v.assessmentSource), uint8(NextBlockLens.DataSource.NOT_AVAILABLE));
         assertFalse(v.disputeWindowElapsed);
 
-        // Advisory AI attached: labelled MOCK_ORACLE, never an approval
+        // Advisory AI attached: labelled ORACLE_ATTESTED, never an approval
         vm.prank(oracleNode);
         assessor.publishAssessment(claimId, 8_000, 1_000, 9_000, AIAssessor.Recommendation.APPROVE, CLAIM_50K, SOURCE);
         claimManager.attachAssessment(claimId);
         v = lens.getClaimDashboard(claimId);
         assertTrue(v.hasAssessment);
-        assertEq(uint8(v.assessmentSource), uint8(NextBlockLens.DataSource.MOCK_ORACLE));
+        assertEq(uint8(v.assessmentSource), uint8(NextBlockLens.DataSource.ORACLE_ATTESTED));
         assertEq(v.assessment.recommendedAmount, CLAIM_50K);
         assertFalse(v.anomalous);
         assertEq(uint8(v.claim.status), uint8(ClaimManager.ClaimStatus.ASSESSED)); // still NOT approved
@@ -452,7 +448,7 @@ contract NextBlockLensTest is Test {
         // NONE before any publish
         NextBlockLens.OracleDashboardView memory v = lens.getOracleDashboard(address(vault));
         assertEq(uint8(v.status), uint8(NextBlockLens.DataStatus.NONE));
-        assertEq(uint8(v.source), uint8(NextBlockLens.DataSource.MOCK_ORACLE));
+        assertEq(uint8(v.source), uint8(NextBlockLens.DataSource.ORACLE_ATTESTED));
 
         // AVAILABLE after publish
         vm.prank(oracleNode);

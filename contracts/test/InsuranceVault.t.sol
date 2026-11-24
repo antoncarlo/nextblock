@@ -3,7 +3,6 @@ pragma solidity ^0.8.24;
 
 import {Test, console} from "forge-std/Test.sol";
 import {MockUSDC} from "../src/MockUSDC.sol";
-import {MockOracle} from "../src/MockOracle.sol";
 import {PolicyRegistry} from "../src/PolicyRegistry.sol";
 import {ClaimReceipt} from "../src/ClaimReceipt.sol";
 import {InsuranceVault} from "../src/InsuranceVault.sol";
@@ -29,7 +28,6 @@ contract InsuranceVaultTest is Test {
 
     // --- Contracts ---
     MockUSDC public usdc;
-    MockOracle public oracle;
     PolicyRegistry public registry;
     ClaimReceipt public claimReceipt;
     InsuranceVault public vaultA;
@@ -50,7 +48,6 @@ contract InsuranceVaultTest is Test {
         // Deploy core contracts
         protocolRoles = new ProtocolRoles(admin);
         usdc = new MockUSDC();
-        oracle = new MockOracle();
         registry = new PolicyRegistry(address(protocolRoles));
         claimReceipt = new ClaimReceipt(address(protocolRoles));
         compliance = new ComplianceRegistry(address(protocolRoles));
@@ -79,7 +76,6 @@ contract InsuranceVaultTest is Test {
                 bufferRatioBps: 2000, // 20% buffer
                 managementFeeBps: 50, // 0.5% management fee
                 registry: address(registry),
-                oracle: address(oracle),
                 claimReceipt: address(claimReceipt),
                 protocolRoles: address(protocolRoles),
                 complianceRegistry: address(compliance),

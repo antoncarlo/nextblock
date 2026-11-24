@@ -10,7 +10,6 @@ import {PortfolioRegistry} from "../src/PortfolioRegistry.sol";
 import {PolicyRegistry} from "../src/PolicyRegistry.sol";
 import {ClaimReceipt} from "../src/ClaimReceipt.sol";
 import {MockUSDC} from "../src/MockUSDC.sol";
-import {MockOracle} from "../src/MockOracle.sol";
 import {InsuranceVault} from "../src/InsuranceVault.sol";
 
 /// @title InsuranceVaultBranchesTest
@@ -26,7 +25,6 @@ contract InsuranceVaultBranchesTest is Test {
     PolicyRegistry public policyRegistry;
     ClaimReceipt public claimReceipt;
     MockUSDC public usdc;
-    MockOracle public oracle;
     InsuranceVault public vault;
 
     address public admin = makeAddr("admin");
@@ -46,7 +44,6 @@ contract InsuranceVaultBranchesTest is Test {
         vm.startPrank(admin);
         protocolRoles = new ProtocolRoles(admin);
         usdc = new MockUSDC();
-        oracle = new MockOracle();
         policyRegistry = new PolicyRegistry(address(protocolRoles));
         claimReceipt = new ClaimReceipt(address(protocolRoles));
         compliance = new ComplianceRegistry(address(protocolRoles));
@@ -83,7 +80,6 @@ contract InsuranceVaultBranchesTest is Test {
             bufferRatioBps: BUFFER_2000,
             managementFeeBps: FEE_50,
             registry: address(policyRegistry),
-            oracle: address(oracle),
             claimReceipt: address(claimReceipt),
             protocolRoles: roles_,
             complianceRegistry: address(compliance),

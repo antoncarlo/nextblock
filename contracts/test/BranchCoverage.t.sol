@@ -10,7 +10,6 @@ import {PortfolioRegistry} from "../src/PortfolioRegistry.sol";
 import {PolicyRegistry} from "../src/PolicyRegistry.sol";
 import {ClaimReceipt} from "../src/ClaimReceipt.sol";
 import {MockUSDC} from "../src/MockUSDC.sol";
-import {MockOracle} from "../src/MockOracle.sol";
 import {InsuranceVault} from "../src/InsuranceVault.sol";
 import {AIAssessor} from "../src/AIAssessor.sol";
 import {ClaimManager} from "../src/ClaimManager.sol";
@@ -31,7 +30,6 @@ contract BranchCoverageTest is Test {
     PolicyRegistry internal policyRegistry;
     ClaimReceipt internal claimReceipt;
     MockUSDC internal usdc;
-    MockOracle internal oracle;
     InsuranceVault internal vault;
     AIAssessor internal assessor;
     ClaimManager internal claimManager;
@@ -60,7 +58,6 @@ contract BranchCoverageTest is Test {
         vm.startPrank(admin);
         protocolRoles = new ProtocolRoles(admin);
         usdc = new MockUSDC();
-        oracle = new MockOracle();
         policyRegistry = new PolicyRegistry(address(protocolRoles));
         claimReceipt = new ClaimReceipt(address(protocolRoles));
         compliance = new ComplianceRegistry(address(protocolRoles));
@@ -92,7 +89,6 @@ contract BranchCoverageTest is Test {
                 bufferRatioBps: 2000,
                 managementFeeBps: 0,
                 registry: address(policyRegistry),
-                oracle: address(oracle),
                 claimReceipt: address(claimReceipt),
                 protocolRoles: address(protocolRoles),
                 complianceRegistry: address(compliance),
@@ -272,14 +268,14 @@ contract BranchCoverageTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(VaultAllocator.VaultAllocator__UnauthorizedRole.selector, rando, ownerRole)
         );
-        allocator.setNavOracle(address(oracle));
+        allocator.setNavOracle(makeAddr("navOracleStub"));
     }
 
     function test_allocator_setNavOracle() public {
         VaultAllocator allocator = new VaultAllocator(address(protocolRoles), address(portfolioRegistry), address(0));
         vm.prank(admin);
-        allocator.setNavOracle(address(oracle));
-        assertEq(address(allocator.navOracle()), address(oracle), "oracle wired");
+        allocator.setNavOracle(makeAddr("navOracleStub"));
+        assertEq(address(allocator.navOracle()), makeAddr("navOracleStub"), "oracle wired");
     }
 
     // --- InsuranceVault: buffer ceiling on withdrawals ---

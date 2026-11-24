@@ -1,11 +1,16 @@
 # NAV keeper — pulls each vault's NAV from Braino.ai and publishes it to NavOracle.
 #
-# Idle until the vendor is connected: on the schedule the job is skipped while the
-# repository variable BRAINO_BASE_URL is empty, so nothing runs and nothing alarms.
-# A manual run always executes and says plainly what is missing.
+# Idle until a source is connected: on the schedule the job is skipped while both the
+# repository variables BRAINO_BASE_URL and NAV_SOURCE are empty, so nothing runs and nothing
+# alarms. A manual run always executes and says plainly what is missing.
+#
+# Two sources. NAV_SOURCE=protocol attests the vault's own totalAssets (a book value, see
+# app/src/lib/protocol-nav.ts) and needs no vendor: only ORACLE_PRIVATE_KEY and the RPC.
+# Without NAV_SOURCE the keeper pulls the analytical NAV from Braino.ai.
 #
 # OWNER-GATED activation (one-time), in Settings -> Secrets and variables -> Actions:
-#   var     BRAINO_BASE_URL        vendor API base, https (switches the schedule on)
+#   var     NAV_SOURCE             protocol, to attest the vault's own accounting (switches the schedule on)
+#   var     BRAINO_BASE_URL        vendor API base, https (switches the schedule on; Braino source)
 #   secret  BRAINO_HMAC_SECRET     shared secret for X-Braino-Signature
 #   secret  BRAINO_API_KEY         bearer credential, only if the vendor issues one
 #   secret  ORACLE_PRIVATE_KEY     a DEDICATED key holding ORACLE_ROLE (grant it from the
@@ -39,7 +44,7 @@ concurrency:
 jobs:
   publish:
     name: publish vault NAV
-    if: github.event_name == 'workflow_dispatch' || vars.BRAINO_BASE_URL != ''
+    if: github.event_name == 'workflow_dispatch' || vars.BRAINO_BASE_URL != '' || vars.NAV_SOURCE == 'protocol'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -56,6 +61,7 @@ jobs:
 
       - name: Publish NAV
         env:
+          NAV_SOURCE: ${{ vars.NAV_SOURCE }}
           BRAINO_BASE_URL: ${{ vars.BRAINO_BASE_URL }}
           BRAINO_HMAC_SECRET: ${{ secrets.BRAINO_HMAC_SECRET }}
           BRAINO_API_KEY: ${{ secrets.BRAINO_API_KEY }}

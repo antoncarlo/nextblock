@@ -3,7 +3,6 @@ pragma solidity ^0.8.24;
 
 import {Test, console} from "forge-std/Test.sol";
 import {MockUSDC} from "../../src/MockUSDC.sol";
-import {MockOracle} from "../../src/MockOracle.sol";
 import {PolicyRegistry} from "../../src/PolicyRegistry.sol";
 import {ClaimReceipt} from "../../src/ClaimReceipt.sol";
 import {InsuranceVault} from "../../src/InsuranceVault.sol";
@@ -22,7 +21,6 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 contract FullFlowTest is Test {
     // --- Contracts ---
     MockUSDC public usdc;
-    MockOracle public oracle;
     PolicyRegistry public registry;
     ClaimReceipt public claimReceipt;
     VaultFactory public factory;
@@ -45,7 +43,6 @@ contract FullFlowTest is Test {
         // Phase 1: Deploy standalone contracts
         protocolRoles = new ProtocolRoles(admin);
         usdc = new MockUSDC();
-        oracle = new MockOracle();
         claimReceipt = new ClaimReceipt(address(protocolRoles));
         registry = new PolicyRegistry(address(protocolRoles));
         compliance = new ComplianceRegistry(address(protocolRoles));
@@ -74,7 +71,6 @@ contract FullFlowTest is Test {
         factory = new VaultFactory(
             address(usdc),
             address(registry),
-            address(oracle),
             address(claimReceipt),
             address(protocolRoles),
             address(compliance),

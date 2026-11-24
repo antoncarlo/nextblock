@@ -10,7 +10,6 @@ import {PortfolioRegistry} from "../../src/PortfolioRegistry.sol";
 import {PolicyRegistry} from "../../src/PolicyRegistry.sol";
 import {ClaimReceipt} from "../../src/ClaimReceipt.sol";
 import {MockUSDC} from "../../src/MockUSDC.sol";
-import {MockOracle} from "../../src/MockOracle.sol";
 import {InsuranceVault} from "../../src/InsuranceVault.sol";
 import {PremiumDistributor} from "../../src/PremiumDistributor.sol";
 import {VaultAllocator} from "../../src/VaultAllocator.sol";
@@ -57,7 +56,6 @@ contract ProtocolInvariantTest is Test {
     PolicyRegistry internal policies;
     ClaimReceipt internal receipts;
     MockUSDC internal usdc;
-    MockOracle internal oracle;
     InsuranceVault internal vault;
     PremiumDistributor internal distributor;
     VaultAllocator internal allocatorC;
@@ -114,7 +112,6 @@ contract ProtocolInvariantTest is Test {
 
         roles = new ProtocolRoles(governance);
         usdc = new MockUSDC();
-        oracle = new MockOracle();
         policies = new PolicyRegistry(address(roles));
         receipts = new ClaimReceipt(address(roles));
         compliance = new ComplianceRegistry(address(roles));
@@ -157,7 +154,6 @@ contract ProtocolInvariantTest is Test {
                 bufferRatioBps: 2_000,
                 managementFeeBps: 0,
                 registry: address(policies),
-                oracle: address(oracle),
                 claimReceipt: address(receipts),
                 protocolRoles: address(roles),
                 complianceRegistry: address(compliance),
@@ -180,7 +176,6 @@ contract ProtocolInvariantTest is Test {
         factory = new VaultFactory(
             address(usdc),
             address(policies),
-            address(oracle),
             address(receipts),
             address(roles),
             address(compliance),
@@ -217,7 +212,6 @@ contract ProtocolInvariantTest is Test {
                 bufferRatioBps: 2_000,
                 managementFeeBps: 0,
                 registry: address(policies),
-                oracle: address(oracle),
                 claimReceipt: address(receipts),
                 protocolRoles: address(roles),
                 complianceRegistry: address(compliance),

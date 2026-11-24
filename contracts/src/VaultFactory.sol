@@ -11,7 +11,7 @@ import {VaultDeployer} from "./VaultDeployer.sol";
 
 /// @title VaultFactory
 /// @notice Deploys and tracks InsuranceVault instances.
-/// @dev Infrastructure addresses (USDC, registry, oracle, claimReceipt) are set once
+/// @dev Infrastructure addresses (USDC, registry, claimReceipt) are set once
 ///      and shared by all vaults created through this factory.
 ///      Permissioned: only UNDERWRITING_CURATOR_ROLE can create a vault, and the
 ///      designated vault manager must also hold UNDERWRITING_CURATOR_ROLE.
@@ -24,8 +24,6 @@ contract VaultFactory is Ownable, ProtocolRoleConstants {
     address public immutable asset; // MockUSDC
     /// @notice Policy registry wired into every vault.
     address public immutable policyRegistry;
-    /// @notice Legacy demo oracle wired into every vault.
-    address public immutable oracle;
     /// @notice Claim receipt NFT wired into every vault.
     address public immutable claimReceiptAddr;
     /// @notice ClaimManager bound into every vault at creation, so no vault is
@@ -85,7 +83,6 @@ contract VaultFactory is Ownable, ProtocolRoleConstants {
     constructor(
         address asset_,
         address policyRegistry_,
-        address oracle_,
         address claimReceipt_,
         address protocolRoles_,
         address complianceRegistry_,
@@ -94,16 +91,15 @@ contract VaultFactory is Ownable, ProtocolRoleConstants {
         address claimManager_
     ) Ownable(msg.sender) {
         if (
-            asset_ == address(0) || policyRegistry_ == address(0) || oracle_ == address(0)
-                || claimReceipt_ == address(0) || protocolRoles_ == address(0) || complianceRegistry_ == address(0)
-                || portfolioRegistry_ == address(0) || vaultDeployer_ == address(0) || claimManager_ == address(0)
+            asset_ == address(0) || policyRegistry_ == address(0) || claimReceipt_ == address(0)
+                || protocolRoles_ == address(0) || complianceRegistry_ == address(0) || portfolioRegistry_ == address(0)
+                || vaultDeployer_ == address(0) || claimManager_ == address(0)
         ) {
             revert VaultFactory__InvalidParams();
         }
         vaultDeployer = VaultDeployer(vaultDeployer_);
         asset = asset_;
         policyRegistry = policyRegistry_;
-        oracle = oracle_;
         claimReceiptAddr = claimReceipt_;
         claimManagerAddr = claimManager_;
         protocolRoles = ProtocolRoles(protocolRoles_);
@@ -184,7 +180,6 @@ contract VaultFactory is Ownable, ProtocolRoleConstants {
                 bufferRatioBps: bufferRatioBps_,
                 managementFeeBps: managementFeeBps_,
                 registry: policyRegistry,
-                oracle: oracle,
                 claimReceipt: claimReceiptAddr,
                 protocolRoles: address(protocolRoles),
                 complianceRegistry: complianceRegistry,

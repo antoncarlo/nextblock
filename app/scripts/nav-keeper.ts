@@ -4,8 +4,11 @@
  *   node --experimental-strip-types app/scripts/nav-keeper.ts
  *
  * Env:
- *   BRAINO_BASE_URL       vendor API base (https)                         [required]
- *   BRAINO_HMAC_SECRET    shared secret for X-Braino-Signature            [required]
+ *   NAV_SOURCE            braino (default) | protocol                      [optional]
+ *                         protocol attests the vault's own totalAssets (a book value, see
+ *                         src/lib/protocol-nav.ts); it needs no vendor and no Braino variables
+ *   BRAINO_BASE_URL       vendor API base (https)                         [required for braino]
+ *   BRAINO_HMAC_SECRET    shared secret for X-Braino-Signature            [required for braino]
  *   BRAINO_API_KEY        bearer credential, if the vendor issues one     [optional]
  *   ORACLE_PRIVATE_KEY    key holding ORACLE_ROLE (never the deployer)    [required to broadcast]
  *   BASE_SEPOLIA_RPC_URL  RPC endpoint                                    [default public]
@@ -29,7 +32,8 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { baseSepolia } from 'viem/chains';
 import { brainoConfigFromEnv, decideNavPublish, fetchNav, BrainoError } from '../src/lib/braino/client.ts';
 import { NEXTBLOCK_ADDRESSES } from '../src/config/generated/addressBook.ts';
-import type { CanonicalValue } from '../src/lib/oracle-node.ts';
+import type { CanonicalValue, PublishNavArgs } from '../src/lib/oracle-node.ts';
+import { buildProtocolNav } from '../src/lib/protocol-nav.ts';
 
 const FACTORY_ABI = parseAbi(['function getVaults() view returns (address[])']);
 
@@ -62,11 +66,17 @@ function snapshotOf(dash: Record<string, unknown>): Record<string, CanonicalValu
 type Outcome = 'published' | 'dry-run' | 'skipped' | 'empty' | 'withheld' | 'failed';
 
 async function main() {
-  const cfg = brainoConfigFromEnv(process.env);
-  if (!cfg.ok) {
+  const source = process.env.NAV_SOURCE ?? 'braino';
+  if (source !== 'braino' && source !== 'protocol') {
+    console.error(`NAV_SOURCE must be "braino" or "protocol", got "${source}".`);
+    process.exit(2);
+  }
+  const cfg = source === 'braino' ? brainoConfigFromEnv(process.env) : null;
+  if (cfg && !cfg.ok) {
     console.error(`NAV keeper is not configured:\n  - ${cfg.problems.join('\n  - ')}`);
     process.exit(2);
   }
+  const brainoConfig = cfg !== null && cfg.ok ? cfg.config : null;
   const dryRun = process.env.DRY_RUN === '1';
   const pk = process.env.ORACLE_PRIVATE_KEY;
   if (!dryRun && (!pk || !/^0x[0-9a-fA-F]{64}$/.test(pk))) {
@@ -85,7 +95,9 @@ async function main() {
 
   const vaults = await publicClient.readContract({ address: factory, abi: FACTORY_ABI, functionName: 'getVaults' });
   const maxDeviationBps = await publicClient.readContract({ address: oracle, abi: NAV_ABI, functionName: 'maxDeviationBps' });
-  console.log(`${vaults.length} vault(s); deviation guard ${maxDeviationBps} bps; ${dryRun ? 'DRY RUN' : `publisher ${account!.address}`}`);
+  console.log(
+    `${vaults.length} vault(s); source ${source}; deviation guard ${maxDeviationBps} bps; ${dryRun ? 'DRY RUN' : `publisher ${account!.address}`}`,
+  );
 
   const results: Array<{ vault: string; outcome: Outcome; note: string }> = [];
 
@@ -95,7 +107,16 @@ async function main() {
       console.log(`${vault}  ${outcome.padEnd(9)} ${note}`);
     };
     try {
-      const dash = await publicClient.readContract({ address: lens, abi: LENS_ABI, functionName: 'getVaultDashboard', args: [vault] });
+      // Every figure of one vault is read at the same block, so the protocol NAV can be
+      // checked against its own inputs and its evidence hash is reproducible.
+      const block = await publicClient.getBlock();
+      const dash = await publicClient.readContract({
+        address: lens,
+        abi: LENS_ABI,
+        functionName: 'getVaultDashboard',
+        args: [vault],
+        blockNumber: block.number,
+      });
       if (dash.status !== DATA_STATUS_AVAILABLE) {
         record('failed', `Lens status ${dash.status}, not AVAILABLE`);
         continue;
@@ -114,11 +135,33 @@ async function main() {
       const att = navState[1];
       const hasPrior = att.updatedAt !== 0n;
 
-      const nav = await fetchNav(cfg.config, {
-        chainId: baseSepolia.id,
-        vaultAddress: vault,
-        snapshot: snapshotOf(dash as unknown as Record<string, unknown>),
-      });
+      let nav: { args: PublishNavArgs; reportId: string };
+      if (source === 'protocol') {
+        const built = buildProtocolNav({
+          vault,
+          chainId: baseSepolia.id,
+          blockNumber: block.number,
+          blockTimestamp: Number(block.timestamp),
+          totalAssets: dash.totalAssets,
+          totalShares: dash.totalShares,
+          balance: dash.balance,
+          unearnedPremiums: dash.unearnedPremiums,
+          pendingClaims: dash.pendingClaims,
+          accumulatedFees: dash.accumulatedFees,
+        });
+        if (!built.ok) {
+          record(built.reason === 'empty' ? 'empty' : 'failed', built.detail);
+          continue;
+        }
+        nav = { args: built.args, reportId: `protocol-nav@${block.number}` };
+      } else {
+        if (!brainoConfig) throw new Error('Braino is not configured');
+        nav = await fetchNav(brainoConfig, {
+          chainId: baseSepolia.id,
+          vaultAddress: vault,
+          snapshot: snapshotOf(dash as unknown as Record<string, unknown>),
+        });
+      }
 
       const decision = decideNavPublish({
         newNav: nav.args.nav,

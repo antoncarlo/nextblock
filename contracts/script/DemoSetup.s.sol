@@ -3,7 +3,6 @@ pragma solidity ^0.8.24;
 
 import {Script, console} from "forge-std/Script.sol";
 import {MockUSDC} from "../src/MockUSDC.sol";
-import {MockOracle} from "../src/MockOracle.sol";
 import {PolicyRegistry} from "../src/PolicyRegistry.sol";
 import {ClaimReceipt} from "../src/ClaimReceipt.sol";
 import {InsuranceVault} from "../src/InsuranceVault.sol";
@@ -101,7 +100,6 @@ contract DemoSetup is Script {
     //  Deployed Contracts (stored as state to share between helper functions)
     // =====================================================================
     MockUSDC public usdc;
-    MockOracle public oracle;
     PolicyRegistry public registry;
     ClaimReceipt public claimReceipt;
     VaultFactory public factory;
@@ -188,9 +186,6 @@ contract DemoSetup is Script {
         usdc = new MockUSDC();
         console.log("MockUSDC:", address(usdc));
 
-        oracle = new MockOracle();
-        console.log("MockOracle:", address(oracle));
-
         claimReceipt = new ClaimReceipt(address(protocolRoles));
         console.log("ClaimReceipt:", address(claimReceipt));
 
@@ -237,7 +232,6 @@ contract DemoSetup is Script {
         factory = new VaultFactory(
             address(usdc),
             address(registry),
-            address(oracle),
             address(claimReceipt),
             address(protocolRoles),
             address(compliance),
@@ -683,8 +677,6 @@ contract DemoSetup is Script {
 
         _setVaultRoles(deployer);
 
-        console.log("Oracle initialized: BTC=$85,000, flight=not delayed");
-
         // Mint USDC to investor ($50K)
         usdc.mint(investor, 50_000e6);
         console.log("Investor funded: $50,000 USDC");
@@ -758,7 +750,6 @@ contract DemoSetup is Script {
         console.log("");
         console.log("Contract Addresses:");
         console.log("  MockUSDC:       ", address(usdc));
-        console.log("  MockOracle:     ", address(oracle));
         console.log("  PolicyRegistry: ", address(registry));
         console.log("  ClaimReceipt:   ", address(claimReceipt));
         console.log("  VaultFactory:   ", address(factory));
