@@ -49,7 +49,10 @@ const NETWORK_NAMES = {
 
 // Contract addresses the frontend already consumes (see the 84532 block in
 // app/src/config/contracts.ts). All of these are REQUIRED in the JSON.
-const CONTRACT_KEYS = [
+// DeployStack writes every one of them except HAND_RECORDED_KEYS, and
+// check-addressbook.mjs fails if that stops being true: a key the deploy no
+// longer writes would otherwise surface only after a redeploy.
+export const CONTRACT_KEYS = [
   "adapterRegistry",
   "aiAssessor",
   "bordereauOracle",
@@ -57,7 +60,6 @@ const CONTRACT_KEYS = [
   "claimReceipt",
   "complianceRegistry",
   "lens",
-  "mockOracle",
   "navOracle",
   "policyRegistry",
   "portfolioRegistry",
@@ -71,6 +73,10 @@ const CONTRACT_KEYS = [
   "vaultDeployer",
   "vaultFactory",
 ];
+
+// Added to the record by hand after the deploy, once governance has moved to
+// the timelock: no deploy script writes them.
+export const HAND_RECORDED_KEYS = ["protocolTimelock", "safe"];
 
 // Operational role addresses recorded by the deployment. OPTIONAL: exported
 // when present, format-validated when present.

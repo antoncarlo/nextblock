@@ -27,7 +27,7 @@ USDC_ADDRESS=0x036CbD53842c5426634e7929541eC2318f3dCF7e \
   forge script script/DeployStack.s.sol --rpc-url $BASE_SEPOLIA_RPC_URL --broadcast
 ```
 
-With a real USDC configured on Base Sepolia, `DeployStack` deploys the UMA-backed bordereau (bond 10 USDC by default, `BORDEREAU_BOND` to change; the deployer must hold the bond). Then regenerate the address book and ABIs, repoint the subgraph and move governance to the timelock as in the previous generation. Operational roles stay as deployed.
+With a real USDC configured on Base Sepolia, `DeployStack` deploys the UMA-backed bordereau (bond 10 USDC by default, `BORDEREAU_BOND` to change; the deployer must hold the bond). Then move governance to the timelock as in the previous generation, and add `protocolTimelock` and `safe` to `contracts/deployments/84532-staging.json` by hand: no script writes them, and the address book generator stops without them. Only then regenerate the address book (`npm run codegen:addressbook`) and the ABIs, and repoint the subgraph. Operational roles stay as deployed.
 
 ## 4. Seed (OWNER)
 
